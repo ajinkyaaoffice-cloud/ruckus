@@ -3,6 +3,7 @@ import gsap from 'gsap'
 import type { GameProps } from '../pages/GameScreen'
 import { act, onGameEvents, playerHex } from '../lib/net'
 import { sfx } from '../lib/sound'
+import { lowPower } from '../lib/perf'
 import './Pong.css'
 
 type Spark = { x: number; y: number; vx: number; vy: number; life: number; c: string }
@@ -25,7 +26,7 @@ export default function Pong({ state, me, room, spectator }: GameProps) {
     let scale = 1, cw = 0, ch = 0
     const fit = () => {
       const r = wrap.current!.getBoundingClientRect()
-      const dpr = Math.min(2, devicePixelRatio || 1)
+      const dpr = Math.min(lowPower ? 1.5 : 2, devicePixelRatio || 1)
       cw = r.width; ch = r.height
       canvas.width = cw * dpr; canvas.height = ch * dpr
       g.setTransform(dpr, 0, 0, dpr, 0, 0)

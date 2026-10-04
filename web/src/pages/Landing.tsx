@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import gsap from 'gsap'
+import { isTouch, watchVisible } from '../lib/perf'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import Lenis from 'lenis'
 import Avatar from '../components/Avatar'
@@ -36,6 +37,13 @@ export default function Landing() {
     fetch('/api/leaderboard').then((r) => r.json()).then((d) => Array.isArray(d) && setLeaders(d)).catch(() => {})
   }, [])
 
+  // pause the looping sticker/avatar animations in sections that are off screen
+  useEffect(() => {
+    const stops = [...document.querySelectorAll('.landing section')].map((s) =>
+      watchVisible(s, (v) => s.classList.toggle('is-off', !v)))
+    return () => stops.forEach((f) => f())
+  }, [])
+
   const play = () => {
     sfx.click()
     go('/play', { label: 'LOBBY!' })
@@ -68,11 +76,11 @@ export default function Landing() {
   /* ---------------- smooth scroll + every scroll animation ---------------- */
   useLayoutEffect(() => {
     if (!loaded) return
-    const lenis = new Lenis({ lerp: 0.09, wheelMultiplier: 1 })
-    lenis.on('scroll', ScrollTrigger.update)
+    const lenis = isTouch ? null : new Lenis({ lerp: 0.09, wheelMultiplier: 1 })
+    lenis?.on('scroll', ScrollTrigger.update)
     setLenis(lenis)
-    const raf = (t: number) => lenis.raf(t * 1000)
-    gsap.ticker.add(raf)
+    const raf = (t: number) => lenis?.raf(t * 1000)
+    if (lenis) gsap.ticker.add(raf)
     gsap.ticker.lagSmoothing(0)
 
     let heroMove: ((e: PointerEvent) => void) | null = null
@@ -243,7 +251,7 @@ export default function Landing() {
       ctx.revert()
       gsap.ticker.remove(raf)
       setLenis(null)
-      lenis.destroy()
+      lenis?.destroy()
     }
   }, [loaded])
 

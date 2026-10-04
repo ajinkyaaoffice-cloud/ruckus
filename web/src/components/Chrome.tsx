@@ -1,6 +1,7 @@
 import { MenuButton } from './Menu'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import gsap from 'gsap'
+import { lowPower } from '../lib/perf'
 import { useNet } from '../lib/net'
 import { isMuted, onMuted, setMuted, sfx } from '../lib/sound'
 import { useTransition } from './Transition'
@@ -27,13 +28,14 @@ export function BrushMarks({ color = '#ffffff', opacity = 0.28 }: { color?: stri
   const ref = useRef<SVGSVGElement>(null)
   useEffect(() => {
     const marks = ref.current!.querySelectorAll('.bm')
-    const tw = gsap.to(marks, { rotate: '+=8', y: '+=24', duration: 6, yoyo: true, repeat: -1, ease: 'sine.inOut', stagger: 1.2 })
+    // the slow drift repaints a full-screen SVG every frame; phones skip it
+    const tw = lowPower ? null : gsap.to(marks, { rotate: '+=8', y: '+=24', duration: 6, yoyo: true, repeat: -1, ease: 'sine.inOut', stagger: 1.2 })
     const paths = ref.current!.querySelectorAll<SVGPathElement>('path')
     paths.forEach((p) => {
       const l = p.getTotalLength()
       gsap.fromTo(p, { strokeDasharray: l, strokeDashoffset: l }, { strokeDashoffset: 0, duration: 1.1, ease: 'power3.out', delay: 0.3 + Math.random() * 0.6 })
     })
-    return () => { tw.kill() }
+    return () => { tw?.kill() }
   }, [])
   return (
     <svg ref={ref} className="brush-marks" viewBox="0 0 1000 1000" preserveAspectRatio="xMidYMid slice" aria-hidden>

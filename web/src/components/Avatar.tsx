@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, type CSSProperties, type ReactNode } from 'react'
+import { isTouch, onFrame, reducedMotion, watchVisible } from '../lib/perf'
 import { normalizeAvatar, shade, type AvatarConfig, type Expression } from '../lib/avatar'
 import './Avatar.css'
 
@@ -73,17 +74,21 @@ export default function Avatar({ config, size = 160, expression = 'idle', track 
   const pupils = useRef<SVGGElement>(null)
 
   useEffect(() => {
-    if (track === 'none') return
-    let raf = 0
+    if (track === 'none' || reducedMotion) return
     let lx = 0, ly = 0
+    let visible = false
+    let rect: DOMRect | null = null
+    let rectAt = 0
     const seed = Math.random() * 100
+    const mode = track === 'mouse' && isTouch ? 'idle' : track
+    const stopVis = root.current ? watchVisible(root.current, (v) => { visible = v }) : () => {}
     const loop = (t: number) => {
-      raf = requestAnimationFrame(loop)
       let tx: number, ty: number
       const el = root.current
-      if (!el) return
-      if (track === 'mouse') {
-        const r = el.getBoundingClientRect()
+      if (!el || !visible) return
+      if (mode === 'mouse') {
+        if (!rect || t - rectAt > 250) { rect = el.getBoundingClientRect(); rectAt = t }
+        const r = rect
         const cx = r.left + r.width / 2, cy = r.top + r.height / 2
         tx = Math.max(-1, Math.min(1, (pointer.x - cx) / (window.innerWidth * 0.4)))
         ty = Math.max(-1, Math.min(1, (pointer.y - cy) / (window.innerHeight * 0.4)))
@@ -100,8 +105,8 @@ export default function Avatar({ config, size = 160, expression = 'idle', track 
       front.current?.setAttribute('transform', `translate(${lx * 5 * d} ${ly * 3 * d})`)
       pupils.current?.setAttribute('transform', `translate(${lx * 3.5} ${ly * 3})`)
     }
-    raf = requestAnimationFrame(loop)
-    return () => cancelAnimationFrame(raf)
+    const stop = onFrame(loop)
+    return () => { stop(); stopVis() }
   }, [track, depth])
 
   const head = HEADS[c.face] ?? HEADS.round

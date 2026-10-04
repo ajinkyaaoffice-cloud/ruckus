@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import gsap from 'gsap'
 import { intro } from '../lib/ui'
+import { lowPower } from '../lib/perf'
 import { TopBar, BrushMarks, Split } from '../components/Chrome'
 import Avatar from '../components/Avatar'
 import Glyph from '../components/Glyph'
@@ -32,7 +33,7 @@ export default function LobbyZone() {
         .fromTo('.lz-box', { y: 80, scale: 0.3, rotate: () => gsap.utils.random(-40, 40) }, { y: 0, scale: 1, rotate: 0, duration: 0.6, ease: 'back.out(2.5)', stagger: 0.06, clearProps: 'transform' }, 0.6)
         .fromTo('.lz-act', { scale: 0 }, { scale: 1, duration: 0.6, ease: 'back.out(2.5)', stagger: 0.08, clearProps: 'transform' }, 0.75)
         .fromTo('.lz-glyph', ...intro({ scale: 0, rotate: -180, duration: 0.8, ease: 'back.out(2)', stagger: 0.05 }), 0.5)
-      gsap.to('.lz-glyph', { y: '+=16', rotate: '+=12', duration: 2.4, yoyo: true, repeat: -1, ease: 'sine.inOut', stagger: 0.3 })
+      if (!lowPower) gsap.to('.lz-glyph', { y: '+=16', rotate: '+=12', duration: 2.4, yoyo: true, repeat: -1, ease: 'sine.inOut', stagger: 0.3 })
     }, root)
     return () => ctx.revert()
   }, [])

@@ -25,7 +25,7 @@ log = logging.getLogger("ruckus")
 store = make_store()
 manager = RoomManager(store)
 PID_RE = re.compile(r"^[A-Za-z0-9_-]{8,64}$")
-EMOTES = {"🔥", "😂", "😱", "👏", "😤", "💀", "🎉", "🤯"}
+EMOTES = {"fire", "lol", "shock", "clap", "rage", "ko", "party", "boom"}
 
 
 @asynccontextmanager

@@ -19,10 +19,13 @@
 .pchip.compact::before { width: 54px; height: 54px; }
 
 .emote-layer { position: fixed; inset: 0; pointer-events: none; z-index: 700; }
-.emote-pop { position: absolute; font-size: 34px; translate: -50% -50%; }
+.emote-pop { position: absolute; width: 78px; height: 78px; margin: -39px 0 0 -39px; display: grid; place-items: center; }
+.emote-art { position: relative; z-index: 1; filter: drop-shadow(0 4px 0 rgba(29, 58, 110, 0.25)); }
+.emote-ray { position: absolute; left: 50%; top: 50%; width: 6px; height: 20px; margin: -60px 0 0 -3px; border-radius: 6px; background: var(--pc); transform-origin: 50% 60px; }
+.emote-who { position: absolute; top: 100%; left: 50%; translate: -50% 2px; white-space: nowrap; background: var(--pc); color: #fff; font-weight: 800; font-size: 12px; padding: 3px 10px; border-radius: 99px; box-shadow: 0 2px 0 var(--navy); }
 
 .emote-bar { display: flex; gap: 4px; background: #fff; border-radius: 999px; padding: 6px; box-shadow: var(--shadow-pop); }
-.emote-bar button { width: 42px; height: 42px; border-radius: 50%; font-size: 22px; transition: transform 0.3s var(--ease-back), background 0.2s; }
+.emote-bar button { width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; font-size: 22px; transition: transform 0.3s var(--ease-back), background 0.2s; }
 .emote-bar button:hover { transform: scale(1.3) rotate(-12deg); background: var(--pink-2); }
 .emote-bar button:active { transform: scale(0.9); }
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -34,3 +37,28 @@
 .emote-bar.compact.open .emote-list button { scale: 1; }
 .emote-bar .emote-toggle { background: var(--magenta); color: #fff; font-size: 20px; flex: none; }
 .emote-bar .emote-toggle:hover { background: var(--magenta-2); }
+
+/* sticker idle motion: each reaction has its own little loop on hover */
+.rx * { transform-box: fill-box; transform-origin: center; }
+.emote-bar button:hover .rx-flame, .emote-art .rx-flame { animation: rx-flick 0.35s ease-in-out infinite alternate; transform-origin: 50% 100%; }
+.emote-bar button:hover .rx-tear, .emote-art .rx-tear { animation: rx-drip 0.5s ease-in infinite; }
+.emote-bar button:hover .rx-pupil, .emote-art .rx-pupil { animation: rx-shake 0.12s linear infinite; }
+.emote-bar button:hover .rx-sweat, .emote-art .rx-sweat { animation: rx-drip 0.7s ease-in infinite; }
+.emote-bar button:hover .rx-hand.l, .emote-art .rx-hand.l { animation: rx-clapl 0.22s ease-in-out infinite alternate; transform-origin: 30% 100%; }
+.emote-bar button:hover .rx-hand.r, .emote-art .rx-hand.r { animation: rx-clapr 0.22s ease-in-out infinite alternate; transform-origin: 70% 100%; }
+.emote-bar button:hover .rx-steam, .emote-art .rx-steam { animation: rx-puff 0.4s ease-out infinite alternate; }
+.emote-bar button:hover .rx-ghost, .emote-art .rx-ghost { animation: rx-float 0.6s ease-in-out infinite alternate; }
+.emote-bar button:hover .rx-orbit, .emote-art .rx-orbit { animation: rx-orbit 0.8s linear infinite; transform-origin: 50% 400%; }
+.emote-bar button:hover .rx-confetti, .emote-art .rx-confetti { animation: rx-pop 0.5s ease-out infinite alternate; }
+.emote-bar button:hover .rx-burst, .emote-art .rx-burst { animation: rx-spinb 2s linear infinite; }
+.emote-bar button:hover .rx-spin, .emote-art .rx-spin { animation: rx-spinb 0.6s linear infinite; }
+@keyframes rx-flick { to { transform: scale(1.06, 0.94) skewX(-4deg); } }
+@keyframes rx-drip { from { transform: translateY(-4px); opacity: 1; } to { transform: translateY(10px); opacity: 0; } }
+@keyframes rx-shake { 50% { transform: translate(1.5px, -1px); } }
+@keyframes rx-clapl { to { transform: rotate(10deg); } }
+@keyframes rx-clapr { to { transform: rotate(-10deg); } }
+@keyframes rx-puff { to { transform: translateY(-5px) scale(1.15); } }
+@keyframes rx-float { to { transform: translateY(-5px); } }
+@keyframes rx-orbit { to { transform: rotate(360deg); } }
+@keyframes rx-pop { to { transform: scale(1.18) rotate(8deg); } }
+@keyframes rx-spinb { to { transform: rotate(360deg); } }

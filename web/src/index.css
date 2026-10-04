@@ -147,3 +147,15 @@ img, svg { display: block; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
+
+/* Phones / low-power: swap GPU-hungry filters for plain shadows. */
+.low-power .uc { filter: none; box-shadow: 0 3px 0 rgba(27, 31, 63, 0.28); }
+.low-power .uno.my-turn .uno-hand .uc.ok { filter: none; box-shadow: 0 6px 0 rgba(27, 31, 63, 0.3), 0 0 0 3px #fff; }
+.low-power .uno.my-turn .uno-hand .uc.no { filter: brightness(0.8); }
+.low-power .uno-modal, .low-power [class*='modal'], .low-power [class*='backdrop'] { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+.low-power .ec-board svg, .low-power .emote-art { filter: none; }
+.low-power .tk { filter: none; }
+.low-power .noise::after { display: none; }
+.low-power .split-char { will-change: auto; }
+/* Sections scrolled out of view stop their looping CSS animations. */
+.is-off, .is-off * { animation-play-state: paused !important; }

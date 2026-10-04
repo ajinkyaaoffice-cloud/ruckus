@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import gsap from 'gsap'
+import { onFrame, watchVisible } from '../lib/perf'
 import { sfx } from '../lib/sound'
 
 /**
@@ -41,16 +42,17 @@ export default function Mascot({ className }: { className?: string }) {
   const squash = useRef({ v: 0 })
 
   useEffect(() => {
-    let raf = 0
     const t0 = performance.now()
+    let visible = false
+    const stopVis = watchVisible(svg.current!, (v) => { visible = v })
     const loop = (now: number) => {
+      if (!visible) return
       const t = (now - t0) / 1000
       const s = squash.current.v
       body.current?.setAttribute('d', blobPath(t, 74, 100, 108, s))
       shadow.current?.setAttribute('d', blobPath(t + 0.3, 74, 100, 116, s))
-      raf = requestAnimationFrame(loop)
     }
-    raf = requestAnimationFrame(loop)
+    const stopLoop = onFrame(loop)
 
     const pupils = eyes.current!.querySelectorAll<SVGCircleElement>('.mx-pupil')
     const tos = Array.from(pupils).map((p) => ({ x: gsap.quickTo(p, 'x', { duration: 0.35, ease: 'power3' }), y: gsap.quickTo(p, 'y', { duration: 0.35, ease: 'power3' }) }))
@@ -67,7 +69,7 @@ export default function Mascot({ className }: { className?: string }) {
       timer = window.setTimeout(blink, 1800 + Math.random() * 3200)
     }
     let timer = window.setTimeout(blink, 1500)
-    return () => { cancelAnimationFrame(raf); window.removeEventListener('pointermove', move); clearTimeout(timer) }
+    return () => { stopLoop(); stopVis(); window.removeEventListener('pointermove', move); clearTimeout(timer) }
   }, [])
 
   const poke = () => {

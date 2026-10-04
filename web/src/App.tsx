@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react'
 import { Route, Routes } from 'react-router-dom'
 import { TransitionProvider } from './components/Transition'
 import Cursor from './components/Cursor'
+import { isTouch } from './lib/perf'
 import Menu from './components/Menu'
 import ContextMenu from './components/ContextMenu'
 import { Toasts } from './components/Chrome'
@@ -31,7 +32,7 @@ export default function App() {
       <Menu />
       <ContextMenu />
       <Toasts />
-      <Cursor />
+      {!isTouch && <Cursor />}
     </TransitionProvider>
   )
 }
