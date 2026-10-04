@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import gsap from 'gsap'
+import { intro } from '../lib/ui'
 import type { GameProps } from '../pages/GameScreen'
 import { act, onGameEvents, playerHex } from '../lib/net'
 import { sfx } from '../lib/sound'
@@ -95,7 +96,7 @@ function Mark({ kind, cx, cy, color, ghost }: { kind: number; cx: number; cy: nu
       const l = p.getTotalLength()
       gsap.fromTo(p, { strokeDasharray: l, strokeDashoffset: l }, { strokeDashoffset: 0, duration: 0.32, delay: i * 0.18, ease: 'power2.out' })
     })
-    gsap.from(ref.current, { scale: 1.4, rotate: kind ? 60 : -20, duration: 0.6, ease: 'back.out(2)', transformOrigin: `${cx}px ${cy}px` })
+    gsap.fromTo(ref.current, ...intro({ scale: 1.4, rotate: kind ? 60 : -20, duration: 0.6, ease: 'back.out(2)', transformOrigin: `${cx}px ${cy}px` }))
   }, [ghost, kind, cx, cy])
   const r = 30
   return (

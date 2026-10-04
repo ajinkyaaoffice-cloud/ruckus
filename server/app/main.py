@@ -158,7 +158,7 @@ async def ws_endpoint(ws: WebSocket) -> None:
                         p.ws, p.left_at = ws, None
                     else:
                         if len(target.players) >= MAX_PLAYERS:
-                            raise GameError("That room is full (3 max)")
+                            raise GameError(f"That room is full ({MAX_PLAYERS} max)")
                         await leave_current(pid, keep=target)
                         target.add(Player(pid, name, avatar, ws=ws))
                     await ws.send_json({"t": "joined", "code": target.code})

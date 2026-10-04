@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import gsap from 'gsap'
+import { intro } from '../lib/ui'
 import QRCode from 'qrcode'
 import { sfx } from '../lib/sound'
 import './Qr.css'
@@ -42,8 +43,8 @@ export default function InviteModal({ code, onClose }: { code: string; onClose: 
   const [copied, setCopied] = useState(false)
   useLayoutEffect(() => {
     const ctx = gsap.context(() => {
-      gsap.from('.qr-sheet', { scale: 0.3, rotate: 25, y: 200, duration: 0.8, ease: 'back.out(1.6)' })
-      gsap.from('.inv-letter', { yPercent: -200, rotate: () => gsap.utils.random(-50, 50), duration: 0.6, ease: 'back.out(2.5)', stagger: 0.07, delay: 0.25 })
+      gsap.fromTo('.qr-sheet', ...intro({ scale: 0.3, rotate: 25, y: 200, duration: 0.8, ease: 'back.out(1.6)' }))
+      gsap.fromTo('.inv-letter', ...intro({ yPercent: -200, rotate: () => gsap.utils.random(-50, 50), duration: 0.6, ease: 'back.out(2.5)', stagger: 0.07, delay: 0.25 }))
     }, root)
     return () => ctx.revert()
   }, [])

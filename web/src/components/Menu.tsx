@@ -6,7 +6,7 @@ import Mascot from './Mascot'
 import { SoundToggle } from './Chrome'
 import { useTransition } from './Transition'
 import { leaveRoom, useNet } from '../lib/net'
-import { lockScroll, scrollToTarget, useUi } from '../lib/ui'
+import { lockScroll, scrollToTarget, useUi, intro } from '../lib/ui'
 import { sfx } from '../lib/sound'
 import './Menu.css'
 
@@ -55,10 +55,10 @@ export default function Menu() {
       tl.current = gsap.timeline()
         .fromTo('.mn-c1', { clipPath: 'circle(0% at 40px 40px)' }, { clipPath: 'circle(150% at 40px 40px)', duration: 0.7, ease: 'power3.inOut' })
         .fromTo('.mn-c2', { clipPath: 'circle(0% at 40px 40px)' }, { clipPath: 'circle(150% at 40px 40px)', duration: 0.7, ease: 'power3.inOut' }, 0.12)
-        .from('.mn-item', { yPercent: 140, rotate: (i: number) => (i % 2 ? 8 : -8), duration: 0.6, ease: 'back.out(1.8)', stagger: 0.06 }, 0.38)
-        .from('.mn-glyph', { scale: 0, rotate: -180, duration: 0.6, ease: 'back.out(2.5)', stagger: 0.04 }, 0.45)
-        .from('.mn-mascot', { yPercent: 110, rotate: 20, duration: 0.8, ease: 'back.out(1.6)' }, 0.5)
-        .from('.mn-foot > *', { y: 40, opacity: 0, duration: 0.4, stagger: 0.06 }, 0.6)
+        .fromTo('.mn-item', ...intro({ yPercent: 140, rotate: (i: number) => (i % 2 ? 8 : -8), duration: 0.6, ease: 'back.out(1.8)', stagger: 0.06 }), 0.38)
+        .fromTo('.mn-glyph', ...intro({ scale: 0, rotate: -180, duration: 0.6, ease: 'back.out(2.5)', stagger: 0.04 }), 0.45)
+        .fromTo('.mn-mascot', ...intro({ yPercent: 110, rotate: 20, duration: 0.8, ease: 'back.out(1.6)' }), 0.5)
+        .fromTo('.mn-foot > *', ...intro({ y: 40, opacity: 0, duration: 0.4, stagger: 0.06 }), 0.6)
     }, root)
     const esc = (e: KeyboardEvent) => e.key === 'Escape' && setMenu(false)
     window.addEventListener('keydown', esc)

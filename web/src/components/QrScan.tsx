@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import gsap from 'gsap'
+import { intro } from '../lib/ui'
 import QrScanner from 'qr-scanner'
 import Glyph from './Glyph'
 import { sfx } from '../lib/sound'
@@ -20,8 +21,8 @@ export default function QrScan({ onCode, onClose }: { onCode: (code: string) => 
 
   useLayoutEffect(() => {
     const ctx = gsap.context(() => {
-      gsap.from('.qr-sheet', { yPercent: 120, rotate: -10, duration: 0.8, ease: 'expo.out' })
-      gsap.from('.qr-corner', { scale: 0, duration: 0.5, ease: 'back.out(3)', stagger: 0.06, delay: 0.3 })
+      gsap.fromTo('.qr-sheet', ...intro({ yPercent: 120, rotate: -10, duration: 0.8, ease: 'expo.out' }))
+      gsap.fromTo('.qr-corner', ...intro({ scale: 0, duration: 0.5, ease: 'back.out(3)', stagger: 0.06, delay: 0.3 }))
     }, root)
     return () => ctx.revert()
   }, [])

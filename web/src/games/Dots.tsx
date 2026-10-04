@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactElement } from 'react'
 import gsap from 'gsap'
+import { intro } from '../lib/ui'
 import type { GameProps } from '../pages/GameScreen'
 import { act, onGameEvents, playerHex } from '../lib/net'
 import { sfx } from '../lib/sound'
@@ -25,7 +26,7 @@ export default function Dots({ state, me, room, players, spectator }: GameProps)
 
   useLayoutEffect(() => {
     const ctx = gsap.context(() => {
-      gsap.from('.dots-dot', { scale: 0, transformOrigin: '50% 50%', duration: 0.5, ease: 'back.out(4)', stagger: { each: 0.02, from: 'center', grid: [rows + 1, cols + 1] }, delay: 0.9 })
+      gsap.fromTo('.dots-dot', ...intro({ scale: 0, transformOrigin: '50% 50%', duration: 0.5, ease: 'back.out(4)', stagger: { each: 0.02, from: 'center', grid: [rows + 1, cols + 1] }, delay: 0.9 }))
     }, root)
     return () => ctx.revert()
   }, [rows, cols])

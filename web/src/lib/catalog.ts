@@ -12,7 +12,7 @@ export type GameMeta = {
 
 export const CATALOG: GameMeta[] = [
   {
-    id: 'uno', name: 'UNO', min: 2, max: 3, tag: 'Cards', bg: '#ff9a62', ink: '#1d3a6e',
+    id: 'uno', name: 'UNO', min: 2, max: 5, tag: 'Cards', bg: '#ff9a62', ink: '#1d3a6e',
     blurb: 'Full official rules: +4 challenges, UNO calls & catches, start-card twists, real scoring.',
     options: [{ key: 'modern', label: 'Deck', choices: [{ value: false, label: 'Classic 108' }, { value: true, label: 'Modern 112' }] }],
   },

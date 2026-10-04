@@ -18,6 +18,8 @@
   --p0: var(--magenta);
   --p1: var(--sky);
   --p2: var(--amber);
+  --p3: #8a6cff;
+  --p4: #2fbf8f;
 
   --font-display: 'Luckiest Guy', 'Arial Black', system-ui, sans-serif;
   --font-body: 'Poppins', system-ui, -apple-system, sans-serif;

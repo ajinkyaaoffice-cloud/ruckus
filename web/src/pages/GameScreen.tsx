@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState, type ComponentType } from 'react'
 import gsap from 'gsap'
+import { intro } from '../lib/ui'
 import { BrushMarks, TopBar } from '../components/Chrome'
 import { EmoteBar, EmoteLayer, PlayerChip } from '../components/Players'
 import Results from '../components/Results'
@@ -39,7 +40,7 @@ export default function GameScreen() {
 
   useLayoutEffect(() => {
     const ctx = gsap.context(() => {
-      gsap.from('.gs-top-players > *', { y: -100, rotate: (i) => (i % 2 ? 15 : -15), duration: 0.6, ease: 'back.out(2)', stagger: 0.08, delay: 0.4 })
+      gsap.fromTo('.gs-top-players > *', ...intro({ y: -100, rotate: (i: number) => (i % 2 ? 15 : -15), duration: 0.6, ease: 'back.out(2)', stagger: 0.08, delay: 0.4 }))
     }, root)
     return () => ctx.revert()
   }, [])
@@ -82,7 +83,7 @@ export default function GameScreen() {
         ) : null}
       </main>
 
-      <div className="gs-dock"><EmoteBar /></div>
+      <div className="gs-dock"><EmoteBar compact /></div>
 
       <Intro key={state?.instance ?? 'none'} />
 
@@ -102,7 +103,7 @@ function Intro() {
         .to('.w1', { scale: 0, rotate: 20, duration: 0.25, ease: 'back.in(2)' }, '+=0.35')
         .fromTo('.w2', { scale: 0, rotate: 30 }, { scale: 1.1, rotate: 4, duration: 0.4, ease: 'back.out(3)', onStart: () => sfx.slam() })
         .to('.w2', { scale: 4, opacity: 0, duration: 0.35, ease: 'power2.in' }, '+=0.25')
-      gsap.from(document.querySelector('.gs-stage'), { scale: 0.85, rotate: -2, duration: 0.9, ease: 'elastic.out(1, 0.6)', delay: 0.6 })
+      gsap.fromTo(document.querySelector('.gs-stage'), ...intro({ scale: 0.85, rotate: -2, duration: 0.9, ease: 'elastic.out(1, 0.6)', delay: 0.6 }))
     }, ref)
     return () => ctx.revert()
   }, [])

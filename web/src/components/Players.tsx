@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import gsap from 'gsap'
 import Avatar from './Avatar'
 import Glyph from './Glyph'
@@ -15,7 +15,7 @@ export function PlayerChip({ p, index, host, active, expression, compact, extra 
   const me = useNet((s) => s.profile.pid) === p.id
   return (
     <div className={`pchip ${active ? 'active' : ''} ${compact ? 'compact' : ''} ${p.connected ? '' : 'away'}`} data-player={p.id}
-      style={{ ['--pc' as string]: PLAYER_HEX[index % 3] }}>
+      style={{ ['--pc' as string]: PLAYER_HEX[index % PLAYER_HEX.length] }}>
       <div className="pchip-face">
         <Avatar config={p.avatar} size="100%" track={compact ? 'idle' : 'mouse'} expression={expression ?? (active ? 'focus' : 'idle')} badge />
         {host && <span className="pchip-crown" title="Host"><Glyph name="star" color="#ffb424" size={26} /></span>}
@@ -61,12 +61,24 @@ export function EmoteLayer() {
   return <div ref={layer} className="emote-layer" aria-hidden />
 }
 
-export function EmoteBar() {
+export function EmoteBar({ compact = false }: { compact?: boolean }) {
+  const [open, setOpen] = useState(!compact)
+  const fire = (e: string) => {
+    emote(e)
+    if (compact) setOpen(false)
+  }
   return (
-    <div className="emote-bar">
-      {EMOJIS.map((e) => (
-        <button key={e} onClick={() => emote(e)} aria-label={`React ${e}`}>{e}</button>
-      ))}
+    <div className={`emote-bar ${compact ? 'compact' : ''} ${open ? 'open' : ''}`}>
+      {compact && (
+        <button className="emote-toggle" onClick={() => { sfx.click(); setOpen((o) => !o) }} aria-label="Reactions" data-cursor="REACT">
+          {open ? '✕' : '😄'}
+        </button>
+      )}
+      <div className="emote-list">
+        {EMOJIS.map((e, i) => (
+          <button key={e} onClick={() => fire(e)} aria-label={`React ${e}`} style={{ transitionDelay: open ? `${i * 25}ms` : '0ms' }}>{e}</button>
+        ))}
+      </div>
     </div>
   )
 }

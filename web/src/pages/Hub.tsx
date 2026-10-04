@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import gsap from 'gsap'
+import { intro } from '../lib/ui'
 import { BrushMarks, Logo, Split, TopBar } from '../components/Chrome'
 import GameArt from '../components/GameArt'
 import Glyph from '../components/Glyph'
@@ -8,7 +9,7 @@ import InviteModal, { InviteCard } from '../components/Invite'
 import { EmoteBar, EmoteLayer, PlayerChip } from '../components/Players'
 import { useTransition } from '../components/Transition'
 import { CATALOG, gameMeta, type GameMeta } from '../lib/catalog'
-import { leaveRoom, startGame, useNet } from '../lib/net'
+import { leaveRoom, MAX_PLAYERS, startGame, useNet } from '../lib/net'
 import { sfx } from '../lib/sound'
 import './Hub.css'
 
@@ -27,11 +28,11 @@ export default function Hub() {
   useLayoutEffect(() => {
     const ctx = gsap.context(() => {
       const tl = gsap.timeline({ delay: 0.2 })
-      tl.from('.hub-title .split-char', { yPercent: 140, rotate: () => gsap.utils.random(-30, 30), duration: 0.7, ease: 'back.out(2.2)', stagger: 0.025 })
-        .from('.hub-players > *', { y: -140, rotate: (i) => (i % 2 ? 20 : -20), duration: 0.8, ease: 'back.out(1.8)', stagger: 0.1 }, 0.1)
-        .from('.hub-card', { y: 200, rotate: () => gsap.utils.random(-25, 25), scale: 0.5, duration: 0.8, ease: 'back.out(1.6)', stagger: { each: 0.05, from: 'start' } }, 0.25)
-        .from('.hub-side > *', { x: 300, rotate: 10, duration: 0.8, ease: 'expo.out', stagger: 0.1 }, 0.4)
-        .from('.hub-dock > *', { y: 120, duration: 0.7, ease: 'back.out(2)', stagger: 0.08 }, 0.6)
+      tl.fromTo('.hub-title .split-char', ...intro({ yPercent: 140, rotate: () => gsap.utils.random(-30, 30), duration: 0.7, ease: 'back.out(2.2)', stagger: 0.025 }))
+        .fromTo('.hub-players > *', ...intro({ y: -140, rotate: (i: number) => (i % 2 ? 20 : -20), duration: 0.8, ease: 'back.out(1.8)', stagger: 0.1 }), 0.1)
+        .fromTo('.hub-card', { y: 200, rotate: () => gsap.utils.random(-25, 25), scale: 0.5 }, { y: 0, rotate: 0, scale: 1, clearProps: 'transform', duration: 0.8, ease: 'back.out(1.6)', stagger: { each: 0.05, from: 'start' } }, 0.25)
+        .fromTo('.hub-side > *', ...intro({ x: 300, rotate: 10, duration: 0.8, ease: 'expo.out', stagger: 0.1 }), 0.4)
+        .fromTo('.hub-dock > *', ...intro({ y: 120, duration: 0.7, ease: 'back.out(2)', stagger: 0.08 }), 0.6)
     }, root)
     return () => ctx.revert()
   }, [])
@@ -66,7 +67,7 @@ export default function Hub() {
     go('/play', { label: 'BYE!', reverse: true })
   }
 
-  const empty = Math.max(0, 3 - room.players.length)
+  const empty = Math.min(1, Math.max(0, MAX_PLAYERS - room.players.length))
 
   return (
     <div ref={root} className="hub">
@@ -186,9 +187,9 @@ function StartSheet({ g, readyCount, onClose }: { g: GameMeta; readyCount: numbe
     Object.fromEntries((g.options ?? []).map((o) => [o.key, o.choices[g.id === 'pong' ? 1 : 0].value])))
   useLayoutEffect(() => {
     const ctx = gsap.context(() => {
-      gsap.from('.ss-sheet', { scale: 0.4, rotate: -20, y: 160, duration: 0.7, ease: 'back.out(1.7)' })
-      gsap.from('.ss-art', { scale: 0, rotate: 90, duration: 0.8, ease: 'elastic.out(1, 0.5)', delay: 0.15 })
-      gsap.from('.ss-sheet h2 .split-char', { yPercent: 120, stagger: 0.03, duration: 0.5, ease: 'back.out(2)', delay: 0.2 })
+      gsap.fromTo('.ss-sheet', ...intro({ scale: 0.4, rotate: -20, y: 160, duration: 0.7, ease: 'back.out(1.7)' }))
+      gsap.fromTo('.ss-art', ...intro({ scale: 0, rotate: 90, duration: 0.8, ease: 'elastic.out(1, 0.5)', delay: 0.15 }))
+      gsap.fromTo('.ss-sheet h2 .split-char', ...intro({ yPercent: 120, stagger: 0.03, duration: 0.5, ease: 'back.out(2)', delay: 0.2 }))
     }, root)
     return () => ctx.revert()
   }, [])

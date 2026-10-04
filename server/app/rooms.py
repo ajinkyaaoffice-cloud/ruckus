@@ -16,7 +16,7 @@ from .store import Store
 
 log = logging.getLogger("ruckus.rooms")
 
-MAX_PLAYERS = 3
+MAX_PLAYERS = 5
 CODE_ALPHABET = "".join(c for c in string.ascii_uppercase if c not in "IOQ")
 RECONNECT_GRACE = 45.0
 

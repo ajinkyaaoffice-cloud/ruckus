@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef } from 'react'
 import gsap from 'gsap'
+import { intro } from '../lib/ui'
 import Avatar from './Avatar'
 import Glyph, { ALL_GLYPHS } from './Glyph'
 import { Split } from './Chrome'
@@ -21,11 +22,11 @@ export default function Results({ state, room, me }: { state: GameState; room: R
   useLayoutEffect(() => {
     const ctx = gsap.context(() => {
       const tl = gsap.timeline({ delay: 0.5 })
-      tl.from('.rs-back', { clipPath: 'circle(0% at 50% 50%)', duration: 0.8, ease: 'expo.inOut' })
-        .from('.rs-title .split-char', { yPercent: -200, rotate: () => gsap.utils.random(-60, 60), scale: 2, duration: 0.6, ease: 'back.out(2.4)', stagger: 0.035 }, 0.4)
-        .from('.rs-step', { scaleY: 0, transformOrigin: '50% 100%', duration: 0.6, ease: 'back.out(1.8)', stagger: 0.12 }, 0.6)
-        .from('.rs-face', { y: -400, rotate: () => gsap.utils.random(-90, 90), duration: 0.9, ease: 'bounce.out', stagger: 0.12 }, 0.7)
-        .from('.rs-sum, .rs-detail, .rs-actions > *', { y: 60, scale: 0.6, duration: 0.5, ease: 'back.out(2)', stagger: 0.06 }, 1.1)
+      tl.fromTo('.rs-back', ...intro({ clipPath: 'circle(0% at 50% 50%)', duration: 0.8, ease: 'expo.inOut' }))
+        .fromTo('.rs-title .split-char', ...intro({ yPercent: -200, rotate: () => gsap.utils.random(-60, 60), scale: 2, duration: 0.6, ease: 'back.out(2.4)', stagger: 0.035 }), 0.4)
+        .fromTo('.rs-step', ...intro({ scaleY: 0, transformOrigin: '50% 100%', duration: 0.6, ease: 'back.out(1.8)', stagger: 0.12 }), 0.6)
+        .fromTo('.rs-face', ...intro({ y: -400, rotate: () => gsap.utils.random(-90, 90), duration: 0.9, ease: 'bounce.out', stagger: 0.12 }), 0.7)
+        .fromTo('.rs-sum, .rs-detail, .rs-actions > *', ...intro({ y: 60, scale: 0.6, duration: 0.5, ease: 'back.out(2)', stagger: 0.06 }), 1.1)
       const bits = gsap.utils.toArray<HTMLElement>('.rs-confetti > *')
       gsap.fromTo(bits, { x: 0, y: 0, scale: 0, rotate: 0 }, {
         x: () => gsap.utils.random(-window.innerWidth / 2, window.innerWidth / 2),
@@ -64,7 +65,7 @@ export default function Results({ state, room, me }: { state: GameState; room: R
                     return (
                       <div key={pid} className="rs-face">
                         <Avatar config={p?.avatar} size="100%" track="mouse" badge expression={place === 0 && !tie ? 'happy' : tie ? 'wink' : 'sad'} />
-                        <span className="rs-name" style={{ background: PLAYER_HEX[Math.max(0, idx) % 3] }}>{p?.name ?? 'Left'}</span>
+                        <span className="rs-name" style={{ background: PLAYER_HEX[Math.max(0, idx) % PLAYER_HEX.length] }}>{p?.name ?? 'Left'}</span>
                         {res.details[pid] && <span className="rs-detail">{res.details[pid]}</span>}
                       </div>
                     )

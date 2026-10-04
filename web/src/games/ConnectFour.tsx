@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import gsap from 'gsap'
+import { intro } from '../lib/ui'
 import type { GameProps } from '../pages/GameScreen'
 import { act, onGameEvents, playerHex } from '../lib/net'
 import { sfx } from '../lib/sound'
@@ -19,8 +20,8 @@ export default function ConnectFour({ state, me, room, players, spectator }: Gam
 
   useLayoutEffect(() => {
     const ctx = gsap.context(() => {
-      gsap.from('.c4-frame', { y: 300, rotate: 6, duration: 0.9, ease: 'back.out(1.6)', delay: 0.8 })
-      gsap.from('.c4-leg', { scaleY: 0, transformOrigin: '50% 0%', duration: 0.5, ease: 'back.out(3)', delay: 1.4, stagger: 0.1 })
+      gsap.fromTo('.c4-frame', ...intro({ y: 300, rotate: 6, duration: 0.9, ease: 'back.out(1.6)', delay: 0.8 }))
+      gsap.fromTo('.c4-leg', ...intro({ scaleY: 0, transformOrigin: '50% 0%', duration: 0.5, ease: 'back.out(3)', delay: 1.4, stagger: 0.1 }))
     }, root)
     return () => ctx.revert()
   }, [])

@@ -295,7 +295,7 @@ export default function Landing() {
         <h1 className="hero-title display" aria-label="Play loud with tiny crowds">
           <span className="ht-row r1">
             <span className="ht-line"><Split text="Play" /></span>
-            <span className="ht-tag sticker">2–3 players</span>
+            <span className="ht-tag sticker">2–5 players</span>
           </span>
           <span className="ht-row r2">
             <span className="ht-face"><span className="ht-face-in">
@@ -474,7 +474,7 @@ export default function Landing() {
         <button className="foot-cta display" onClick={play} data-magnetic data-cursor="LET'S GO">
           <span>Go!</span>
           <svg viewBox="0 0 200 200" className="foot-ring"><defs><path id="ring" d="M100 100 m-80 0 a80 80 0 1 1 160 0 a80 80 0 1 1 -160 0" /></defs>
-            <text><textPath href="#ring">open a room ✦ grab two friends ✦ make some noise ✦ </textPath></text></svg>
+            <text><textPath href="#ring">open a room ✦ grab your friends ✦ make some noise ✦ </textPath></text></svg>
         </button>
         <div className="foot-meta">
           <span>Ruckus · realtime mini-games</span>

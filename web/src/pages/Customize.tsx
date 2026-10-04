@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import gsap from 'gsap'
+import { intro } from '../lib/ui'
 import Avatar from '../components/Avatar'
 import Glyph from '../components/Glyph'
 import { BrushMarks, Split, TopBar } from '../components/Chrome'
@@ -35,10 +36,10 @@ export default function Customize() {
   useLayoutEffect(() => {
     const ctx = gsap.context(() => {
       const tl = gsap.timeline({ delay: 0.2 })
-      tl.from('.cz-avatar', { scale: 0, rotate: -120, duration: 1.1, ease: 'elastic.out(1, 0.55)' })
-        .from('.cz-bubble', { scale: 0, rotate: () => gsap.utils.random(-50, 50), duration: 0.6, ease: 'back.out(2.6)', stagger: { each: 0.05, from: 'center' } }, 0.35)
-        .from('.cz-rand, .cz-go', { y: 140, rotate: (i) => (i ? 20 : -20), duration: 0.8, ease: 'back.out(2)' }, 0.5)
-        .from('.cz-name', { scaleX: 0, duration: 0.7, ease: 'expo.out' }, 0.6)
+      tl.fromTo('.cz-avatar', { scale: 0, rotate: -120 }, { scale: 1, rotate: 0, duration: 1.1, ease: 'elastic.out(1, 0.55)' })
+        .fromTo('.cz-bubble', { scale: 0, rotate: () => gsap.utils.random(-50, 50) }, { scale: 1, rotate: 0, clearProps: 'transform', duration: 0.6, ease: 'back.out(2.6)', stagger: { each: 0.05, from: 'center' } }, 0.35)
+        .fromTo('.cz-rand, .cz-go', { y: 140, rotate: (i: number) => (i ? 20 : -20) }, { y: 0, rotate: 0, clearProps: 'transform', duration: 0.8, ease: 'back.out(2)' }, 0.5)
+        .fromTo('.cz-name', { scaleX: 0 }, { scaleX: 1, clearProps: 'transform', duration: 0.7, ease: 'expo.out' }, 0.6)
     }, root)
     return () => ctx.revert()
   }, [])
@@ -63,9 +64,9 @@ export default function Customize() {
   useLayoutEffect(() => {
     if (!cat) return
     const ctx = gsap.context(() => {
-      gsap.from('.cz-opt', { scale: 0, y: 40, rotate: () => gsap.utils.random(-30, 30), duration: 0.5, ease: 'back.out(2.4)', stagger: 0.04 })
-      gsap.from('.cz-swatch', { scale: 0, duration: 0.45, ease: 'back.out(3)', stagger: 0.03, delay: 0.1 })
-      gsap.from('.cz-rail', { clipPath: 'inset(0 50% 0 50% round 999px)', duration: 0.6, ease: 'expo.out' })
+      gsap.fromTo('.cz-opt', { scale: 0, y: 40, rotate: () => gsap.utils.random(-30, 30) }, { scale: 1, y: 0, rotate: 0, clearProps: 'transform', duration: 0.5, ease: 'back.out(2.4)', stagger: 0.04 })
+      gsap.fromTo('.cz-swatch', { scale: 0 }, { scale: 1, clearProps: 'transform', duration: 0.45, ease: 'back.out(3)', stagger: 0.03, delay: 0.1 })
+      gsap.fromTo('.cz-rail', ...intro({ clipPath: 'inset(0 50% 0 50% round 999px)', duration: 0.6, ease: 'expo.out' }))
     }, root)
     return () => ctx.revert()
   }, [cat])
@@ -123,7 +124,7 @@ export default function Customize() {
         right={<span className="cz-code display">Room {code}</span>}
       />
 
-      <h1 ref={title} className="cz-title display" key={cat?.key ?? 'avatar'}>
+      <h1 ref={title} className="cz-title display" key={`title-${cat?.key ?? 'avatar'}`}>
         <Split text={cat ? cat.label : 'Avatar'} />
       </h1>
 

@@ -26,3 +26,11 @@
 .emote-bar button:hover { transform: scale(1.3) rotate(-12deg); background: var(--pink-2); }
 .emote-bar button:active { transform: scale(0.9); }
 @keyframes spin { to { transform: rotate(360deg); } }
+.emote-list { display: flex; gap: 4px; }
+.emote-bar.compact { padding: 5px; flex-direction: row-reverse; align-items: center; }
+.emote-bar.compact .emote-list { max-width: 0; overflow: hidden; transition: max-width 0.45s var(--ease-out); }
+.emote-bar.compact.open .emote-list { max-width: 420px; }
+.emote-bar.compact .emote-list button { scale: 0; transition: scale 0.3s var(--ease-back), transform 0.3s var(--ease-back), background 0.2s; }
+.emote-bar.compact.open .emote-list button { scale: 1; }
+.emote-bar .emote-toggle { background: var(--magenta); color: #fff; font-size: 20px; flex: none; }
+.emote-bar .emote-toggle:hover { background: var(--magenta-2); }

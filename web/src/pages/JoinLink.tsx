@@ -18,7 +18,7 @@ export default function JoinLink() {
       const info = await checkRoom(code)
       if (cancelled) return
       if (!info.exists || info.full) {
-        useNet.setState({ error: { msg: info.exists ? 'That room is full (3 max)' : `No room called ${code}`, key: Date.now() } })
+        useNet.setState({ error: { msg: info.exists ? 'That room is full (5 max)' : `No room called ${code}`, key: Date.now() } })
         go('/play', { label: 'OOPS', replace: true })
         return
       }

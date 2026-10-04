@@ -339,7 +339,8 @@ def test_echo_knockout():
 
 def test_registry_player_counts():
     assert REGISTRY["tictactoe"].max_players == 2
-    assert REGISTRY["uno"].max_players == 3
+    assert REGISTRY["uno"].max_players == 5
+    assert REGISTRY["uno"].min_players == 2
     with pytest.raises(GameError):
         TicTacToe(P3)
 
@@ -362,3 +363,37 @@ def test_pong_tracking_paddles_rally_and_misses():
             break
     assert hits > 0
     assert g.over and g.results.winners == ["alice"] and g.score["alice"] == 7
+
+
+@pytest.mark.parametrize("n,modern,seed", [(4, False, 1), (5, False, 2), (5, True, 3), (5, True, 4)])
+def test_uno_random_games_with_many_players(n, modern, seed):
+    from app.games.uno import Uno
+    rng = random.Random(seed)
+    players = [f"p{i}" for i in range(n)]
+    g = Uno(players, {"modern": modern}, random.Random(seed))
+    total = len(g.draw_pile) + len(g.discard) + sum(len(h) for h in g.hands.values())
+    for _ in range(5000):
+        if g.over:
+            break
+        pid = g.players[g.turn]
+        v = g.view(pid)
+        others = [p for p in g.players if p != pid]
+        if len(v["hand"]) <= 2 and rng.random() < 0.7:
+            g.handle(pid, {"type": "uno"})
+        if v["phase"] == "start_color":
+            g.handle(pid, {"type": "start_color", "color": rng.choice(["red", "blue"]), "target": rng.choice(others)})
+        elif v["phase"] == "challenge":
+            g.handle(pid, {"type": rng.choice(["accept", "challenge"])})
+        elif v["playable"]:
+            g.handle(pid, {"type": "play", "card": rng.choice(v["playable"]), "color": "green", "target": rng.choice(others)})
+        elif v["phase"] == "drawn":
+            g.handle(pid, {"type": "pass"})
+        else:
+            g.handle(pid, {"type": "draw"})
+        for p in list(g.vulnerable):
+            if rng.random() < 0.3:
+                g.handle(rng.choice([q for q in g.players if q != p]), {"type": "catch", "target": p})
+        # cards are conserved
+        assert len(g.draw_pile) + len(g.discard) + sum(len(h) for h in g.hands.values()) == total
+    assert g.over
+    assert g.results.ranking[0] and len(sum(g.results.ranking, [])) == n

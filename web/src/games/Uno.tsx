@@ -21,18 +21,23 @@ const KIND_NAME: Record<Kind, string> = { number: '', skip: 'Skip', reverse: 'Re
 function Glyph({ card }: { card: Card }): ReactElement {
   switch (card.kind) {
     case 'number':
-      return <text x="0" y="0" dy="0.36em" textAnchor="middle" className="uc-num" style={{ fontSize: 44 }}>{card.value}</text>
-    case 'skip':
-      return <g fill="none" stroke="currentColor" strokeWidth="7"><circle r="17" /><path d="M-12 12 12 -12" /></g>
-    case 'reverse':
       return (
-        <g fill="currentColor">
-          <path d="M-14 6 L2 -14 L8 -9 L-2 4 Z" transform="translate(-2 -2)" />
-          <path d="M2 -14 L10 -18 L10 -6 Z" transform="translate(-2 -2)" />
-          <path d="M14 -6 L-2 14 L-8 9 L2 -4 Z" transform="translate(2 2)" />
-          <path d="M-2 14 L-10 18 L-10 6 Z" transform="translate(2 2)" />
+        <g>
+          <text x="0" y="0" dy="0.36em" textAnchor="middle" className="uc-num" style={{ fontSize: 44 }}>{card.value}</text>
+          {(card.value === 6 || card.value === 9) && <rect x="-10" y="19" width="20" height="5" rx="2.5" fill="currentColor" stroke="#1b1f3f" strokeWidth="2" />}
         </g>
       )
+    case 'skip':
+      return <g fill="none" stroke="currentColor" strokeWidth="7"><circle r="17" /><path d="M-12 12 12 -12" /></g>
+    case 'reverse': {
+      const arrow = 'M-15 9 L1 -7 L-4 -12 L13 -15 L10 2 L5 -3 L-11 13 Z'
+      return (
+        <g fill="currentColor" stroke="#1b1f3f" strokeWidth="2" strokeLinejoin="round">
+          <path d={arrow} transform="translate(-3 -3)" />
+          <path d={arrow} transform="translate(3 3) rotate(180)" />
+        </g>
+      )
+    }
     case 'draw2':
       return <text dy="0.36em" textAnchor="middle" className="uc-num" style={{ fontSize: 34 }}>+2</text>
     case 'wild4':
@@ -343,7 +348,7 @@ export default function Uno({ state, me, room, players, spectator }: GameProps) 
     <div ref={root} className={`uno ${myTurn ? 'my-turn' : ''}`} style={{ ['--active' as string]: HEX[state.color] ?? '#1d3a6e' }}>
       <TurnBanner state={state} me={me} players={players} spectator={spectator} text={banner} />
 
-      <div className="uno-opps">
+      <div className={`uno-opps ${others.length >= 3 ? 'many' : ''}`}>
         {others.map((pid) => {
           const p = room.players.find((x) => x.id === pid)
           const n = counts[pid] ?? 0
@@ -351,7 +356,7 @@ export default function Uno({ state, me, room, players, spectator }: GameProps) 
           return (
             <div key={pid} data-pid={pid} className={`uno-opp ${turn ? 'turn' : ''}`} style={{ ['--pc' as string]: playerHex(room, pid) }}>
               <div className="uno-opp-who">
-                <Avatar config={p?.avatar} size={56} badge track="none" expression={n <= 1 ? 'happy' : turn ? 'focus' : 'idle'} />
+                <Avatar config={p?.avatar} size={others.length >= 3 ? 40 : 56} badge track="none" expression={n <= 1 ? 'happy' : turn ? 'focus' : 'idle'} />
                 <div>
                   <b>{p?.name ?? '…'}</b>
                   <span>{n} card{n === 1 ? '' : 's'}</span>
@@ -359,8 +364,8 @@ export default function Uno({ state, me, room, players, spectator }: GameProps) 
                 {saidUno.includes(pid) && n <= 2 && <em className="uno-said">UNO!</em>}
               </div>
               <div className="uno-opp-fan">
-                {Array.from({ length: Math.min(n, 14) }, (_, i) => (
-                  <UnoBack key={i} style={{ transform: `rotate(${(i - (Math.min(n, 14) - 1) / 2) * 5}deg) translateY(${Math.abs(i - (Math.min(n, 14) - 1) / 2) * 1.2}px)`, marginLeft: i ? -34 : 0 }} />
+                {Array.from({ length: Math.min(n, others.length >= 3 ? 9 : 14) }, (_, i) => i).map((i, _, all) => (
+                  <UnoBack key={i} style={{ transform: `rotate(${(i - (all.length - 1) / 2) * 4}deg)`, marginLeft: i ? (others.length >= 3 ? -22 : -28) : 0 }} />
                 ))}
               </div>
               {state.over && state.hands?.[pid] && (
@@ -377,14 +382,11 @@ export default function Uno({ state, me, room, players, spectator }: GameProps) 
       </div>
 
       <div className="uno-table">
-        <div className={`uno-ring ${dirSpin}`}>
-          <svg viewBox="-100 -100 200 200">
-            <circle r="92" fill="none" stroke="currentColor" strokeWidth="6" strokeDasharray="22 14" />
-            {[0, 120, 240].map((a) => (
-              <path key={a} transform={`rotate(${a}) translate(0 -92) ${state.direction === 1 ? '' : 'scale(-1 1)'}`} d="M-8 -10 L10 0 L-8 10 Z" fill="currentColor" />
-            ))}
-          </svg>
-        </div>
+        <svg className={`uno-ring ${dirSpin}`} viewBox="-220 -110 440 220" preserveAspectRatio="none">
+          <ellipse rx="208" ry="98" fill="none" stroke="currentColor" strokeWidth="5" strokeDasharray="20 14" strokeLinecap="round" />
+          <path transform={`translate(208 0) ${state.direction === 1 ? '' : 'scale(1 -1)'}`} d="M-11 -4 L0 10 L11 -4 Z" fill="currentColor" />
+          <path transform={`translate(-208 0) ${state.direction === 1 ? 'scale(1 -1)' : ''}`} d="M-11 -4 L0 10 L11 -4 Z" fill="currentColor" />
+        </svg>
         <button className={`uno-draw ${canDraw ? 'live' : ''}`} data-cursor={canDraw ? 'Draw' : undefined} disabled={!canDraw}
           onClick={() => { sfx.card(); act({ type: 'draw' }) }}>
           {[3, 2, 1, 0].map((i) => <UnoBack key={i} style={{ transform: `translate(${i * 2}px, ${i * -2}px)` }} />)}
@@ -409,7 +411,7 @@ export default function Uno({ state, me, room, players, spectator }: GameProps) 
           <button className={`uno-btn uno-call display ${canUno ? 'hot' : ''}`} disabled={!canUno} data-cursor="UNO!"
             onClick={() => act({ type: 'uno' })}>UNO!</button>
           {canPass && <button className="uno-btn display" onClick={() => { sfx.click(); act({ type: 'pass' }) }}>Keep it · pass</button>}
-          {top && <span className="uno-top-name">on top: <b style={{ color: HEX[state.color] ?? '#1d3a6e' }}>{top.kind === 'number' ? `${top.color} ${top.value}` : `${KIND_NAME[top.kind]}${top.color === 'wild' ? '' : ` (${top.color})`}`}</b></span>}
+          {top && <span className="uno-top-name">on top: <b style={{ background: HEX[state.color] ?? '#1d3a6e' }}>{top.kind === 'number' ? `${top.color} ${top.value}` : `${KIND_NAME[top.kind]}${top.color === 'wild' ? '' : ` (${top.color})`}`}</b></span>}
         </div>
       )}
 

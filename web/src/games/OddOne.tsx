@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import gsap from 'gsap'
+import { intro } from '../lib/ui'
 import type { GameProps } from '../pages/GameScreen'
 import { act, onGameEvents, playerHex } from '../lib/net'
 import { sfx } from '../lib/sound'
@@ -59,7 +60,7 @@ export default function OddOne({ state, me, room, spectator }: GameProps) {
   // grid pops in each round
   useLayoutEffect(() => {
     if (phase !== 'play') return
-    gsap.from(root.current!.querySelectorAll('.oo-cell'), { scale: 0, rotate: 90, duration: 0.45, ease: 'back.out(2)', stagger: { each: 0.012, from: 'center', grid: [state.size, state.size] } })
+    gsap.fromTo(root.current!.querySelectorAll('.oo-cell'), ...intro({ scale: 0, rotate: 90, duration: 0.45, ease: 'back.out(2)', stagger: { each: 0.012, from: 'center', grid: [state.size, state.size] } }))
     const bar = root.current!.querySelector('.oo-timer i')
     if (bar && state.timeLeft) gsap.fromTo(bar, { scaleX: state.timeLeft / 15 }, { scaleX: 0, duration: state.timeLeft, ease: 'none' })
   }, [phase, state.round]) // eslint-disable-line react-hooks/exhaustive-deps

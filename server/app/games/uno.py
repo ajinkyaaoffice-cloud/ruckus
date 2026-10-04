@@ -58,7 +58,7 @@ class Uno(Game):
     id = "uno"
     name = "UNO"
     min_players = 2
-    max_players = 3
+    max_players = 5
 
     def __init__(self, players, options=None, rng=None):
         super().__init__(players, options, rng)

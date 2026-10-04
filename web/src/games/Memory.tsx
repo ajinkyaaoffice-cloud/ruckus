@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, type ReactElement } from 'react'
 import gsap from 'gsap'
+import { intro } from '../lib/ui'
 import type { GameProps } from '../pages/GameScreen'
 import { act, onGameEvents, playerHex } from '../lib/net'
 import { sfx } from '../lib/sound'
@@ -38,10 +39,10 @@ export default function Memory({ state, me, room, players, spectator }: GameProp
 
   useLayoutEffect(() => {
     const ctx = gsap.context(() => {
-      gsap.from('.mem-card', {
+      gsap.fromTo('.mem-card', ...intro({
         y: -600, rotate: () => gsap.utils.random(-90, 90), scale: 0.4, duration: 0.8, ease: 'back.out(1.3)',
         stagger: { each: 0.025, from: 'random' }, delay: 0.9,
-      })
+      }))
     }, root)
     return () => ctx.revert()
   }, [])

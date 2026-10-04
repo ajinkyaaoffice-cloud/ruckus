@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import gsap from 'gsap'
+import { intro } from '../lib/ui'
 import { TopBar, BrushMarks, Split } from '../components/Chrome'
 import Avatar from '../components/Avatar'
 import Glyph from '../components/Glyph'
@@ -24,13 +25,13 @@ export default function LobbyZone() {
   useLayoutEffect(() => {
     const ctx = gsap.context(() => {
       const tl = gsap.timeline({ delay: 0.15 })
-      tl.from('.lz-half.host', { xPercent: -110, rotate: -8, duration: 1, ease: 'expo.out' })
-        .from('.lz-half.join', { xPercent: 110, rotate: 8, duration: 1, ease: 'expo.out' }, 0.06)
-        .from('.lz-title .split-char', { yPercent: 130, rotate: 25, duration: 0.7, ease: 'back.out(2.2)', stagger: 0.03 }, 0.35)
-        .from('.lz-me', { scale: 0, rotate: 200, duration: 1, ease: 'elastic.out(1, 0.5)' }, 0.5)
-        .from('.lz-box', { y: 80, scale: 0.3, rotate: () => gsap.utils.random(-40, 40), duration: 0.6, ease: 'back.out(2.5)', stagger: 0.06 }, 0.6)
-        .from('.lz-act', { scale: 0, duration: 0.6, ease: 'back.out(2.5)', stagger: 0.08 }, 0.75)
-        .from('.lz-glyph', { scale: 0, rotate: -180, duration: 0.8, ease: 'back.out(2)', stagger: 0.05 }, 0.5)
+      tl.fromTo('.lz-half.host', ...intro({ xPercent: -110, rotate: -8, duration: 1, ease: 'expo.out' }))
+        .fromTo('.lz-half.join', ...intro({ xPercent: 110, rotate: 8, duration: 1, ease: 'expo.out' }), 0.06)
+        .fromTo('.lz-title .split-char', ...intro({ yPercent: 130, rotate: 25, duration: 0.7, ease: 'back.out(2.2)', stagger: 0.03 }), 0.35)
+        .fromTo('.lz-me', { scale: 0, rotate: 200 }, { scale: 1, rotate: 0, duration: 1, ease: 'elastic.out(1, 0.5)' }, 0.5)
+        .fromTo('.lz-box', { y: 80, scale: 0.3, rotate: () => gsap.utils.random(-40, 40) }, { y: 0, scale: 1, rotate: 0, duration: 0.6, ease: 'back.out(2.5)', stagger: 0.06, clearProps: 'transform' }, 0.6)
+        .fromTo('.lz-act', { scale: 0 }, { scale: 1, duration: 0.6, ease: 'back.out(2.5)', stagger: 0.08, clearProps: 'transform' }, 0.75)
+        .fromTo('.lz-glyph', ...intro({ scale: 0, rotate: -180, duration: 0.8, ease: 'back.out(2)', stagger: 0.05 }), 0.5)
       gsap.to('.lz-glyph', { y: '+=16', rotate: '+=12', duration: 2.4, yoyo: true, repeat: -1, ease: 'sine.inOut', stagger: 0.3 })
     }, root)
     return () => ctx.revert()
@@ -56,7 +57,7 @@ export default function LobbyZone() {
     sfx.click()
     const info = await checkRoom(c)
     if (!info.exists || info.full) {
-      useNet.setState({ error: { msg: info.exists ? 'That room is full (3 max)' : `No room called ${c}`, key: Date.now() } })
+      useNet.setState({ error: { msg: info.exists ? 'That room is full (5 max)' : `No room called ${c}`, key: Date.now() } })
       gsap.fromTo('.lz-code', { x: -14 }, { x: 0, duration: 0.5, ease: 'elastic.out(1, 0.25)' })
       setBusy(false)
       return
@@ -107,7 +108,7 @@ export default function LobbyZone() {
         <div className="lz-inner">
           <span className="sticker">New party</span>
           <h1 className="lz-title display"><Split text="Host" /></h1>
-          <p>Open a fresh room and invite up to two friends with a code or QR.</p>
+          <p>Open a fresh room and invite up to four friends with a code or QR.</p>
           <button className="bubble-btn big lz-act" onClick={host} disabled={busy} data-cursor="OPEN">
             <Glyph name="plus" color="#e64fe0" size={22} /> Open a room
           </button>

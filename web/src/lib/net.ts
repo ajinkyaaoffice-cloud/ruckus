@@ -153,7 +153,17 @@ export function send(msg: unknown): void {
 
 function awaitJoin(msg: unknown): Promise<string> {
   return new Promise((resolve, reject) => {
-    joinedResolvers.push((code, err) => (code ? resolve(code) : reject(new Error(err || 'Could not join'))))
+    const done = (code: string | null, err?: string) => {
+      clearTimeout(timer)
+      joinedResolvers = joinedResolvers.filter((r) => r !== done)
+      if (code) resolve(code)
+      else reject(new Error(err || 'Could not join'))
+    }
+    const timer = window.setTimeout(() => {
+      done(null, 'The server took too long — try again')
+      useNet.setState({ error: { msg: 'The server took too long — try again', key: Date.now() } })
+    }, 8000)
+    joinedResolvers.push(done)
     send(msg)
   })
 }
@@ -184,10 +194,11 @@ export async function checkRoom(code: string): Promise<{ exists: boolean; full?:
 /** Index of a player in the room, used to pick their signature colour. */
 export function playerColor(room: Room | null, pid: string): string {
   const i = room ? room.players.findIndex((p) => p.id === pid) : 0
-  return ['var(--p0)', 'var(--p1)', 'var(--p2)'][Math.max(0, i) % 3]
+  return ['var(--p0)', 'var(--p1)', 'var(--p2)', 'var(--p3)', 'var(--p4)'][Math.max(0, i) % 5]
 }
-export const PLAYER_HEX = ['#e64fe0', '#45b8ff', '#ffb424']
+export const PLAYER_HEX = ['#e64fe0', '#45b8ff', '#ffb424', '#8a6cff', '#2fbf8f']
+export const MAX_PLAYERS = 5
 export function playerHex(room: Room | null, pid: string): string {
   const i = room ? room.players.findIndex((p) => p.id === pid) : 0
-  return PLAYER_HEX[Math.max(0, i) % 3]
+  return PLAYER_HEX[Math.max(0, i) % PLAYER_HEX.length]
 }
