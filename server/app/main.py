@@ -226,11 +226,21 @@ async def ws_endpoint(ws: WebSocket) -> None:
 # Serve the built frontend (web/dist) when present, with SPA fallback.
 DIST = Path(__file__).resolve().parents[2] / "web" / "dist"
 if DIST.exists():
-    app.mount("/assets", StaticFiles(directory=DIST / "assets"), name="assets")
+    class HashedAssets(StaticFiles):
+        """Built assets have content hashes in their names, so browsers can keep them forever."""
+
+        async def get_response(self, path, scope):  # type: ignore[override]
+            res = await super().get_response(path, scope)
+            if res.status_code == 200:
+                res.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+            return res
+
+    app.mount("/assets", HashedAssets(directory=DIST / "assets"), name="assets")
 
     @app.get("/{path:path}")
     async def spa(path: str) -> FileResponse:
         f = DIST / path
         if path and f.is_file() and DIST in f.resolve().parents:
             return FileResponse(f)
-        return FileResponse(DIST / "index.html")
+        # never cache the shell, so a new deploy reaches everyone on their next load
+        return FileResponse(DIST / "index.html", headers={"Cache-Control": "no-cache"})

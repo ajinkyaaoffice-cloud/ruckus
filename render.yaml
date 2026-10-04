@@ -1,0 +1,17 @@
+# Render blueprint: New > Blueprint, point it at this repo, then fill in the secrets it asks for.
+services:
+  - type: web
+    name: ruckus
+    runtime: docker
+    plan: starter # free works too, but it sleeps when idle and drops open rooms
+    healthCheckPath: /api/health
+    autoDeploy: true
+    # rooms are held in memory: never scale past one instance
+    numInstances: 1
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: PUBLIC_URL
+        sync: false
