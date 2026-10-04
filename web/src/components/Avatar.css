@@ -1,8 +1,8 @@
 .avatar { overflow: visible; }
-.avatar .av-body { transform-origin: 100px 190px; animation: av-bob 3.2s ease-in-out infinite; }
-.avatar .av-eyes { transform-origin: 100px 107px; transform-box: view-box; transition: transform 0.35s var(--ease-back); }
-.avatar .blink { transform-origin: 100px 107px; transform-box: view-box; animation: av-blink 5.2s infinite; }
-.avatar .av-halo { animation: av-halo 2.4s ease-in-out infinite; transform-box: view-box; transform-origin: 100px 10px; }
+.avatar .av-body { transform-origin: 100px 230px; animation: av-bob 3.2s ease-in-out infinite; }
+.avatar .av-eyes { transform-origin: 100px 116px; transform-box: view-box; transition: transform 0.35s var(--ease-back); }
+.avatar .blink { transform-origin: 100px 116px; transform-box: view-box; animation: av-blink 5.2s infinite; }
+.avatar .av-halo { animation: av-halo 2.4s ease-in-out infinite; transform-box: view-box; transform-origin: 100px 14px; }
 .avatar.ex-happy .av-body { animation: av-hop 0.6s var(--ease-out) infinite alternate; }
 .avatar.ex-sad .av-body { animation: av-sag 2.6s ease-in-out infinite; }
 .avatar.ex-shock .av-body { animation: av-shake 0.25s linear infinite; }

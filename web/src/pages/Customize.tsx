@@ -12,7 +12,7 @@ import './Customize.css'
 
 const SPOTS: Record<string, [number, number]> = {
   hat: [30, 7], hair: [70, 8], eyes: [12, 27], extra: [88, 28], detail: [6, 50],
-  nose: [94, 50], brows: [12, 72], face: [88, 72], beard: [28, 92], mouth: [72, 92],
+  nose: [94, 50], brows: [12, 72], face: [88, 72], beard: [24, 92], mouth: [76, 92], top: [50, 99],
 }
 
 export default function Customize() {

@@ -13,13 +13,16 @@ export type AvatarConfig = {
   extra: string
   detail: string
   bg: string
+  top: string
+  topColor: string
 }
 
 export type Expression = 'idle' | 'happy' | 'sad' | 'focus' | 'shock' | 'wink'
 
-export const SKINS = ['#ffe0c7', '#ffd0a6', '#f3b98c', '#e0a072', '#c58256', '#9b5f3b', '#6e4129', '#c9f0ff', '#d6ffa8']
+export const SKINS = ['#ffe4d3', '#ffd3b4', '#f6bf98', '#e4a57c', '#c98a62', '#a76a46', '#7c4a30', '#bfe9ff', '#d7f5a6', '#e7d6ff']
 export const HAIR_COLORS = ['#1e2346', '#2b1a12', '#6b3b1f', '#c8853c', '#f4d36b', '#f2f2f2', '#e64fe0', '#45b8ff', '#ff7a4d', '#7d6bff']
 export const HAT_COLORS = ['#e64fe0', '#1d3a6e', '#45b8ff', '#d9f66b', '#ff9a62', '#ffb424', '#ffffff', '#a596ff']
+export const TOP_COLORS = ['#e64fe0', '#45b8ff', '#ffb424', '#1d3a6e', '#d9f66b', '#ff9a62', '#a596ff', '#ffffff']
 export const BG_COLORS = ['#a7ecff', '#d9f66b', '#ffb424', '#ff9a62', '#a596ff', '#ffffff', '#e64fe0', '#1d3a6e']
 
 export type Category = {
@@ -40,13 +43,14 @@ export const CATEGORIES: Category[] = [
   { key: 'mouth', label: 'Mouth', options: ['smile', 'grin', 'smirk', 'tongue', 'o', 'flat'] },
   { key: 'face', label: 'Face', options: ['round', 'bean', 'square', 'pear', 'egg'], colorKey: 'skin', colors: SKINS },
   { key: 'beard', label: 'Beard', options: ['none', 'stubble', 'full', 'stache', 'goatee'] },
+  { key: 'top', label: 'Outfit', options: ['tee', 'hoodie', 'collar', 'stripes', 'jacket'], colorKey: 'topColor', colors: TOP_COLORS },
   { key: 'detail', label: 'Details', options: ['none', 'freckles', 'blush', 'mole', 'bandaid', 'sticker'], colorKey: 'bg', colors: BG_COLORS },
 ]
 
 export const DEFAULT_AVATAR: AvatarConfig = {
   face: 'round', skin: SKINS[1], hair: 'curly', hairColor: HAIR_COLORS[0], brows: 'thick', eyes: 'goggle',
   nose: 'button', mouth: 'smile', beard: 'none', hat: 'none', hatColor: HAT_COLORS[0], extra: 'none',
-  detail: 'blush', bg: BG_COLORS[0],
+  detail: 'blush', bg: BG_COLORS[0], top: 'hoodie', topColor: TOP_COLORS[0],
 }
 
 const pick = <T,>(a: T[]) => a[Math.floor(Math.random() * a.length)]
@@ -69,6 +73,8 @@ export function randomAvatar(): AvatarConfig {
     extra: weighted(CATEGORIES.find((c) => c.key === 'extra')!.options, 0.6),
     detail: weighted(CATEGORIES.find((c) => c.key === 'detail')!.options, 0.4),
     bg: pick(BG_COLORS),
+    top: pick(CATEGORIES.find((c) => c.key === 'top')!.options),
+    topColor: pick(TOP_COLORS),
   }
 }
 
@@ -85,7 +91,7 @@ export function normalizeAvatar(a: unknown): AvatarConfig {
 
 /** Lighten (amt > 0) or darken (amt < 0) a hex colour. */
 export function shade(hex: string, amt: number): string {
-  const n = parseInt(hex.replace('#', '').padEnd(6, '0').slice(0, 6), 16)
+  const n = parseInt(String(hex ?? '#888888').replace('#', '').padEnd(6, '0').slice(0, 6), 16)
   let r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255
   const t = amt < 0 ? 0 : 255
   const p = Math.abs(amt)
