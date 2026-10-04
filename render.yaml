@@ -3,7 +3,8 @@ services:
   - type: web
     name: ruckus
     runtime: docker
-    plan: starter # free works too, but it sleeps when idle and drops open rooms
+    plan: free # sleeps after 15 idle minutes (open rooms close); "starter" stays awake
+    region: singapore # closest to players in South/Southeast Asia
     healthCheckPath: /api/health
     autoDeploy: true
     # rooms are held in memory: never scale past one instance
