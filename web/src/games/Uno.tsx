@@ -344,30 +344,33 @@ export default function Uno({ state, me, room, players, spectator }: GameProps) 
     phase === 'start_color' ? (myTurn ? 'Pick the starting colour' : `${name(state.turn)} picks a colour`) :
     myTurn ? (phase === 'drawn' ? 'Play it or pass' : 'Your turn!') : `${name(state.turn)}'s turn`
 
-  return (
-    <div ref={root} className={`uno ${myTurn ? 'my-turn' : ''}`} style={{ ['--active' as string]: HEX[state.color] ?? '#1d3a6e' }}>
-      <TurnBanner state={state} me={me} players={players} spectator={spectator} text={banner} />
+  const meP = room.players.find((x) => x.id === me)
+  const topLabel = top ? (top.kind === 'number' ? `${top.color} ${top.value}` : `${KIND_NAME[top.kind]}${top.color === 'wild' ? '' : ` · ${top.color}`}`) : ''
 
-      <div className={`uno-opps ${others.length >= 3 ? 'many' : ''}`}>
-        {others.map((pid) => {
+  return (
+    <div ref={root} className={`uno ${myTurn ? 'my-turn' : ''} seats-${others.length}`} style={{ ['--active' as string]: HEX[state.color] ?? '#1d3a6e' }}>
+      {/* opponents sit around the far edge of the table, on an arc */}
+      <div className="uno-opps">
+        {others.map((pid, i) => {
           const p = room.players.find((x) => x.id === pid)
           const n = counts[pid] ?? 0
           const turn = state.turn === pid && !state.over
+          const mid = (others.length - 1) / 2
+          const off = mid ? (i - mid) / mid : 0
           return (
-            <div key={pid} data-pid={pid} className={`uno-opp ${turn ? 'turn' : ''}`} style={{ ['--pc' as string]: playerHex(room, pid) }}>
-              <div className="uno-opp-who">
-                <Avatar config={p?.avatar} size={others.length >= 3 ? 40 : 56} badge track="none" expression={n <= 1 ? 'happy' : turn ? 'focus' : 'idle'} />
-                <div>
-                  <b>{p?.name ?? '…'}</b>
-                  <span>{n} card{n === 1 ? '' : 's'}</span>
-                </div>
-                {saidUno.includes(pid) && n <= 2 && <em className="uno-said">UNO!</em>}
-              </div>
+            <div key={pid} data-pid={pid} data-player={pid} className={`uno-opp ${turn ? 'turn' : ''}`}
+              style={{ ['--pc' as string]: playerHex(room, pid), ['--lift' as string]: `${(1 - off * off) * -1}`, ['--tilt' as string]: `${off * 8}deg` }}>
               <div className="uno-opp-fan">
-                {Array.from({ length: Math.min(n, others.length >= 3 ? 9 : 14) }, (_, i) => i).map((i, _, all) => (
-                  <UnoBack key={i} style={{ transform: `rotate(${(i - (all.length - 1) / 2) * 4}deg)`, marginLeft: i ? (others.length >= 3 ? -22 : -28) : 0 }} />
+                {Array.from({ length: Math.min(n, 7) }, (_, k) => k).map((k, _, all) => (
+                  <UnoBack key={k} style={{ transform: `rotate(${(k - (all.length - 1) / 2) * 9}deg)` }} />
                 ))}
               </div>
+              <div className="uno-opp-av">
+                <Avatar config={p?.avatar} size={others.length >= 3 ? 46 : 58} track="none" expression={n <= 1 ? 'happy' : turn ? 'focus' : 'idle'} />
+                <span className="uno-opp-n">{n}</span>
+              </div>
+              <b className="uno-opp-name">{p?.name ?? '…'}</b>
+              {saidUno.includes(pid) && n <= 2 && <em className="uno-said">UNO!</em>}
               {state.over && state.hands?.[pid] && (
                 <div className="uno-reveal">
                   {(state.hands[pid] as Card[]).map((c) => <UnoCard key={c.id} card={c} className="tiny" />)}
@@ -381,37 +384,50 @@ export default function Uno({ state, me, room, players, spectator }: GameProps) 
         })}
       </div>
 
+      {/* the felt: direction ring, piles, banner and the live colour */}
       <div className="uno-table">
         <svg className={`uno-ring ${dirSpin}`} viewBox="-220 -110 440 220" preserveAspectRatio="none">
-          <ellipse rx="208" ry="98" fill="none" stroke="currentColor" strokeWidth="5" strokeDasharray="20 14" strokeLinecap="round" />
-          <path transform={`translate(208 0) ${state.direction === 1 ? '' : 'scale(1 -1)'}`} d="M-11 -4 L0 10 L11 -4 Z" fill="currentColor" />
-          <path transform={`translate(-208 0) ${state.direction === 1 ? 'scale(1 -1)' : ''}`} d="M-11 -4 L0 10 L11 -4 Z" fill="currentColor" />
+          <rect x="-206" y="-96" width="412" height="192" rx="96" fill="none" stroke="currentColor" strokeWidth="4" strokeDasharray="18 14" strokeLinecap="round" />
+          <path transform={`translate(0 -96) ${state.direction === 1 ? '' : 'scale(-1 1)'}`} d="M-6 -9 L8 0 L-6 9 Z" fill="currentColor" />
+          <path transform={`translate(0 96) ${state.direction === 1 ? 'scale(-1 1)' : ''}`} d="M-6 -9 L8 0 L-6 9 Z" fill="currentColor" />
         </svg>
-        <button className={`uno-draw ${canDraw ? 'live' : ''}`} data-cursor={canDraw ? 'Draw' : undefined} disabled={!canDraw}
-          onClick={() => { sfx.card(); act({ type: 'draw' }) }}>
-          {[3, 2, 1, 0].map((i) => <UnoBack key={i} style={{ transform: `translate(${i * 2}px, ${i * -2}px)` }} />)}
-          <span className="uno-draw-n">{state.drawCount}</span>
-          {canDraw && <span className="uno-draw-hint display">Draw</span>}
-        </button>
-        <div className="uno-pile">
-          {pile.map((p, i) => (
-            <UnoCard key={`${p.card.id}-${i}`} card={p.card} chosen={p.card.color === 'wild' ? p.color : undefined}
-              className={p.card.color === 'wild' && p.color ? 'chosen' : ''}
-              style={{ transform: `translate(${p.x}px, ${p.y}px) rotate(${p.rot}deg)`, zIndex: i }} />
-          ))}
+        <TurnBanner state={state} me={me} players={players} spectator={spectator} text={banner} />
+        <div className="uno-center">
+          <button className={`uno-draw ${canDraw ? 'live' : ''}`} data-cursor={canDraw ? 'Draw' : undefined} disabled={!canDraw}
+            onClick={() => { sfx.card(); act({ type: 'draw' }) }}>
+            {[3, 2, 1, 0].map((i) => <UnoBack key={i} style={{ transform: `translate(${i * 2}px, ${i * -2}px)` }} />)}
+            <span className="uno-draw-n">{state.drawCount}</span>
+            {canDraw && <span className="uno-draw-hint display">Draw</span>}
+          </button>
+          <div className="uno-pile">
+            {pile.map((p, i) => (
+              <UnoCard key={`${p.card.id}-${i}`} card={p.card} chosen={p.card.color === 'wild' ? p.color : undefined}
+                className={p.card.color === 'wild' && p.color ? 'chosen' : ''}
+                style={{ transform: `translate(${p.x}px, ${p.y}px) rotate(${p.rot}deg)`, zIndex: i }} />
+            ))}
+          </div>
         </div>
-        <div className="uno-colorchip" title="current colour">
-          <i style={{ background: HEX[state.color] ?? '#ccc' }} />
-          <span>{state.color || '—'}</span>
-        </div>
+        {top && (
+          <div className="uno-colorchip" title="current colour">
+            <i style={{ background: HEX[state.color] ?? '#ccc' }} />
+            <span>{topLabel}</span>
+          </div>
+        )}
       </div>
 
+      {/* my seat: who I am, the big UNO button, pass */}
       {!spectator && (
-        <div className="uno-actions">
-          <button className={`uno-btn uno-call display ${canUno ? 'hot' : ''}`} disabled={!canUno} data-cursor="UNO!"
-            onClick={() => act({ type: 'uno' })}>UNO!</button>
-          {canPass && <button className="uno-btn display" onClick={() => { sfx.click(); act({ type: 'pass' }) }}>Keep it · pass</button>}
-          {top && <span className="uno-top-name">on top: <b style={{ background: HEX[state.color] ?? '#1d3a6e' }}>{top.kind === 'number' ? `${top.color} ${top.value}` : `${KIND_NAME[top.kind]}${top.color === 'wild' ? '' : ` (${top.color})`}`}</b></span>}
+        <div className={`uno-me ${myTurn ? 'turn' : ''}`} data-player={me} style={{ ['--pc' as string]: playerHex(room, me) }}>
+          <div className="uno-me-plate">
+            <Avatar config={meP?.avatar} size={44} track="none" expression={hand.length <= 1 ? 'happy' : myTurn ? 'focus' : 'idle'} />
+            <div>
+              <b>{meP?.name ?? 'You'}</b>
+              <span>{hand.length} card{hand.length === 1 ? '' : 's'}</span>
+            </div>
+          </div>
+          {canPass && <button className="uno-btn uno-pass display" onClick={() => { sfx.click(); act({ type: 'pass' }) }}>Pass</button>}
+          <button className={`uno-call display ${canUno ? 'hot' : ''}`} disabled={!canUno} data-cursor="UNO!"
+            onClick={() => act({ type: 'uno' })}><span>UNO!</span></button>
         </div>
       )}
 

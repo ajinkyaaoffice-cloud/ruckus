@@ -45,8 +45,9 @@ export function EmoteLayer() {
     for (const e of emotes) {
       if (seen.current.has(e.key)) continue
       seen.current.add(e.key)
-      const host = document.querySelector(`[data-player="${e.pid}"]`)
-      const r = host?.getBoundingClientRect()
+      // first on-screen element for that player (games may hide the top chips)
+      const r = [...document.querySelectorAll(`[data-player="${e.pid}"]`)]
+        .map((el) => el.getBoundingClientRect()).find((b) => b.width > 0)
       const idx = room?.players.findIndex((p) => p.id === e.pid) ?? 0
       fresh.push({
         key: e.key, id: e.emoji,

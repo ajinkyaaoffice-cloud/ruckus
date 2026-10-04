@@ -10,3 +10,9 @@
 @keyframes pg-pop { from { scale: 2.4; opacity: 0; rotate: -20deg; } 40% { scale: 1; opacity: 1; rotate: 0deg; } to { scale: 0.8; opacity: 0; } }
 .pg-flash { position: absolute; inset: 0; border-radius: 26px; background: #fff; opacity: 0; pointer-events: none; }
 .pg-hint { margin: 4px 0 0; font-size: 14px; font-weight: 700; color: var(--navy); opacity: 0.7; }
+
+@media (max-width: 600px) {
+  .pg-table { height: min(66svh, 600px); }
+  .pg-to { font-size: 18px; }
+  .pg-hint { font-size: 12px; text-align: center; padding: 0 60px; }
+}
