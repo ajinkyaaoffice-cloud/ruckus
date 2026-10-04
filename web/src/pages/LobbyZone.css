@@ -1,6 +1,6 @@
 .lz { position: relative; min-height: 100svh; display: flex; overflow: hidden; background: var(--navy); }
 .lz-half {
-  position: relative; flex: 1; display: grid; place-items: center; padding: 120px clamp(16px, 4vw, 60px) 80px; overflow: hidden;
+  position: relative; flex: 1; display: grid; place-items: center; padding: calc(var(--topbar-h) + 32px) var(--gutter-r) calc(var(--safe-b) + 80px) var(--gutter-l); overflow: hidden;
   transition: flex 0.7s var(--ease-out);
 }
 .lz.focus-host .lz-half.host, .lz.focus-join .lz-half.join { flex: 1.35; }
@@ -29,8 +29,14 @@
 
 @media (max-width: 820px) {
   .lz { flex-direction: column; }
-  .lz-half { padding: 100px 20px 60px; }
+  .lz-half { padding: calc(var(--topbar-h) + 12px) var(--gutter-r) 60px var(--gutter-l); }
   .lz-half.host { clip-path: polygon(0 0, 100% 0, 100% 92%, 0 100%); margin: 0 0 -5vh; }
-  .lz-half.join { padding: 12vh 20px 180px; }
-  .lz-me { bottom: 2vh; }
+  .lz-half.join { padding: 12vh var(--gutter-r) calc(var(--safe-b) + 180px) var(--gutter-l); }
+  .lz-me { bottom: calc(var(--safe-b) + 2vh); }
+  /* decorations shrink with the screen and keep to the edges, clear of the copy */
+  .lz-glyph { width: clamp(36px, 13vmin, 90px); height: auto; opacity: 0.85; }
+  .lz-glyph.g-star { left: auto !important; right: var(--gutter-r); top: calc(var(--topbar-h) + 4px) !important; }
+  .lz-glyph.g-squig { left: auto !important; right: var(--gutter-r); bottom: 10% !important; }
+  .lz-glyph.g-o { right: var(--gutter-r) !important; top: 6% !important; }
+  .lz-glyph.g-tri { right: var(--gutter-r) !important; bottom: calc(var(--safe-b) + 8%) !important; }
 }

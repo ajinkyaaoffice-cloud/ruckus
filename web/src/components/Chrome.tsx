@@ -2,7 +2,6 @@ import { MenuButton } from './Menu'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import gsap from 'gsap'
 import { lowPower } from '../lib/perf'
-import { useNet } from '../lib/net'
 import { isMuted, onMuted, setMuted, sfx } from '../lib/sound'
 import { useTransition } from './Transition'
 import './Chrome.css'
@@ -105,25 +104,5 @@ export function TopBar({ left, right }: { left?: ReactNode; right?: ReactNode })
       <div className="topbar-side"><MenuButton />{left ?? <Logo small />}</div>
       <div className="topbar-side right">{right}<SoundToggle /></div>
     </header>
-  )
-}
-
-/** Error toasts that bounce in from the bottom whenever the server rejects something. */
-export function Toasts() {
-  const error = useNet((s) => s.error)
-  const status = useNet((s) => s.status)
-  const [items, setItems] = useState<{ key: number; msg: string }[]>([])
-  useEffect(() => {
-    if (!error) return
-    sfx.bad()
-    setItems((it) => [...it.slice(-2), error])
-    const t = setTimeout(() => setItems((it) => it.filter((x) => x.key !== error.key)), 2800)
-    return () => clearTimeout(t)
-  }, [error])
-  return (
-    <div className="toasts">
-      {status === 'closed' && <div className="toast warn">Reconnecting to the party…</div>}
-      {items.map((t) => <div key={t.key} className="toast">{t.msg}</div>)}
-    </div>
   )
 }

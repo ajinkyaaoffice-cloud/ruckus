@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { loadProfile, saveProfile, type Profile } from './profile'
 import type { AvatarConfig } from './avatar'
+import { toast } from './toast'
 
 export type RoomPlayer = {
   id: string
@@ -43,7 +44,6 @@ type NetState = {
   profile: Profile
   room: Room | null
   game: GameState | null
-  error: { msg: string; key: number } | null
   emotes: Emote[]
   setProfile: (p: Partial<Profile>) => void
 }
@@ -53,7 +53,6 @@ export const useNet = create<NetState>((set, get) => ({
   profile: loadProfile(),
   room: null,
   game: null,
-  error: null,
   emotes: [],
   setProfile: (patch) => {
     const profile = { ...get().profile, ...patch }
@@ -130,7 +129,7 @@ export function connect(): void {
           joinedResolvers.forEach((r) => r(null, msg.msg))
           joinedResolvers = []
         }
-        useNet.setState({ error: { msg: msg.msg, key: Date.now() } })
+        toast.error(msg.msg)
         break
     }
   }
@@ -161,7 +160,7 @@ function awaitJoin(msg: unknown): Promise<string> {
     }
     const timer = window.setTimeout(() => {
       done(null, 'The server took too long — try again')
-      useNet.setState({ error: { msg: 'The server took too long — try again', key: Date.now() } })
+      toast.error('The server took too long — try again')
     }, 8000)
     joinedResolvers.push(done)
     send(msg)

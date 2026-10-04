@@ -4,6 +4,7 @@ import { checkRoom, joinRoom, useNet } from '../lib/net'
 import { useTransition } from '../components/Transition'
 import Glyph from '../components/Glyph'
 import './RoomGuard.css'
+import { toast } from '../lib/toast'
 
 /** Landing spot for QR / shared links: /join/ABCD → join, then off to dress up. */
 export default function JoinLink() {
@@ -18,7 +19,7 @@ export default function JoinLink() {
       const info = await checkRoom(code)
       if (cancelled) return
       if (!info.exists || info.full) {
-        useNet.setState({ error: { msg: info.exists ? 'That room is full (5 max)' : `No room called ${code}`, key: Date.now() } })
+        toast.error(info.exists ? 'That room is full (5 max)' : `No room called ${code}`)
         go('/play', { label: 'OOPS', replace: true })
         return
       }

@@ -1,0 +1,94 @@
+/* The book: a frame in the game's colour holding a paper leaf. Each game
+   swaps the paper, the demo surface and a decoration pattern below. */
+.rb-modal { position: fixed; inset: 0; z-index: 850; display: grid; place-items: center;
+  padding: calc(var(--safe-t) + 12px) var(--gutter-r) calc(var(--safe-b) + 12px) var(--gutter-l); }
+.rb-dim { position: absolute; inset: 0; background: rgba(19, 42, 82, 0.55); backdrop-filter: blur(6px); }
+.low-power .rb-dim { backdrop-filter: none; background: rgba(19, 42, 82, 0.72); }
+
+.rb {
+  --rb-paper: #fffaf2; --rs-bg: #fff; --rs-ink: var(--navy); --rb-accent: var(--magenta);
+  position: relative; display: flex; flex-direction: column; gap: clamp(8px, 1.6svh, 14px);
+  width: min(540px, 100%); max-height: 100%; padding: clamp(12px, 2.4vmin, 20px);
+  border-radius: clamp(26px, 5vmin, 40px); background: var(--gbg); color: var(--gink);
+  box-shadow: 0 14px 0 rgba(0, 0, 0, 0.22); overflow: hidden; touch-action: pan-y;
+}
+.rb-deco { position: absolute; inset: 0; pointer-events: none; opacity: 0.5; }
+
+.rb-head { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.rb-tag { font-size: clamp(15px, 4vw, 19px); background: var(--rb-paper); color: var(--navy); padding: 0.45em 0.9em 0.25em; border-radius: 999px; rotate: -3deg; box-shadow: 0 4px 0 rgba(0, 0, 0, 0.15); }
+.rb-x { display: grid; place-items: center; width: var(--tb-btn); height: var(--tb-btn); border-radius: 50%; background: var(--navy); transition: transform 0.25s var(--ease-back); }
+.rb-x:hover { transform: rotate(90deg); }
+.rb-x svg, .rb-nav svg { width: 50%; fill: none; stroke: #fff; stroke-width: 3.4; stroke-linecap: round; stroke-linejoin: round; }
+
+.rb-spread { position: relative; perspective: 1200px; min-height: 0; flex: 1 1 auto; display: flex; }
+.rb-leaf { flex: 1; min-height: 0; background: var(--rb-paper); color: var(--navy); border-radius: clamp(18px, 3.4vmin, 26px);
+  box-shadow: inset 0 -5px 0 rgba(27, 31, 63, 0.08), 0 6px 0 rgba(0, 0, 0, 0.14); overflow: auto; overscroll-behavior: contain; backface-visibility: hidden; }
+.rb-page { display: flex; flex-direction: column; align-items: center; text-align: center; gap: clamp(6px, 1.4svh, 12px); padding: clamp(12px, 2.6vmin, 22px); position: relative; }
+
+.rb-scene { width: 100%; max-width: 420px; aspect-ratio: 8 / 5; max-height: 34svh; border-radius: 18px; background: var(--rs-bg); color: var(--rs-ink); display: grid; place-items: center; overflow: hidden; position: relative; }
+.rs { width: 100%; height: 100%; display: block; overflow: visible; }
+.rs-pill { font: 700 9.5px/1 system-ui, sans-serif; letter-spacing: 0.01em; }
+.rs-num { font-family: var(--font-display); paint-order: stroke; stroke: #1b1f3f; stroke-width: 2px; }
+.rs-uno { font-family: var(--font-display); font-size: 8px; fill: #ffc93c; paint-order: stroke; stroke: #1b1f3f; stroke-width: 1.5px; }
+
+.rb-step { position: absolute; top: clamp(18px, 3.4vmin, 28px); left: clamp(18px, 3.4vmin, 28px); background: var(--rb-accent); color: #fff; font-size: 18px; padding: 0.35em 0.6em 0.15em; border-radius: 12px; rotate: -8deg; box-shadow: 0 3px 0 rgba(27, 31, 63, 0.25); }
+.rb-step small { font-size: 0.6em; opacity: 0.8; }
+.rb-page h3 { margin: 4px 0 0; font-size: clamp(24px, 6.4vw, 34px); line-height: 1.05; }
+.rb-page h3 .split-word, .rb-cover h2 .split-word { overflow: hidden; padding-top: 0.2em; margin-top: -0.2em; }
+.rb-copy { margin: 0; max-width: 40ch; font-weight: 600; font-size: clamp(14px, 3.9vw, 16px); line-height: 1.5; }
+
+.rb-cover { padding-top: clamp(18px, 4svh, 34px); padding-bottom: clamp(18px, 4svh, 34px); }
+.rb-art { width: clamp(120px, 26svh, 210px); height: clamp(120px, 26svh, 210px); }
+.rb-cover h2 { margin: 0; font-size: clamp(40px, 11vw, 64px); line-height: 1; color: var(--rb-accent); text-shadow: 0 5px 0 var(--navy); }
+.rb-goal b { color: var(--rb-accent); }
+.rb-meta { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.rb-meta span { background: var(--navy); color: #fff; font-size: 13px; padding: 6px 12px; border-radius: 999px; }
+
+.rb-foot { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.rb-nav { flex: none; display: grid; place-items: center; width: var(--tb-btn); height: var(--tb-btn); border-radius: 50%; background: var(--navy); box-shadow: 0 4px 0 rgba(0, 0, 0, 0.2); transition: transform 0.25s var(--ease-back), opacity 0.2s; }
+.rb-nav:not(:disabled):hover { transform: scale(1.1); }
+.rb-nav:disabled { opacity: 0.3; }
+.rb-nav.next { background: var(--rb-accent); animation: rb-nudge 1.4s ease-in-out infinite; }
+@keyframes rb-nudge { 0%, 70%, 100% { translate: 0 0; } 80% { translate: 5px 0; } 90% { translate: -2px 0; } }
+.rb-pips { display: flex; gap: 7px; flex-wrap: wrap; justify-content: center; }
+.rb-pips button { width: 11px; height: 11px; border-radius: 99px; background: currentColor; opacity: 0.35; transition: width 0.3s var(--ease-back), opacity 0.2s; }
+.rb-pips button.on { width: 28px; opacity: 1; }
+.rb-go { flex: none; height: var(--tb-btn); padding: 0.3em 1.1em 0; border-radius: 999px; background: var(--rb-accent); color: #fff; font-size: clamp(16px, 4.6vw, 20px); box-shadow: 0 4px 0 var(--navy); }
+
+/* ---------- themes ---------- */
+
+/* UNO: a big card — white oval behind the paper, felt for the demos */
+.rb-uno { --rb-paper: #fff5ec; --rs-bg: radial-gradient(circle at 50% 40%, #2c8a63, #1d6247); --rs-ink: #fff; --rb-accent: #ff5d73; }
+.rb-uno .rb-deco { opacity: 1; background:
+  radial-gradient(ellipse 46% 64% at 50% 50%, rgba(255, 255, 255, 0.35) 98%, transparent 100%),
+  linear-gradient(135deg, #ff5d73 0 10%, transparent 10% 90%, #3d8bff 90%); rotate: 0deg; }
+/* Ping Pong: table-tennis blue with the white centre line */
+.rb-pong { --rb-paper: #f2fdff; --rs-bg: #bff2ff; --rs-ink: #1d3a6e; --rb-accent: #3d8bff; }
+.rb-pong .rb-deco { background: linear-gradient(90deg, transparent calc(50% - 2px), #fff calc(50% - 2px) calc(50% + 2px), transparent calc(50% + 2px)); }
+/* Tic Tac Toe: a notebook page with a margin line */
+.rb-tictactoe { --rb-paper: #fff; --rs-bg: repeating-linear-gradient(transparent 0 17px, #d8e6ff 17px 18px), #fff; --rs-ink: #1d3a6e; --rb-accent: #e64fe0; }
+.rb-tictactoe .rb-leaf { background: linear-gradient(90deg, transparent 26px, #ffb3c4 26px 28px, transparent 28px), var(--rb-paper); }
+.rb-tictactoe .rb-deco { background: repeating-linear-gradient(45deg, transparent 0 14px, rgba(255, 255, 255, 0.25) 14px 18px); }
+/* Connect Four: punched holes all round the frame */
+.rb-connect4 { --rb-paper: #eef3ff; --rs-bg: #dfe8ff; --rs-ink: #1d3a6e; --rb-accent: #e64fe0; }
+.rb-connect4 .rb-deco { background: radial-gradient(circle, rgba(255, 255, 255, 0.22) 7px, transparent 8px) 0 0 / 26px 26px; }
+/* Dots & Boxes: graph paper */
+.rb-dots { --rb-paper: #fbffe9; --rs-bg: radial-gradient(circle, #c9d6a0 1.2px, transparent 1.6px) 0 0 / 12px 12px, #fff; --rs-ink: #1d3a6e; --rb-accent: #1d3a6e; }
+.rb-dots .rb-deco { background: radial-gradient(circle, rgba(29, 58, 110, 0.35) 2.5px, transparent 3px) 0 0 / 22px 22px; }
+/* Memory: card-back diamonds */
+.rb-memory { --rb-paper: #f6f3ff; --rs-bg: #efeaff; --rs-ink: #1d3a6e; --rb-accent: #7d6bff; }
+.rb-memory .rb-deco { background: conic-gradient(from 45deg, rgba(255, 255, 255, 0.22) 25%, transparent 0 50%, rgba(255, 255, 255, 0.22) 0 75%, transparent 0) 0 0 / 30px 30px; }
+/* Odd One Out: rows of stars, one turned */
+.rb-oddone { --rb-paper: #fffaeb; --rs-bg: #fff3d2; --rs-ink: #1d3a6e; --rb-accent: #ff5d73; }
+.rb-oddone .rb-deco { background: radial-gradient(circle, rgba(255, 255, 255, 0.5) 3px, transparent 3.5px) 0 0 / 18px 18px; }
+/* Echo: ripples from the middle, pads glow on a dark stage */
+.rb-echo { --rb-paper: #fff6fe; --rs-bg: radial-gradient(circle at 50% 52%, #26457c, #132a52); --rs-ink: #fff; --rb-accent: #e64fe0; }
+.rb-echo .rb-deco { background: repeating-radial-gradient(circle at 50% 50%, transparent 0 18px, rgba(230, 79, 224, 0.18) 18px 21px); }
+
+@media (max-height: 560px) and (orientation: landscape) {
+  .rb { width: min(820px, 100%); }
+  .rb-page:not(.rb-cover) { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); grid-template-rows: auto auto 1fr; column-gap: 16px; text-align: left; align-items: start; }
+  .rb-page:not(.rb-cover) .rb-scene { grid-row: 1 / 4; max-height: 60svh; }
+  .rb-art { width: 26svh; height: 26svh; }
+}
+@media (prefers-reduced-motion: reduce) { .rb-nav.next { animation: none; } }

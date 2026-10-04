@@ -30,9 +30,11 @@ export function TransitionProvider({ children }: { children: ReactNode }) {
   const label = useRef<HTMLDivElement>(null)
   const glyphs = useRef<HTMLDivElement>(null)
   const busyRef = useRef(false)
+  // a request made while a wipe is still playing runs right after it, instead of being lost
+  const queued = useRef<{ to: string; opts: GoOptions } | null>(null)
 
-  const go = useCallback(async (to: string, opts: GoOptions = {}) => {
-    if (busyRef.current) return
+  const go = useCallback(async (to: string, opts: GoOptions = {}): Promise<void> => {
+    if (busyRef.current) { queued.current = { to, opts }; return }
     busyRef.current = true
     const el = svg.current!
     const w = window.innerWidth, h = window.innerHeight
@@ -90,6 +92,9 @@ export function TransitionProvider({ children }: { children: ReactNode }) {
     })
     document.documentElement.classList.remove('is-transitioning')
     busyRef.current = false
+    const next = queued.current
+    queued.current = null
+    if (next && next.to !== window.location.pathname) await go(next.to, next.opts)
   }, [navigate])
 
   const value = useMemo(() => ({ go, busy: () => busyRef.current }), [go])

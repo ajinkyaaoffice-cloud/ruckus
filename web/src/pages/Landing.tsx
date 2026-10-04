@@ -19,8 +19,9 @@ import './Landing.css'
 
 gsap.registerPlugin(ScrollTrigger)
 
-// The loader plays once per full page load (reloads included), not on in-app returns.
-let bootDone = false
+// The loader plays once, and only when the very first page of the visit is
+// home. Opening a room link and later wandering home skips it.
+let bootDone = window.location.pathname !== '/'
 
 type Leader = { id: string; name: string; avatar: Partial<AvatarConfig>; wins: number; games: number; points: number }
 
@@ -28,7 +29,8 @@ export default function Landing() {
   const root = useRef<HTMLDivElement>(null)
   const { go } = useTransition()
   const me = useNet((s) => s.profile)
-  const [loaded, setLoaded] = useState(bootDone)
+  const [booting, setBooting] = useState(!bootDone)
+  const bootRef = useRef(!bootDone)
   const [leaders, setLeaders] = useState<Leader[]>([])
   const crowd = useMemo(() => Array.from({ length: 15 }, () => randomAvatar()), [])
   const heroFaces = useMemo(() => [me.avatar, randomAvatar(), randomAvatar(), randomAvatar()], [me.avatar])
@@ -49,33 +51,11 @@ export default function Landing() {
     go('/play', { label: 'LOBBY!' })
   }
 
-  /* ---------------- loader: chunky % counter, then wipe ---------------- */
-  useLayoutEffect(() => {
-    if (loaded) return
-    const ctx = gsap.context(() => {
-      const num = { v: 0 }
-      const out = root.current!.querySelector('.ld-num span')!
-      const tl = gsap.timeline({
-        onComplete: () => {
-          bootDone = true
-          setLoaded(true)
-        },
-      })
-      tl.from('.ld-stroke', { scaleX: 0, duration: 0.6, ease: 'expo.out', stagger: 0.12 })
-        .to(num, {
-          v: 100, duration: 1.8, ease: 'power2.inOut',
-          onUpdate: () => { out.textContent = String(Math.round(num.v)) },
-        }, 0)
-        .to('.ld-num', { scale: 1.15, rotate: -6, duration: 0.25, ease: 'back.out(3)' })
-        .to('.ld-num', { scale: 0, rotate: 20, duration: 0.35, ease: 'back.in(2)' })
-        .to('.ld-panel', { yPercent: -101, duration: 0.8, ease: 'expo.inOut', stagger: 0.08 }, '-=0.15')
-    }, root)
-    return () => ctx.revert()
-  }, [loaded])
-
   /* ---------------- smooth scroll + every scroll animation ---------------- */
   useLayoutEffect(() => {
-    if (!loaded) return
+    // read from a ref so StrictMode's second effect run still plays the loader
+    const boot = bootRef.current
+    bootDone = true
     const lenis = isTouch ? null : new Lenis({ lerp: 0.09, wheelMultiplier: 1 })
     lenis?.on('scroll', ScrollTrigger.update)
     setLenis(lenis)
@@ -91,21 +71,54 @@ export default function Landing() {
       /* hero: kinetic headline + orbiting game tokens.
          Each motion layer owns its own element so entrance, scroll-scrub,
          pointer parallax and hover never fight over the same transform. */
-      const hero = gsap.timeline({ delay: 0.1 })
+      const hero = gsap.timeline({ delay: boot ? 0 : 0.1, paused: boot })
       hero
         .from(q('.hb-in'), { scale: 0, rotate: -120, duration: 1.4, ease: 'expo.out' }, 0)
         .from(q('.ht-row .split-char'), { yPercent: 115, rotate: (i: number) => (i % 2 ? 14 : -14), duration: 0.9, ease: 'back.out(1.8)', stagger: 0.035 }, 0.15)
         .from(q('.ht-face-in'), { scale: 0, rotate: -200, duration: 1.2, ease: 'elastic.out(1, 0.55)' }, 0.35)
         .from(q('.ht-tag'), { scale: 0, rotate: 60, y: -80, duration: 0.7, ease: 'back.out(3)' }, 0.8)
         .from(q('.ht-crowd > *'), { x: -60, scale: 0, duration: 0.6, ease: 'back.out(2.4)', stagger: 0.08 }, 0.9)
-        .from(q('.tk-in'), {
-          x: (_i: number, el: HTMLElement) => { const r = el.getBoundingClientRect(); return window.innerWidth / 2 - (r.left + r.width / 2) },
-          y: (_i: number, el: HTMLElement) => { const r = el.getBoundingClientRect(); return window.innerHeight / 2 - (r.top + r.height / 2) },
-          scale: 0, rotate: () => rnd(-360, 360), duration: 1.3, ease: 'expo.out', stagger: 0.06,
-        }, 0.5)
+        .add(boot
+          // first visit: the tokens are already orbiting the counter, they just fly home
+          ? gsap.to(q('.tk-in'), { x: 0, y: 0, scale: 1, rotate: 0, duration: 1.2, ease: 'expo.out', stagger: 0.04 })
+          : gsap.from(q('.tk-in'), {
+            x: (_i: number, el: HTMLElement) => { const r = el.getBoundingClientRect(); return window.innerWidth / 2 - (r.left + r.width / 2) },
+            y: (_i: number, el: HTMLElement) => { const r = el.getBoundingClientRect(); return window.innerHeight / 2 - (r.top + r.height / 2) },
+            scale: 0, rotate: () => rnd(-360, 360), duration: 1.3, ease: 'expo.out', stagger: 0.06,
+          }), boot ? 0 : 0.5)
         .from(q('.hero-sub .split-char'), { yPercent: 120, duration: 0.6, ease: 'back.out(2)', stagger: 0.008 }, 1)
         .from(q('.hero-badge'), { scale: 0, rotate: -180, duration: 1, ease: 'back.out(2)' }, 1.05)
         .from(q('.hero-band'), { xPercent: -110, duration: 1, ease: 'expo.out' }, 1.1)
+
+      /* loader: the hero's own tokens orbit a % counter in the middle of the
+         screen, then the counter pops and they fly out to their places as the
+         headline builds, so loading and the hero are one continuous move */
+      if (boot) {
+        document.documentElement.classList.add('booting', 'boot-hold')
+        const toks = q('.tk-in') as HTMLElement[]
+        const cx = window.innerWidth / 2, cy = window.innerHeight / 2
+        const R = Math.min(window.innerWidth, window.innerHeight) * 0.26
+        const home = toks.map((el) => { const r = el.getBoundingClientRect(); return [cx - (r.left + r.width / 2), cy - (r.top + r.height / 2)] })
+        const spin = { a: -Math.PI / 2 }
+        const place = () => toks.forEach((el, i) => {
+          const a = spin.a + (i / toks.length) * Math.PI * 2
+          gsap.set(el, { x: home[i][0] + Math.cos(a) * R, y: home[i][1] + Math.sin(a) * R })
+        })
+        place()
+        gsap.set(toks, { scale: 0, rotate: 0 })
+        gsap.set('.land-nav', { autoAlpha: 0, y: -40 })
+        const num = { v: 0 }
+        const out = q('.ld-num span')[0] as HTMLElement
+        gsap.timeline({ onComplete: () => { document.documentElement.classList.remove('booting'); setBooting(false) } })
+          .to(toks, { scale: 0.62, duration: 0.6, ease: 'back.out(2.4)', stagger: 0.05 }, 0)
+          .fromTo('.ld-num', { scale: 0, rotate: -30 }, { scale: 1, rotate: 0, duration: 0.6, ease: 'back.out(2.4)' }, 0)
+          .to(spin, { a: Math.PI * 1.5, duration: 2, ease: 'power1.inOut', onUpdate: place }, 0)
+          .to(num, { v: 100, duration: 1.7, ease: 'power2.inOut', onUpdate: () => { out.textContent = String(Math.round(num.v)) } }, 0.1)
+          .to('.ld-num', { scale: 1.2, rotate: -8, duration: 0.2, ease: 'back.out(3)' }, 1.85)
+          .to('.ld-num', { scale: 0, rotate: 30, duration: 0.3, ease: 'back.in(2)' })
+          .add(() => { document.documentElement.classList.remove('boot-hold'); hero.play() }, '-=0.2')
+          .to('.land-nav', { autoAlpha: 1, y: 0, duration: 0.6, ease: 'back.out(2)' }, '+=0.5')
+      }
 
       // pointer parallax for the tokens and burst (depth from data attribute)
       const tos = (q('.hero-token') as HTMLElement[]).map((t) => {
@@ -252,25 +265,15 @@ export default function Landing() {
       gsap.ticker.remove(raf)
       setLenis(null)
       lenis?.destroy()
+      document.documentElement.classList.remove('booting', 'boot-hold')
     }
-  }, [loaded])
+  }, [])
 
   const wallCols = [0, 1, 2, 3, 4].map((c) => crowd.filter((_, i) => i % 5 === c))
 
   return (
     <div ref={root} className="landing">
-      {!loaded && (
-        <div className="loader" aria-hidden>
-          <div className="ld-panel p1" />
-          <div className="ld-panel p2" />
-          <div className="ld-panel p3">
-            <div className="ld-stroke s1" />
-            <div className="ld-stroke s2" />
-            <div className="ld-stroke s3" />
-            <div className="ld-num display"><span>0</span><sup>%</sup></div>
-          </div>
-        </div>
-      )}
+      {booting && <div className="ld-num display" aria-hidden><span>0</span><sup>%</sup></div>}
 
       <nav className="land-nav">
         <MenuButton />
@@ -321,7 +324,7 @@ export default function Landing() {
         </h1>
 
         <div className="hero-foot">
-          <p className="hero-sub"><Split text="Eight realtime mini games. One room code. Zero sign-ups." /></p>
+          <p className="hero-sub"><Split text={`${CATALOG.length} realtime mini games. One room code. Zero sign-ups.`} /></p>
           <button className="hero-badge" onClick={play} data-magnetic data-cursor="PLAY" aria-label="Start a ruckus">
             <svg viewBox="0 0 200 200" className="hb-ring" aria-hidden>
               <defs><path id="hb-circle" d="M100 100 m-74 0 a74 74 0 1 1 148 0 a74 74 0 1 1 -148 0" /></defs>

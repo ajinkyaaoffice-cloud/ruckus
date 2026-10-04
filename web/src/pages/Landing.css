@@ -1,16 +1,10 @@
 .landing { position: relative; background: var(--pink); overflow-x: clip; }
 
-/* ---------------- loader ---------------- */
-.loader { position: fixed; inset: 0; z-index: 500; pointer-events: all; }
-.ld-panel { position: absolute; inset: 0; }
-.ld-panel.p1 { background: var(--navy); }
-.ld-panel.p2 { background: var(--magenta); }
-.ld-panel.p3 { background: var(--pink); display: grid; place-items: center; overflow: hidden; }
-.ld-stroke { position: absolute; height: 28px; border-radius: 99px; background: rgba(255, 255, 255, 0.65); transform-origin: left center; }
-.ld-stroke.s1 { width: 46vw; left: 46%; top: 22%; rotate: -12deg; }
-.ld-stroke.s2 { width: 30vw; left: 4%; top: 72%; rotate: -8deg; background: var(--pink-deep); }
-.ld-stroke.s3 { width: 22vw; left: 62%; top: 86%; rotate: -16deg; }
-.ld-num { font-size: clamp(120px, 22vw, 300px); color: #fff; display: flex; align-items: flex-start; text-shadow: 0 10px 0 rgba(29, 58, 110, 0.15); }
+/* ---------------- loader: a counter the hero tokens orbit ---------------- */
+html.booting, html.booting body { overflow: hidden; }
+/* everything but the orbiting tokens waits for the counter to finish */
+html.boot-hold .hero-title, html.boot-hold .hero-foot, html.boot-hold .hero-band, html.boot-hold .hero-burst { visibility: hidden; }
+.ld-num { position: fixed; left: 50%; top: 50%; translate: -50% -50%; z-index: 500; pointer-events: none; font-size: clamp(64px, 14vmin, 150px); color: #fff; display: flex; align-items: flex-start; text-shadow: 0 8px 0 var(--magenta); }
 .ld-num sup { font-size: 0.3em; margin-top: 0.1em; }
 
 /* ---------------- nav ---------------- */

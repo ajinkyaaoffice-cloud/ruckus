@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useLayoutEffect, useRef, useState } from 'react'
 import gsap from 'gsap'
 import { intro } from '../lib/ui'
 import { BrushMarks, Logo, Split, TopBar } from '../components/Chrome'
@@ -12,6 +12,10 @@ import { CATALOG, gameMeta, type GameMeta } from '../lib/catalog'
 import { leaveRoom, MAX_PLAYERS, startGame, useNet } from '../lib/net'
 import { sfx } from '../lib/sound'
 import './Hub.css'
+import { toast } from '../lib/toast'
+
+// fetched the first time someone opens a rulebook
+const Rulebook = lazy(() => import('../components/Rulebook'))
 
 export default function Hub() {
   const root = useRef<HTMLDivElement>(null)
@@ -20,6 +24,7 @@ export default function Hub() {
   const { go } = useTransition()
   const [invite, setInvite] = useState(false)
   const [picked, setPicked] = useState<GameMeta | null>(null)
+  const [rules, setRules] = useState<GameMeta | null>(null)
   const isHost = room.host === pid
   const ready = room.players.filter((p) => p.status === 'ready' && p.connected)
   const ranked = [...room.players].sort((a, b) => b.points - a.points || b.wins - a.wins)
@@ -50,12 +55,12 @@ export default function Hub() {
   const choose = (g: GameMeta) => {
     if (!isHost) {
       sfx.bad()
-      useNet.setState({ error: { msg: 'Only the host picks — nudge them with an emote!', key: Date.now() } })
+      toast.info('Only the host picks — nudge them with an emote!')
       return
     }
     if (ready.length < g.min) {
       sfx.bad()
-      useNet.setState({ error: { msg: `${g.name} needs ${g.min} ready players`, key: Date.now() } })
+      toast.warn(`${g.name} needs ${g.min} ready players`)
       return
     }
     sfx.click()
@@ -115,18 +120,26 @@ export default function Hub() {
             const locked = ready.length < g.min
             const sitOut = ready.length > g.max
             return (
-              <button key={g.id} className={`hub-card ${locked ? 'locked' : ''}`} style={{ background: g.bg, color: g.ink }}
+              <div key={g.id} role="button" tabIndex={0} className={`hub-card ${locked ? 'locked' : ''}`} style={{ background: g.bg, color: g.ink }}
                 onPointerMove={tilt} onPointerLeave={untilt} onClick={() => choose(g)} onMouseEnter={() => sfx.hover()}
+                onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && e.target === e.currentTarget && (e.preventDefault(), choose(g))}
                 data-cursor={isHost && !locked ? 'PLAY' : undefined}>
                 <div className="hc-top">
                   <span className="hc-tag">{g.tag}</span>
                   <span className="hc-p display">{g.min === g.max ? g.min : `${g.min}-${g.max}`}P</span>
                 </div>
                 <GameArt id={g.id} className="hc-art" />
-                <h3 className="display">{g.name}</h3>
+                <div className="hc-foot">
+                  <h3 className="display">{g.name}</h3>
+                  <button className="hc-rules" aria-label={`How to play ${g.name}`} data-cursor="RULES"
+                    onClick={(e) => { e.stopPropagation(); sfx.click(); setRules(g) }}>
+                    <svg viewBox="0 0 24 24" aria-hidden><path d="M4 5.5C7 4 10 4.5 12 6c2-1.5 5-2 8-.5V19c-3-1.5-6-1-8 .5-2-1.5-5-2-8-.5Z M12 6v13.5" /></svg>
+                    <span>Rules</span>
+                  </button>
+                </div>
                 {locked && <span className="hc-flag">Needs {g.min} ready</span>}
                 {!locked && sitOut && <span className="hc-flag soft">{ready.length - g.max} sits out</span>}
-              </button>
+              </div>
             )
           })}
         </section>
@@ -176,12 +189,13 @@ export default function Hub() {
       </div>
 
       {invite && <InviteModal code={room.code} onClose={() => setInvite(false)} />}
-      {picked && <StartSheet g={picked} readyCount={ready.length} onClose={() => setPicked(null)} />}
+      {picked && <StartSheet g={picked} readyCount={ready.length} onClose={() => setPicked(null)} onRules={() => setRules(picked)} />}
+      {rules && <Suspense fallback={null}><Rulebook g={rules} onClose={() => setRules(null)} /></Suspense>}
     </div>
   )
 }
 
-function StartSheet({ g, readyCount, onClose }: { g: GameMeta; readyCount: number; onClose: () => void }) {
+function StartSheet({ g, readyCount, onClose, onRules }: { g: GameMeta; readyCount: number; onClose: () => void; onRules: () => void }) {
   const root = useRef<HTMLDivElement>(null)
   const [opts, setOpts] = useState<Record<string, unknown>>(() =>
     Object.fromEntries((g.options ?? []).map((o) => [o.key, o.choices[g.id === 'pong' ? 1 : 0].value])))
@@ -204,6 +218,7 @@ function StartSheet({ g, readyCount, onClose }: { g: GameMeta; readyCount: numbe
         <GameArt id={g.id} className="ss-art" />
         <h2 className="display"><Split text={g.name} /></h2>
         <p>{g.blurb}</p>
+        <button className="ss-rules" onClick={() => { sfx.click(); onRules() }}>New to {g.name}? <u>Read the rules</u></button>
         {readyCount > g.max && <p className="ss-note">{readyCount - g.max} player sits this one out and spectates — they get priority next game.</p>}
         {(g.options ?? []).map((o) => (
           <div key={o.key} className="ss-opt">

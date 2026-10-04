@@ -1,10 +1,10 @@
-.gs { position: relative; min-height: 100svh; background: var(--pink); display: flex; flex-direction: column; align-items: center; padding: 84px 12px 40px; overflow: hidden; }
-.gs-name { font-size: 28px; color: #fff; text-shadow: 0 4px 0 var(--navy); background: var(--magenta); padding: 10px 20px 6px; border-radius: 999px; rotate: -3deg; display: inline-block; }
+.gs { position: relative; min-height: 100svh; background: var(--pink); display: flex; flex-direction: column; align-items: center; padding: calc(var(--topbar-h) + 4px) var(--gutter-r) calc(var(--dock-h) + 8px) var(--gutter-l); overflow: hidden; }
+.gs-name { font-size: calc(var(--tb-btn) * 0.55); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 42vw; color: #fff; text-shadow: 0 4px 0 var(--navy); background: var(--magenta); padding: 0.36em 0.7em 0.2em; border-radius: 999px; rotate: -3deg; display: inline-block; }
 .gs-top-players { position: relative; z-index: 3; display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-bottom: 12px; }
 .gs-top-players .pchip { padding-right: 16px; }
 .gs-spec { position: relative; z-index: 3; background: var(--navy); color: #fff; padding: 8px 16px 4px; border-radius: 999px; font-size: 14px; margin-bottom: 10px; }
 .gs-stage { position: relative; z-index: 2; flex: 1; width: 100%; display: flex; justify-content: center; align-items: center; }
-.gs-dock { position: fixed; right: 16px; bottom: 16px; z-index: 30; }
+.gs-dock { position: fixed; right: var(--gutter-r); bottom: calc(var(--safe-b) + var(--tb-pad)); z-index: 30; }
 .gs-intro { position: fixed; inset: 0; z-index: 400; display: grid; place-items: center; pointer-events: none; }
 .gs-intro span { grid-area: 1 / 1; font-size: clamp(90px, 18vw, 260px); color: #fff; text-shadow: 0 8px 0 var(--navy), 0 16px 0 rgba(29, 58, 110, 0.3); transform: scale(0); }
 .gs-intro .w2 { color: var(--lime); }
@@ -12,6 +12,7 @@
 /* shared bits for game boards */
 .turn-banner { font-family: var(--font-display); font-size: clamp(22px, 3vw, 34px); color: var(--navy); text-align: center; margin: 0 0 14px; min-height: 1.1em; }
 .turn-banner.mine { color: #fff; text-shadow: 0 4px 0 var(--magenta); }
-@media (max-width: 600px) { .gs { padding-top: 76px; } .gs-name { font-size: 20px; } }
 .gs-uno .gs-top-players { display: none; }
 @media (max-width: 600px) { .gs-pong .gs-top-players { display: none; } }
+.gs-help { background: #fff; color: var(--navy); font-size: calc(var(--tb-btn) * 0.5); }
+.gs-help span { padding-top: 0.15em; }

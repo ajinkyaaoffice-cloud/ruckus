@@ -22,6 +22,7 @@ const GAMES: Record<string, ComponentType<GameProps>> = {
   oddone: lazy(() => import('../games/OddOne')),
   echo: lazy(() => import('../games/Echo')),
 }
+const Rulebook = lazy(() => import('../components/Rulebook'))
 
 export default function GameScreen() {
   const root = useRef<HTMLDivElement>(null)
@@ -29,6 +30,7 @@ export default function GameScreen() {
   const state = useNet((s) => s.game)
   const me = useNet((s) => s.profile.pid)
   const { go } = useTransition()
+  const [rules, setRules] = useState(false)
   const gid = state?.game ?? room.game?.id
   const meta = gameMeta(gid)
   const Game = gid ? GAMES[gid] : undefined
@@ -64,7 +66,16 @@ export default function GameScreen() {
       <EmoteLayer />
       <TopBar
         left={<span className="gs-name display">{meta?.name ?? 'Game'}</span>}
-        right={<button className="bubble-btn small navy" onClick={leave}>Leave</button>}
+        right={
+          <>
+            {meta && (
+              <button className="icon-btn gs-help" onClick={() => { sfx.click(); setRules(true) }} aria-label="How to play" data-cursor="RULES">
+                <span className="display">?</span>
+              </button>
+            )}
+            <button className="bubble-btn small navy" onClick={leave}>Leave</button>
+          </>
+        }
       />
       <div className="gs-top-players">
         {participants.map((p) => (
@@ -87,6 +98,7 @@ export default function GameScreen() {
 
       <Intro key={state?.instance ?? 'none'} />
 
+      {rules && meta && <Suspense fallback={null}><Rulebook g={meta} onClose={() => setRules(false)} /></Suspense>}
       {state?.over && state.results && <Results state={state} room={room} me={me} />}
     </div>
   )

@@ -1,7 +1,7 @@
-.menu-btn { color: var(--magenta); display: grid; place-items: center; width: 56px; height: 56px; border-radius: 50%; position: relative; z-index: 1001; transition: background 0.3s, color 0.3s; }
+.menu-btn { color: var(--magenta); display: grid; place-items: center; flex: none; width: var(--tb-btn); height: var(--tb-btn); border-radius: 50%; position: relative; z-index: 1001; transition: background 0.3s, color 0.3s; }
 .menu-btn:hover { background: rgba(255, 255, 255, 0.5); }
 .menu-btn.open { color: #fff; }
-.menu-btn svg { overflow: visible; }
+.menu-btn svg { overflow: visible; width: 80%; height: auto; }
 .mb-l { fill: none; stroke: currentColor; stroke-width: 3.4; stroke-linecap: round; transform-box: view-box; transform-origin: 20px 15px; transition: transform 0.5s var(--ease-back), opacity 0.3s, d 0.4s; }
 .menu-btn:hover .mb-l.l1 { transform: translateX(-3px); }
 .menu-btn:hover .mb-l.l3 { transform: translateX(3px); }

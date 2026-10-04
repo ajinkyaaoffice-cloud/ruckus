@@ -1,12 +1,15 @@
-.cz { position: relative; min-height: 100svh; overflow: hidden; background: var(--pink); display: flex; flex-direction: column; align-items: center; }
-.cz-code { background: var(--navy); color: #fff; padding: 12px 18px 8px; border-radius: 999px; font-size: 16px; }
+/* below the top bar, title + stage share the height down to the bottom bar, centred */
+.cz { position: relative; min-height: 100svh; overflow: hidden; background: var(--pink); display: flex; flex-direction: column; align-items: center;
+  padding: calc(var(--topbar-h) + 1svh) 0 calc(var(--dock-h) + 24px); }
+.cz-code { display: inline-flex; align-items: center; gap: 0.4em; background: var(--navy); color: #fff; padding: 12px 18px 8px; border-radius: 999px; font-size: 16px; white-space: nowrap; }
 .cz-title {
-  position: relative; z-index: 2; margin: 2vh 0 0; font-size: clamp(64px, 11vw, 170px); color: #fff;
+  position: relative; z-index: 2; margin: 0; font-size: clamp(56px, min(9vw, 13svh), 150px); line-height: 1; color: #fff;
   text-shadow: 0 7px 0 var(--magenta); white-space: nowrap; transform-origin: 50% 100%;
 }
 .cz-title .split-char { transform-origin: 50% 100%; }
-.cz-stage { position: relative; z-index: 2; width: min(760px, 96vw); height: min(58svh, 560px); margin-top: -2vh; }
+.cz-stage { position: relative; z-index: 2; flex: 1 1 auto; width: min(760px, 96vw); min-height: min(52svh, 420px); max-height: 640px; margin: 1svh 0; }
 .cz-avatar { position: absolute; left: 50%; top: 50%; width: min(44svh, 62vw, 430px); aspect-ratio: 1; translate: -50% -50%; cursor: pointer; perspective: 600px; }
+.cz-bubbles { display: contents; }
 .cz-bubble {
   position: absolute; translate: -50% -50%; background: #fff; color: var(--navy); font-size: 15px; padding: 12px 18px 9px; border-radius: 999px;
   box-shadow: var(--shadow-pop); transition: background 0.25s, color 0.25s, transform 0.35s var(--ease-back); white-space: nowrap;
@@ -35,7 +38,7 @@
 .cz-swatch:hover { transform: scale(1.15); }
 .cz-swatch.on { outline: 4px solid var(--navy); transform: scale(1.18); }
 
-.cz-bottom { position: fixed; left: 0; right: 0; bottom: 0; z-index: 4; display: flex; justify-content: space-between; align-items: flex-end; padding: 0 clamp(16px, 3vw, 32px) 24px; pointer-events: none; }
+.cz-bottom { position: fixed; left: 0; right: 0; bottom: 0; z-index: 4; display: flex; justify-content: space-between; align-items: flex-end; padding: 0 var(--gutter-r) calc(var(--safe-b) + 24px) var(--gutter-l); pointer-events: none; }
 .cz-bottom > * { pointer-events: auto; }
 .cz-name { display: flex; align-items: center; gap: 10px; background: #fff; border-radius: 999px; padding: 8px 8px 8px 20px; box-shadow: var(--shadow-pop); transform-origin: left; }
 .cz-name span { font-size: 15px; color: var(--magenta); padding-top: 3px; }
@@ -45,13 +48,40 @@
 .cz-friend { position: relative; }
 .cz-friend span { position: absolute; right: -4px; bottom: -2px; background: var(--navy); color: #fff; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 800; }
 
-@media (max-width: 760px) {
-  .cz-title { margin-top: 84px; font-size: clamp(54px, 15vw, 110px); }
-  .cz-rand { font-size: 13px; padding: 9px 14px 7px; }
-  .cz-stage { height: auto; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; padding-top: min(68vw, 300px); }
-  .cz-avatar { top: 0; translate: -50% 0; width: min(66vw, 290px); }
-  .cz-bubble { position: relative; left: auto !important; top: auto !important; translate: none; font-size: 13px; padding: 9px 13px 7px; }
+/* Phones and short landscape screens: one column sized from the viewport.
+   Title, avatar, a swipeable row of categories, the option rail, then a
+   sticky name + go bar above the home indicator. */
+@media (max-width: 760px), (max-height: 540px) {
+  .cz { min-height: 100svh; padding: var(--topbar-h) 0 0; }
+  .cz-code { height: var(--tb-btn); display: inline-flex; align-items: center; gap: 0.4em; padding: 0.3em 0.9em 0; font-size: calc(var(--tb-btn) * 0.34); white-space: nowrap; }
+  .cz-rand { height: var(--tb-btn); padding: 0 0.9em; font-size: calc(var(--tb-btn) * 0.3); min-width: 0; }
+  .cz-title { margin: clamp(2px, 1.2svh, 14px) 0 0; font-size: clamp(40px, min(14vw, 9svh), 110px); }
+  /* the avatar soaks up whatever height is left, keeping its square shape */
+  .cz-stage { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; height: auto; margin: 0; }
+  .cz-avatar { position: relative; left: auto; top: auto; translate: none; flex: 1 1 0; min-height: 150px; max-height: min(400px, 86vw); width: auto; aspect-ratio: 1; margin: 0 0 4px; }
+  .cz-bubbles { display: flex; gap: 8px; width: 100%; overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: none;
+    padding: 6px var(--gutter-r) 12px var(--gutter-l); scroll-padding-inline: var(--gutter-l);
+    mask-image: linear-gradient(90deg, transparent, #000 var(--gutter-l), #000 calc(100% - var(--gutter-r)), transparent); }
+  .cz-bubbles::-webkit-scrollbar { display: none; }
+  .cz-bubble { position: relative; flex: none; left: auto !important; top: auto !important; translate: none; scroll-snap-align: start; font-size: clamp(12px, 3.6vw, 15px); padding: 0.7em 1em 0.5em; }
   .cz-bubble::after { display: none; }
-  .cz-bottom { position: relative; flex-direction: column; align-items: center; gap: 14px; margin-top: 20px; }
+  .cz-panel { width: 100%; padding: 0 var(--gutter-r) 0 var(--gutter-l); margin-top: 0; gap: 10px; }
+  .cz-rail { width: 100%; max-width: 560px; }
+  .cz-opts { flex: 1; min-width: 0; scroll-snap-type: x proximity; }
+  .cz-opt { width: clamp(48px, 15vw, 66px); height: auto; aspect-ratio: 1; scroll-snap-align: start; }
+  .cz-arrow { flex: none; width: clamp(30px, 9vw, 40px); height: clamp(30px, 9vw, 40px); font-size: clamp(26px, 8vw, 34px); }
+  .cz-swatch { width: clamp(32px, 9vw, 40px); height: auto; aspect-ratio: 1; }
+  .cz-bottom { position: sticky; bottom: 0; margin-top: auto; width: 100%; flex-direction: row; align-items: center; gap: 10px;
+    padding: 16px var(--gutter-r) calc(var(--safe-b) + 14px) var(--gutter-l);
+    background: linear-gradient(transparent, var(--pink) 34%); }
+  .cz-name { flex: 1; min-width: 0; padding: 6px 6px 6px 16px; }
+  .cz-name input { flex: 1; min-width: 0; width: auto; padding: 10px 12px; }
+  .cz-go { flex: none; font-size: clamp(16px, 5vw, 24px) !important; padding: 0.7em 1.1em 0.5em !important; }
   .cz-friends { display: none; }
+}
+@media (max-width: 420px) {
+  .cz-rand span, .cz-code small { display: none; }
+  .cz-rand { width: var(--tb-btn); padding: 0; justify-content: center; }
+  .cz-name span { display: none; }
+  .cz-name { padding-left: 6px; }
 }

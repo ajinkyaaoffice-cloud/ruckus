@@ -10,6 +10,7 @@ import { useTransition } from '../components/Transition'
 import { checkRoom, createRoom, joinRoom, useNet } from '../lib/net'
 import { sfx } from '../lib/sound'
 import './LobbyZone.css'
+import { toast } from '../lib/toast'
 
 const ALPHA = /[A-HJ-NP-Z]/ // room codes skip I, O, Q
 
@@ -58,7 +59,7 @@ export default function LobbyZone() {
     sfx.click()
     const info = await checkRoom(c)
     if (!info.exists || info.full) {
-      useNet.setState({ error: { msg: info.exists ? 'That room is full (5 max)' : `No room called ${c}`, key: Date.now() } })
+      toast.error(info.exists ? 'That room is full (5 max)' : `No room called ${c}`)
       gsap.fromTo('.lz-code', { x: -14 }, { x: 0, duration: 0.5, ease: 'elastic.out(1, 0.25)' })
       setBusy(false)
       return
@@ -104,8 +105,8 @@ export default function LobbyZone() {
       <TopBar />
       <section className="lz-half host" onMouseEnter={() => setSide('host')} onMouseLeave={() => setSide(null)}>
         <BrushMarks />
-        <Glyph className="lz-glyph" name="star" color="#d9f66b" size={90} style={{ left: '12%', top: '20%' }} />
-        <Glyph className="lz-glyph" name="squiggle" color="#1d3a6e" size={120} strokeWidth={9} style={{ left: '8%', bottom: '18%' }} />
+        <Glyph className="lz-glyph g-star" name="star" color="#d9f66b" size={90} style={{ left: '12%', top: '20%' }} />
+        <Glyph className="lz-glyph g-squig" name="squiggle" color="#1d3a6e" size={120} strokeWidth={9} style={{ left: '8%', bottom: '18%' }} />
         <div className="lz-inner">
           <span className="sticker">New party</span>
           <h1 className="lz-title display"><Split text="Host" /></h1>
@@ -118,8 +119,8 @@ export default function LobbyZone() {
 
       <section className="lz-half join" onMouseEnter={() => setSide('join')} onMouseLeave={() => setSide(null)}>
         <BrushMarks color="#a7ecff" opacity={0.18} />
-        <Glyph className="lz-glyph" name="o" color="#e64fe0" size={80} style={{ right: '12%', top: '18%' }} />
-        <Glyph className="lz-glyph" name="tri" color="#ffb424" size={70} style={{ right: '8%', bottom: '16%' }} />
+        <Glyph className="lz-glyph g-o" name="o" color="#e64fe0" size={80} style={{ right: '12%', top: '18%' }} />
+        <Glyph className="lz-glyph g-tri" name="tri" color="#ffb424" size={70} style={{ right: '8%', bottom: '16%' }} />
         <div className="lz-inner">
           <span className="sticker">Got a code?</span>
           <h1 className="lz-title display"><Split text="Join" /></h1>

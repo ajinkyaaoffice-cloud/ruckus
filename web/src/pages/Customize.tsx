@@ -98,15 +98,20 @@ export default function Customize() {
     gsap.fromTo('.cz-rand svg', { rotate: 0 }, { rotate: 360, duration: 0.6, ease: 'back.out(2)' })
   }
 
-  const finish = async () => {
+  const leaving = useRef(false)
+  const finish = () => {
+    if (leaving.current) return
+    leaving.current = true
     const n = name.trim() || 'Player'
     setProfile({ name: n, customized: true })
     pushProfile(true)
     sfx.win()
     setExpr('happy')
-    await gsap.to('.cz-avatar', { y: -60, scale: 1.08, duration: 0.25, ease: 'power2.out', yoyo: true, repeat: 1 })
+    // the hop plays while the wipe starts; never wait on it, a killed tween would never resolve
+    gsap.to('.cz-avatar', { y: -60, scale: 1.08, duration: 0.25, ease: 'power2.out', yoyo: true, repeat: 1 })
     const playing = useNet.getState().room?.phase === 'playing'
-    if (!playing) go(`/room/${code}`, { label: 'LOBBY!', colors: ['#1d3a6e', '#e64fe0', '#d9f66b'] })
+    if (playing) { leaving.current = false; return }
+    window.setTimeout(() => go(`/room/${code}`, { label: 'LOBBY!', colors: ['#1d3a6e', '#e64fe0', '#d9f66b'] }), 180)
   }
 
   const others = room?.players.filter((p) => p.id !== profile.pid) ?? []
@@ -118,10 +123,10 @@ export default function Customize() {
         left={
           <button className="bubble-btn cz-rand" onClick={randomize} data-cursor="SHUFFLE">
             <svg className="ico" viewBox="0 0 24 24"><path d="M3 7h4l10 10h4M3 17h4l3-3M14 10l3-3h4M18 4l3 3-3 3M18 14l3 3-3 3" stroke="#e64fe0" strokeWidth="2.4" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
-            Randomize
+            <span>Randomize</span>
           </button>
         }
-        right={<span className="cz-code display">Room {code}</span>}
+        right={<span className="cz-code display"><small>Room</small>{code}</span>}
       />
 
       <h1 ref={title} className="cz-title display" key={`title-${cat?.key ?? 'avatar'}`}>
@@ -132,6 +137,7 @@ export default function Customize() {
         <div className="cz-avatar" onClick={() => { setExpr('wink'); sfx.pop(); setTimeout(() => setExpr('idle'), 600) }}>
           <Avatar config={a} size="100%" track="mouse" depth={1.8} expression={expr} />
         </div>
+        <div className="cz-bubbles">
         {CATEGORIES.map((c) => {
           const [x, y] = SPOTS[c.key] ?? [50, 50]
           return (
@@ -139,13 +145,14 @@ export default function Customize() {
               key={c.key}
               className={`cz-bubble display ${cat?.key === c.key ? 'on' : ''} ${x < 50 ? 'l' : 'r'}`}
               style={{ left: `${x}%`, top: `${y}%` }}
-              onClick={() => { sfx.click(); setCat(cat?.key === c.key ? null : c) }}
+              onClick={(e) => { sfx.click(); setCat(cat?.key === c.key ? null : c); e.currentTarget.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' }) }}
               onMouseEnter={() => sfx.hover()}
             >
               {c.label}
             </button>
           )
         })}
+        </div>
       </div>
 
       {cat && (
