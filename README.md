@@ -82,7 +82,9 @@ Things to know:
 - **A redeploy or restart ends the games in progress.** Players reconnect automatically, see that the room is gone, and can open a new one in a click. Profiles, scores and the leaderboard live in Supabase and survive.
 - **Free tiers that sleep** (Render free, for example) drop open rooms when they spin down. Use an always-on plan for real sessions.
 - Hashed assets are cached for a year and `index.html` is never cached, so a deploy reaches players on their next page load.
-- If you host the frontend separately (Vercel, Netlify), build it with `VITE_WS_URL=wss://your-server/ws` and point `/api` at the server.
+- **Frontend on Vercel, server elsewhere:** in Vercel set the project's Root Directory to `web` and add the environment variable `VITE_SERVER_URL` set to the server's address (e.g. `https://ruckus.up.railway.app`), then redeploy. On the server, set `PUBLIC_URL` to the Vercel address so invite links and QR codes open the Vercel site. `web/vercel.json` makes links like `/room/ABCD` load the app.
+
+**Railway (no card needed for the trial):** New Project → Deploy from GitHub repo → pick the repo. `railway.json` tells it to use the Dockerfile with a health check. Add the Supabase variables under Variables, then Settings → Networking → Generate Domain.
 
 ## Supabase
 
@@ -94,7 +96,7 @@ Things to know:
 | `SUPABASE_URL` | Project URL from Project Settings → Data API (`https://<ref>.supabase.co`) |
 | `SUPABASE_SERVICE_KEY` | Secret key (`sb_secret_…`) or legacy service_role key from Project Settings → API Keys. Server side only, never ship it to the browser |
 | `RUCKUS_DB` | Path of the SQLite fallback file (default `server/ruckus.db`) |
-| `PUBLIC_URL` | Public base URL used in invite links and QR codes when hosted |
+| `PUBLIC_URL` | Public base URL used in invite links and QR codes when hosted (the Vercel address if the site is on Vercel) |
 
 If the Supabase variables aren't set, the server uses SQLite (inside Docker that's `/data/ruckus.db`, so mount a volume there to keep it).
 

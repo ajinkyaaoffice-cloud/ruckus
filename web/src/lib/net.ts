@@ -75,9 +75,14 @@ let lastHeard = 0
 const queue: unknown[] = []
 let joinedResolvers: ((code: string | null, err?: string) => void)[] = []
 
+/** Game server origin. Empty when the server also serves this site; set VITE_SERVER_URL when the site is hosted elsewhere (e.g. Vercel). */
+export const SERVER = ((import.meta.env.VITE_SERVER_URL as string | undefined) ?? '').replace(/\/$/, '')
+export const api = (path: string) => `${SERVER}${path}`
+
 function wsUrl(): string {
   const env = import.meta.env.VITE_WS_URL as string | undefined
   if (env) return env
+  if (SERVER) return `${SERVER.replace(/^http/, 'ws')}/ws`
   const proto = location.protocol === 'https:' ? 'wss' : 'ws'
   return `${proto}://${location.host}/ws`
 }
@@ -222,7 +227,7 @@ export function pushProfile(ready?: boolean): void {
 
 export async function checkRoom(code: string): Promise<{ exists: boolean; full?: boolean }> {
   try {
-    const r = await fetch(`/api/rooms/${encodeURIComponent(code.toUpperCase())}`)
+    const r = await fetch(api(`/api/rooms/${encodeURIComponent(code.toUpperCase())}`))
     return await r.json()
   } catch {
     return { exists: false }

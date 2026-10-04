@@ -13,7 +13,7 @@ import { Split, SoundToggle } from '../components/Chrome'
 import { useTransition } from '../components/Transition'
 import { CATALOG } from '../lib/catalog'
 import { randomAvatar, type AvatarConfig } from '../lib/avatar'
-import { useNet } from '../lib/net'
+import { api, useNet } from '../lib/net'
 import { sfx } from '../lib/sound'
 import './Landing.css'
 
@@ -36,7 +36,7 @@ export default function Landing() {
   const heroFaces = useMemo(() => [me.avatar, randomAvatar(), randomAvatar(), randomAvatar()], [me.avatar])
 
   useEffect(() => {
-    fetch('/api/leaderboard').then((r) => r.json()).then((d) => Array.isArray(d) && setLeaders(d)).catch(() => {})
+    fetch(api('/api/leaderboard')).then((r) => r.json()).then((d) => Array.isArray(d) && setLeaders(d)).catch(() => {})
   }, [])
 
   // pause the looping sticker/avatar animations in sections that are off screen

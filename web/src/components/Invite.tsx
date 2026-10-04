@@ -3,6 +3,7 @@ import gsap from 'gsap'
 import { intro } from '../lib/ui'
 import QRCode from 'qrcode'
 import { sfx } from '../lib/sound'
+import { api } from '../lib/net'
 import './Qr.css'
 
 /** Phones can't reach "localhost", so swap in the machine's LAN IP when we're served locally. */
@@ -10,7 +11,7 @@ export async function joinUrl(code: string): Promise<string> {
   const local = ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname)
   let origin = location.origin
   try {
-    const r = await fetch('/api/net').then((x) => x.json())
+    const r = await fetch(api('/api/net')).then((x) => x.json())
     if (r.public) origin = String(r.public).replace(/\/$/, '')
     else if (local && r.lan) origin = `${location.protocol}//${r.lan}${location.port ? ':' + location.port : ''}`
   } catch {
