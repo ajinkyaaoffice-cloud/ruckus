@@ -6,7 +6,7 @@
 const mq = (q: string) => typeof window !== 'undefined' && window.matchMedia?.(q).matches
 export const isTouch = !!mq('(pointer: coarse)') || (typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0 && !mq('(pointer: fine)'))
 export const reducedMotion = !!mq('(prefers-reduced-motion: reduce)')
-export const lowPower = isTouch || reducedMotion || ((typeof navigator !== 'undefined' && navigator.hardwareConcurrency) || 8) <= 4
+export const lowPower = isTouch || reducedMotion
 
 if (typeof document !== 'undefined') {
   document.documentElement.classList.toggle('low-power', lowPower)

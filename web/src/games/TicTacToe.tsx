@@ -1,6 +1,9 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import gsap from 'gsap'
 import { intro } from '../lib/ui'
+import { lowPower } from '../lib/perf'
+
+const ROUGH = lowPower ? undefined : 'url(#ttt-rough)'
 import type { GameProps } from '../pages/GameScreen'
 import { act, onGameEvents, playerHex } from '../lib/net'
 import { sfx } from '../lib/sound'
@@ -55,7 +58,7 @@ export default function TicTacToe({ state, me, room, players, spectator }: GameP
           <defs>
             <filter id="ttt-rough"><feTurbulence type="fractalNoise" baseFrequency="0.04 0.4" numOctaves="2" seed="4" /><feDisplacementMap in="SourceGraphic" scale="6" /></filter>
           </defs>
-          <g className="ttt-grid" filter="url(#ttt-rough)" stroke="#fff" strokeWidth="9" strokeLinecap="round" fill="none">
+          <g className="ttt-grid" filter={ROUGH} stroke="#fff" strokeWidth="9" strokeLinecap="round" fill="none">
             <path d="M102 8 C98 100 104 200 98 292" />
             <path d="M200 6 C204 110 196 200 202 294" />
             <path d="M8 98 C100 104 200 96 292 102" />
@@ -73,7 +76,7 @@ export default function TicTacToe({ state, me, room, players, spectator }: GameP
               </g>
             )
           })}
-          {line && <path className="ttt-win" d={`M${lx1} ${ly1} L${lx2} ${ly2}`} stroke="#1d3a6e" strokeWidth="16" strokeLinecap="round" filter="url(#ttt-rough)" />}
+          {line && <path className="ttt-win" d={`M${lx1} ${ly1} L${lx2} ${ly2}`} stroke="#1d3a6e" strokeWidth="16" strokeLinecap="round" filter={ROUGH} />}
         </svg>
       </div>
       <div className="ttt-legend">
@@ -100,7 +103,7 @@ function Mark({ kind, cx, cy, color, ghost }: { kind: number; cx: number; cy: nu
   }, [ghost, kind, cx, cy])
   const r = 30
   return (
-    <g ref={ref} opacity={ghost ? 0.3 : 1} filter="url(#ttt-rough)" stroke={color} strokeWidth="15" strokeLinecap="round" fill="none" pointerEvents="none">
+    <g ref={ref} opacity={ghost ? 0.3 : 1} filter={ROUGH} stroke={color} strokeWidth="15" strokeLinecap="round" fill="none" pointerEvents="none">
       {kind === 0 ? (
         <>
           <path d={`M${cx - r} ${cy - r} L${cx + r} ${cy + r}`} />

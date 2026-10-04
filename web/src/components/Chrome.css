@@ -68,3 +68,4 @@
 }
 .toast.warn { background: var(--magenta); }
 @keyframes toast-in { from { transform: translateY(80px) scale(0.6) rotate(-6deg); } to { transform: none; } }
+.brush-marks.static { object-fit: cover; user-select: none; }

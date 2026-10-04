@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, type CSSProperties, type ReactNode } from 'react'
-import { isTouch, onFrame, reducedMotion, watchVisible } from '../lib/perf'
+import { lowPower, onFrame, watchVisible } from '../lib/perf'
 import { normalizeAvatar, shade, type AvatarConfig, type Expression } from '../lib/avatar'
 import './Avatar.css'
 
@@ -74,13 +74,14 @@ export default function Avatar({ config, size = 160, expression = 'idle', track 
   const pupils = useRef<SVGGElement>(null)
 
   useEffect(() => {
-    if (track === 'none' || reducedMotion) return
+    // phones: a static pose; the CSS bob on the outer element is enough life
+    if (track === 'none' || lowPower) return
     let lx = 0, ly = 0
     let visible = false
     let rect: DOMRect | null = null
     let rectAt = 0
     const seed = Math.random() * 100
-    const mode = track === 'mouse' && isTouch ? 'idle' : track
+    const mode = track
     const stopVis = root.current ? watchVisible(root.current, (v) => { visible = v }) : () => {}
     const loop = (t: number) => {
       let tx: number, ty: number
@@ -122,7 +123,7 @@ export default function Avatar({ config, size = 160, expression = 'idle', track 
   const hasFringe = !!fringe && c.hat !== 'cap' && c.hat !== 'beanie'
 
   return (
-    <svg ref={root} viewBox="-16 -14 232 232" width={size} height={size} className={`avatar ${className ?? ''} ex-${ex}`} style={style} aria-hidden>
+    <svg ref={root} viewBox="-16 -14 232 232" width={size} height={size} className={`avatar ${className ?? ''} ex-${ex} trk-${track}`} style={style} aria-hidden>
       <defs>
         <clipPath id={`${uid}-badge`}><circle cx="100" cy="102" r="116" /></clipPath>
         <clipPath id={`${uid}-head`}><path d={head} /></clipPath>

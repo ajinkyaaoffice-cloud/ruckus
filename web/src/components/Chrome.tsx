@@ -1,5 +1,5 @@
 import { MenuButton } from './Menu'
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import gsap from 'gsap'
 import { lowPower } from '../lib/perf'
 import { useNet } from '../lib/net'
@@ -23,19 +23,40 @@ export function Split({ text, className }: { text: string; className?: string })
   )
 }
 
+const MARKS = '<path d="M-40 120 L240 420"/><path d="M240 110 L-30 430"/><path d="M880 640 A120 120 0 1 1 879 640"/><path d="M700 -60 L960 260"/><path d="M960 -40 L690 250"/><path d="M150 800 A90 90 0 1 1 149 800"/>'
+
+/**
+ * Phones get the marks as an <img>: Safari re-runs SVG filters on the CPU
+ * whenever anything above them repaints, but an image is rasterised once.
+ */
+function BrushMarksStatic({ color, opacity }: { color: string; opacity: number }) {
+  const ref = useRef<HTMLImageElement>(null)
+  const src = useMemo(() => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000"><filter id="r"><feTurbulence type="fractalNoise" baseFrequency="0.03 0.2" numOctaves="2" seed="8"/><feDisplacementMap in="SourceGraphic" scale="14"/></filter><g filter="url(#r)" fill="none" stroke="${color}" stroke-linecap="round" opacity="${opacity}" stroke-width="70">${MARKS}</g></svg>`,
+  ), [color, opacity])
+  useEffect(() => {
+    gsap.fromTo(ref.current, { scale: 1.15, rotate: -4 }, { scale: 1, rotate: 0, duration: 1.1, ease: 'power3.out', clearProps: 'transform' })
+  }, [])
+  return <img ref={ref} className="brush-marks static" src={src} alt="" aria-hidden decoding="async" />
+}
+
 /** Giant faint brush X / O marks drifting behind app screens (XOX vibes). */
 export function BrushMarks({ color = '#ffffff', opacity = 0.28 }: { color?: string; opacity?: number }) {
+  if (lowPower) return <BrushMarksStatic color={color} opacity={opacity} />
+  return <BrushMarksLive color={color} opacity={opacity} />
+}
+
+function BrushMarksLive({ color, opacity }: { color: string; opacity: number }) {
   const ref = useRef<SVGSVGElement>(null)
   useEffect(() => {
     const marks = ref.current!.querySelectorAll('.bm')
-    // the slow drift repaints a full-screen SVG every frame; phones skip it
-    const tw = lowPower ? null : gsap.to(marks, { rotate: '+=8', y: '+=24', duration: 6, yoyo: true, repeat: -1, ease: 'sine.inOut', stagger: 1.2 })
+    const tw = gsap.to(marks, { rotate: '+=8', y: '+=24', duration: 6, yoyo: true, repeat: -1, ease: 'sine.inOut', stagger: 1.2 })
     const paths = ref.current!.querySelectorAll<SVGPathElement>('path')
     paths.forEach((p) => {
       const l = p.getTotalLength()
       gsap.fromTo(p, { strokeDasharray: l, strokeDashoffset: l }, { strokeDashoffset: 0, duration: 1.1, ease: 'power3.out', delay: 0.3 + Math.random() * 0.6 })
     })
-    return () => { tw?.kill() }
+    return () => { tw.kill() }
   }, [])
   return (
     <svg ref={ref} className="brush-marks" viewBox="0 0 1000 1000" preserveAspectRatio="xMidYMid slice" aria-hidden>

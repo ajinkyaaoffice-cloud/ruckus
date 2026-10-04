@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import gsap from 'gsap'
 import Glyph, { type GlyphName } from './Glyph'
 import { sfx } from '../lib/sound'
+import { lowPower } from '../lib/perf'
 import './Transition.css'
 
 /**
@@ -104,7 +105,7 @@ export function TransitionProvider({ children }: { children: ReactNode }) {
               <feDisplacementMap in="SourceGraphic" scale="46" />
             </filter>
           </defs>
-          <g filter="url(#tr-rough)">
+          <g filter={lowPower ? undefined : 'url(#tr-rough)'}>
             <path className="tr-stroke" fill="none" strokeLinecap="round" />
             <path className="tr-stroke" fill="none" strokeLinecap="round" />
             <path className="tr-stroke" fill="none" strokeLinecap="round" />

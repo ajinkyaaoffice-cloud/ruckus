@@ -151,7 +151,9 @@ img, svg { display: block; }
 /* Phones / low-power: swap GPU-hungry filters for plain shadows. */
 .low-power .uc { filter: none; box-shadow: 0 3px 0 rgba(27, 31, 63, 0.28); }
 .low-power .uno.my-turn .uno-hand .uc.ok { filter: none; box-shadow: 0 6px 0 rgba(27, 31, 63, 0.3), 0 0 0 3px #fff; }
-.low-power .uno.my-turn .uno-hand .uc.no { filter: brightness(0.8); }
+.low-power .uno .uc { filter: none !important; }
+.low-power .uno.my-turn .uno-hand .uc.no::after { content: ''; position: absolute; inset: 0; border-radius: inherit; background: rgba(27, 31, 63, 0.38); pointer-events: none; }
+.low-power .uno-call:disabled { filter: none; opacity: 0.4; }
 .low-power .uno-modal, .low-power [class*='modal'], .low-power [class*='backdrop'] { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
 .low-power .ec-board svg, .low-power .emote-art { filter: none; }
 .low-power .tk { filter: none; }
@@ -159,3 +161,12 @@ img, svg { display: block; }
 .low-power .split-char { will-change: auto; }
 /* Sections scrolled out of view stop their looping CSS animations. */
 .is-off, .is-off * { animation-play-state: paused !important; }
+/* Game-card illustrations animate groups inside SVGs (full repaints on iOS);
+   on phones they hold still until you touch the card. */
+.low-power .hc-art *, .low-power .gc-art * { animation-play-state: paused !important; }
+.low-power .hub-card:is(:hover, :active) .hc-art *, .low-power .game-card:is(:hover, :active) .gc-art * { animation-play-state: running !important; }
+.low-power .hub-card.locked { filter: none; }
+.low-power .hub-card.locked .hc-art { opacity: 0.45; }
+.low-power .uno-ring rect { animation: none; }
+.low-power .uno-opp.turn .uno-opp-av { animation: none; }
+.low-power .c4-ghost circle, .low-power .dots-ghost { animation: none; }
