@@ -50,9 +50,11 @@ class Cycles(Game):
             self.grid[y * W + x] = self.players.index(p)
         self.phase = "count"
         self.round_winner = None
-        self.go_at = self.now() + 3.0
+        # the first round waits out the screen transition and the READY/GO slam
+        wait = 5.0 if self.round == 1 else 3.0
+        self.go_at = self.now() + wait
         self.emit("round", round=self.round)
-        self.later(3.0, self._go)
+        self.later(wait, self._go)
 
     def _go(self) -> None:
         self.phase = "run"

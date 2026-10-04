@@ -137,7 +137,7 @@ def test_reversi_random_game_finishes():
 # --- light cycles -----------------------------------------------------------
 def test_cycles_wall_crash_and_round_win(clock):
     g = Cycles(P2, rng=random.Random(0))
-    run(g, clock, 3.1)
+    run(g, clock, 5.1)
     assert g.phase == "run"
     # left rider keeps straight into the far wall; the other turns away in time
     left = next(p for p, r in g.riders.items() if r["slot"] == 0)
@@ -152,7 +152,7 @@ def test_cycles_wall_crash_and_round_win(clock):
 
 def test_cycles_reverse_ignored_and_head_on(clock):
     g = Cycles(P2, rng=random.Random(0))
-    run(g, clock, 3.05)
+    run(g, clock, 5.05)
     r = next(iter(g.riders.values()))
     d = r["d"]
     g.handle(next(iter(g.riders)), {"type": "turn", "dir": (d + 2) % 4})
@@ -165,7 +165,7 @@ def test_cycles_reverse_ignored_and_head_on(clock):
 # --- quick draw -------------------------------------------------------------
 def test_quickdraw_foul_and_fastest_reported(clock):
     g = QuickDraw(["a", "b", "c"], rng=random.Random(2))
-    run(g, clock, 2.05)
+    run(g, clock, 3.65)
     assert g.phase == "wait"
     g.handle("a", {"type": "tap"})                  # jumped the gun
     assert "a" in g.fouled
@@ -181,7 +181,7 @@ def test_quickdraw_foul_and_fastest_reported(clock):
 
 def test_quickdraw_rejects_impossible_times(clock):
     g = QuickDraw(P2, rng=random.Random(4))
-    run(g, clock, 2.05)
+    run(g, clock, 3.65)
     while g.phase == "wait":
         run(g, clock, 0.1)
     clock[0] += 0.2
@@ -204,7 +204,7 @@ def test_quickdraw_full_match(clock):
 # --- showdown ---------------------------------------------------------------
 def test_showdown_scoring_and_hidden_picks(clock):
     g = Showdown(P4, rng=random.Random(0))
-    run(g, clock, 1.9)
+    run(g, clock, 3.7)
     g.handle("alice", {"type": "throw", "hand": "rock"})
     assert g.view("bob")["picks"] == {} and g.view("alice")["mine"] == "rock"
     g.handle("bob", {"type": "throw", "hand": "scissors"})
@@ -216,7 +216,7 @@ def test_showdown_scoring_and_hidden_picks(clock):
 
 def test_showdown_random_for_no_throw_and_finishes(clock):
     g = Showdown(P2, rng=random.Random(1))
-    run(g, clock, 1.9 + 6.1)
+    run(g, clock, 3.7 + 6.1)
     assert g.phase == "reveal" and set(g.auto) == set(P2)
     run(g, clock, 80)
     assert g.over
@@ -229,7 +229,7 @@ def test_quickmaths_answers_are_right(clock):
         text, ans = g.make(level)
         expr = text.replace("×", "*").replace("÷", "//").replace("−", "-")
         assert eval(expr) == ans                       # noqa: S307 - our own generated sums
-    run(g, clock, 1.9)
+    run(g, clock, 3.7)
     v = g.view("alice")
     assert v["answer"] is None and len(set(v["options"])) == 4
     wrong = (g.answer + 1) % 4

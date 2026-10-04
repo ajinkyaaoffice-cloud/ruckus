@@ -37,7 +37,7 @@ class QuickDraw(Game):
         self.drawn_at = 0.0
         self.winner: str | None = None
         self.fakes = 0
-        self.later(2.0, self._next)
+        self.later(3.6, self._next)  # outlast the screen transition
 
     def _next(self) -> None:
         if self.round >= ROUNDS:

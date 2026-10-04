@@ -31,7 +31,7 @@ class Showdown(Game):
         self.auto: set[str] = set()
         self.gain: dict[str, int] = {}
         self.deadline = 0.0
-        self.later(1.8, self._next)
+        self.later(3.6, self._next)  # outlast the screen transition
 
     def _next(self) -> None:
         if self.round >= ROUNDS:

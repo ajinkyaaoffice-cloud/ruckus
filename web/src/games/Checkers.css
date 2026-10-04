@@ -1,0 +1,16 @@
+.ck { display: flex; flex-direction: column; align-items: center; width: 100%; }
+.ck-wrap { width: min(92vw, 58svh, 600px); }
+.ck-board { width: 100%; height: auto; display: block; overflow: visible; }
+.ck-click { cursor: pointer; }
+.ck-target { animation: ck-blink 0.8s ease-in-out infinite alternate; pointer-events: none; }
+@keyframes ck-blink { from { opacity: 0.35; } to { opacity: 0.9; } }
+.ck-piece { transition: scale 0.2s var(--ease-out); transform-box: fill-box; transform-origin: 50% 46%; }
+.ck-piece.can { cursor: pointer; }
+.ck-piece.can circle:nth-child(3) { stroke: #fff; stroke-opacity: 0.9; stroke-dasharray: 10 8; }
+.ck-piece.lifted { scale: 1.12; }
+.ck-legend { display: flex; gap: 24px; margin-top: 10px; color: var(--navy); font-size: 18px; flex-wrap: wrap; justify-content: center; }
+.ck-legend span { display: inline-flex; align-items: center; gap: 8px; }
+.ck-legend i { width: 18px; height: 18px; border-radius: 50%; border: 3px solid var(--navy); }
+.ck-legend .me { text-decoration: underline wavy var(--magenta); text-underline-offset: 6px; }
+.ck-hint { margin: 6px 0 0; color: var(--navy); font-weight: 700; text-align: center; min-height: 1.4em; }
+html.low-power .ck-target { animation: none; opacity: 0.7; }

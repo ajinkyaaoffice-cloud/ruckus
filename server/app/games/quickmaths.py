@@ -31,7 +31,7 @@ class QuickMaths(Game):
         self.locked: set[str] = set()
         self.solved_by: str | None = None
         self.deadline = 0.0
-        self.later(1.8, self._next)
+        self.later(3.6, self._next)  # outlast the screen transition
 
     def make(self, level: int) -> tuple[str, int]:
         r = self.rng.randint

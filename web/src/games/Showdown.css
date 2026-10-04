@@ -1,0 +1,29 @@
+.sd { display: flex; flex-direction: column; align-items: center; gap: 14px; width: 100%; }
+.sd-head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; justify-content: center; }
+.sd-round { font-size: 28px; color: var(--navy); }
+.sd-round small { font-size: 0.6em; opacity: 0.7; }
+.sd-call { font-size: clamp(40px, 8vw, 96px); color: #fff; text-shadow: 0 6px 0 var(--navy); text-align: center; margin-top: 6vh; rotate: -3deg; }
+.sd-call.small { font-size: clamp(24px, 4vw, 40px); margin-top: 0; }
+.sd-picks { display: flex; gap: clamp(10px, 2.4vw, 24px); justify-content: center; }
+.sd-pick {
+  display: flex; flex-direction: column; align-items: center; gap: 4px; width: clamp(92px, 24vw, 170px); padding: 14px 10px 10px; border-radius: 26px;
+  background: #fff; box-shadow: 0 8px 0 var(--navy); transition: translate 0.2s var(--ease-out), box-shadow 0.2s;
+}
+.sd-pick:hover { translate: 0 -4px; }
+.sd-pick.on { background: var(--lime); box-shadow: 0 8px 0 var(--magenta); translate: 0 -8px; }
+.sd-pick span { font-size: clamp(14px, 2.2vw, 20px); color: var(--navy); }
+.sd-hand { width: 100%; height: auto; display: block; }
+.sd-locked { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.sd-locked span { padding: 4px 12px; border-radius: 999px; border: 3px dashed var(--c); color: var(--navy); font-weight: 700; font-size: 14px; }
+.sd-locked span.in { background: var(--c); color: #fff; border-style: solid; }
+.sd-reveal { display: flex; gap: clamp(8px, 2vw, 18px); flex-wrap: wrap; justify-content: center; perspective: 800px; }
+.sd-card {
+  position: relative; display: flex; flex-direction: column; align-items: center; width: clamp(96px, 20vw, 150px); padding: 12px 10px 10px;
+  background: #fff; border-radius: 22px; box-shadow: 0 7px 0 var(--c); backface-visibility: hidden;
+}
+.sd-card.me { outline: 4px solid var(--navy); }
+.sd-card b { font-size: 16px; color: var(--navy); margin-top: 4px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sd-card small { font-weight: 700; color: var(--navy); opacity: 0.7; font-size: 12px; }
+.sd-gain { position: absolute; top: -12px; right: -10px; background: var(--navy); color: #fff; border-radius: 999px; padding: 6px 10px 2px; font-size: 18px; }
+.sd-gain.up { background: var(--magenta); }
+.sd-tip { margin: 0; color: var(--navy); font-weight: 600; font-size: 14px; opacity: 0.75; text-align: center; }

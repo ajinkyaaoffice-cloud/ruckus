@@ -802,6 +802,402 @@ const EchoGrow = () => (
   </Scene>
 )
 
+/* ---------- Sea Battle ---------- */
+
+const SB = 20, SBX = 60, SBY = 12
+const sc = (c: number, r: number) => [SBX + SB * c + SB / 2, SBY + SB * r + SB / 2] as const
+function Sea6() {
+  return (
+    <g>
+      <rect x={SBX} y={SBY} width={SB * 6} height={SB * 6} rx={8} fill="#3d8bff" />
+      {Array.from({ length: 5 }, (_, i) => (
+        <path key={i} d={`M${SBX + SB * (i + 1)} ${SBY} V${SBY + SB * 6} M${SBX} ${SBY + SB * (i + 1)} H${SBX + SB * 6}`} stroke="#fff" strokeOpacity={0.2} />
+      ))}
+    </g>
+  )
+}
+function Boat({ cls, c, r, len, vertical, color = ME }: { cls: string; c: number; r: number; len: number; vertical?: boolean; color?: string }) {
+  const [x, y] = [SBX + SB * c + 3, SBY + SB * r + 3]
+  const w = vertical ? SB - 6 : SB * len - 6, h = vertical ? SB * len - 6 : SB - 6
+  return <rect className={cls} data-o x={x} y={y} width={w} height={h} rx={7} fill={color} stroke="#fff" strokeOpacity={0.5} strokeWidth={2} />
+}
+function Boom({ cls, c, r }: { cls: string; c: number; r: number }) {
+  const [x, y] = sc(c, r)
+  return (
+    <g className={cls} data-o transform={`translate(${x} ${y})`}>
+      <path d="M0 -9 L3 -3 L9 -4 L5 1 L8 8 L0 4 L-8 8 L-5 1 L-9 -4 L-3 -3Z" fill="#ff5d73" /><circle r={3} fill="#ffb424" />
+    </g>
+  )
+}
+function Splash({ cls, c, r }: { cls: string; c: number; r: number }) {
+  const [x, y] = sc(c, r)
+  return <g className={cls} data-o transform={`translate(${x} ${y})`}><circle r={6} fill="none" stroke="#fff" strokeWidth={2} /><circle r={2.5} fill="#fff" /></g>
+}
+
+const SeaHide = () => (
+  <Scene build={(tl) => {
+    tl.set('.b', { scale: 0, opacity: 1 }).set('.l1', { opacity: 0, scale: 0.4 })
+      .to('.b', { scale: 1, duration: 0.35, ease: 'back.out(3)', stagger: 0.12 }, 0.3)
+      .to('.b', { opacity: 0, duration: 0.2 }, '+=0.6')
+      .set('.b', { scale: 0 })
+      .set('.b1', { x: 20, y: 40 }).set('.b2', { x: -40, y: -20 }).set('.b3', { x: 40, y: 0 })
+      .to('.b', { scale: 1, opacity: 1, duration: 0.35, ease: 'back.out(3)', stagger: 0.1 })
+      .to('.l1', { opacity: 1, scale: 1, ease: 'back.out(3)' })
+      .set('.b1, .b2, .b3', { x: 0, y: 0 }, '+=1.2')
+  }}>
+    <Sea6 />
+    <Boat cls="b b1" c={0} r={0} len={4} /><Boat cls="b b2" c={4} r={2} len={3} vertical /><Boat cls="b b3" c={1} r={4} len={2} />
+    <Pill cls="l1" x={120} y={140} text="shuffle, then press Ready" bg={ME} />
+  </Scene>
+)
+
+const SeaFire = () => (
+  <Scene build={(tl) => {
+    tl.set('.tap', { x: 210, y: 140, opacity: 0 }).set('.m1, .h1, .h2', { scale: 0 }).set('.l1, .l2', { opacity: 0, scale: 0.4 })
+    tapAt(tl, ...sc(1, 1), 0.3)
+    tl.to('.m1', { scale: 1, ease: 'back.out(3)' }).to('.l1', { opacity: 1, scale: 1, ease: 'back.out(3)' }, '<')
+      .to('.l1', { opacity: 0, duration: 0.2 }, '+=0.8')
+    tapAt(tl, ...sc(3, 3))
+    tl.to('.h1', { scale: 1, ease: 'back.out(3)' }).to('.l2', { opacity: 1, scale: 1, ease: 'back.out(3)' }, '<')
+    tapAt(tl, ...sc(4, 3), '+=0.4')
+    tl.to('.h2', { scale: 1, ease: 'back.out(3)' })
+  }}>
+    <Sea6 />
+    <Splash cls="m1" c={1} r={1} /><Boom cls="h1" c={3} r={3} /><Boom cls="h2" c={4} r={3} />
+    <Tap />
+    <Pill cls="l1" x={120} y={140} text="miss: their turn" />
+    <Pill cls="l2" x={120} y={140} text="hit: fire again!" bg={ME} />
+  </Scene>
+)
+
+const SeaSink = () => (
+  <Scene build={(tl) => {
+    tl.set('.h', { scale: 1 }).set('.ship', { opacity: 0, scale: 0.6 }).set('.l1', { opacity: 0, scale: 0.4 }).set('.h3', { scale: 0 }).set('.tap', { x: 210, y: 140, opacity: 0 })
+    tapAt(tl, ...sc(4, 2), 0.3)
+    tl.to('.h3', { scale: 1, ease: 'back.out(3)' })
+      .to('.ship', { opacity: 1, scale: 1, ease: 'back.out(2)' }, '+=0.2')
+      .to('.h', { scale: 0.7, duration: 0.2 }, '<')
+      .to('.l1', { opacity: 1, scale: 1, ease: 'back.out(3)' })
+  }}>
+    <Sea6 />
+    <Boat cls="ship" c={2} r={2} len={3} color={YOU} />
+    <Boom cls="h" c={2} r={2} /><Boom cls="h" c={3} r={2} /><Boom cls="h3" c={4} r={2} />
+    <Tap />
+    <Pill cls="l1" x={120} y={140} text="sink their whole fleet to win" bg={ME} />
+  </Scene>
+)
+
+/* ---------- Checkers ---------- */
+
+const KX = 72, KY = 8, KS = 24
+const kc = (c: number, r: number) => [KX + KS * c + KS / 2, KY + KS * r + KS / 2] as const
+function CkBoard() {
+  return (
+    <g>
+      {Array.from({ length: 20 }, (_, i) => {
+        const c = i % 4, r = Math.floor(i / 4)
+        return <rect key={i} x={KX + c * KS} y={KY + r * KS} width={KS} height={KS} fill={(c + r) % 2 ? '#ff5d73' : '#ffe3ea'} />
+      })}
+    </g>
+  )
+}
+function Man({ cls, color, king }: { cls: string; color: string; king?: boolean }) {
+  return (
+    <g className={cls}>
+      <circle r={9.5} fill={color} stroke="#fff" strokeWidth={2} />
+      <path className="crown" data-o d="M-6 3 L-7 -4 L-3 -1 L0 -6 L3 -1 L7 -4 L6 3Z" fill="#ffb424" stroke="#1d3a6e" strokeWidth={1.2} opacity={king ? 1 : 0} />
+    </g>
+  )
+}
+const at = (tl: gsap.core.Timeline, sel: string, c: number, r: number) => tl.set(sel, { x: kc(c, r)[0], y: kc(c, r)[1], opacity: 1, scale: 1 })
+
+const CkMove = () => (
+  <Scene build={(tl) => {
+    at(tl, '.me', 0, 4); at(tl, '.you', 3, 0)
+    tl.set('.l1', { opacity: 0, scale: 0.4 })
+      .to('.me', { x: kc(1, 3)[0], y: kc(1, 3)[1], duration: 0.5, ease: 'power2.inOut' }, 0.4)
+      .to('.you', { x: kc(2, 1)[0], y: kc(2, 1)[1], duration: 0.5, ease: 'power2.inOut' }, '+=0.3')
+      .to('.me', { x: kc(2, 2)[0], y: kc(2, 2)[1], duration: 0.5, ease: 'power2.inOut' }, '+=0.3')
+      .to('.l1', { opacity: 1, scale: 1, ease: 'back.out(3)' })
+  }}>
+    <CkBoard />
+    <Man cls="you" color={YOU} /><Man cls="me" color={ME} />
+    <Pill cls="l1" x={120} y={140} text="one step diagonally forward" />
+  </Scene>
+)
+
+const CkJump = () => (
+  <Scene build={(tl) => {
+    at(tl, '.me', 0, 4); at(tl, '.y1', 1, 3); at(tl, '.y2', 1, 1)
+    tl.set('.l1', { opacity: 0, scale: 0.4 })
+      .to('.me', { keyframes: [{ x: kc(1, 3)[0], y: kc(1, 3)[1] - 10, duration: 0.25 }, { x: kc(2, 2)[0], y: kc(2, 2)[1], duration: 0.25 }] }, 0.5)
+      .to('.y1', { scale: 0, opacity: 0, duration: 0.25 }, '-=0.1')
+      .to('.me', { keyframes: [{ x: kc(1, 1)[0], y: kc(1, 1)[1] - 10, duration: 0.25 }, { x: kc(0, 0)[0], y: kc(0, 0)[1], duration: 0.25 }] }, '+=0.35')
+      .to('.y2', { scale: 0, opacity: 0, duration: 0.25 }, '-=0.1')
+      .to('.l1', { opacity: 1, scale: 1, ease: 'back.out(3)' })
+  }}>
+    <CkBoard />
+    <Man cls="y1" color={YOU} /><Man cls="y2" color={YOU} /><Man cls="me" color={ME} />
+    <Pill cls="l1" x={120} y={140} text="jumps are a must — and they chain!" bg={ME} />
+  </Scene>
+)
+
+const CkKing = () => (
+  <Scene build={(tl) => {
+    at(tl, '.me', 2, 1)
+    tl.set('.me .crown', { opacity: 0, scale: 0 }).set('.l1', { opacity: 0, scale: 0.4 })
+      .to('.me', { x: kc(3, 0)[0], y: kc(3, 0)[1], duration: 0.5, ease: 'power2.inOut' }, 0.4)
+      .to('.me .crown', { opacity: 1, scale: 1.3, duration: 0.4, ease: 'back.out(3)' })
+      .to('.l1', { opacity: 1, scale: 1, ease: 'back.out(3)' })
+      .to('.me', { x: kc(1, 2)[0], y: kc(1, 2)[1], duration: 0.7, ease: 'power2.inOut' }, '+=0.3')
+  }}>
+    <CkBoard />
+    <Man cls="me" color={ME} />
+    <Pill cls="l1" x={120} y={140} text="reach the far side: king! moves both ways" bg={ME} />
+  </Scene>
+)
+
+/* ---------- Reversi ---------- */
+
+const RX = [48, 84, 120, 156, 192]
+function RDisc({ cls, color }: { cls: string; color: string }) {
+  return <circle className={cls} data-o r={14} fill={color} stroke="#1d3a6e" strokeWidth={2} />
+}
+const RvFlip = () => (
+  <Scene build={(tl) => {
+    tl.set('.tap', { x: 210, y: 140, opacity: 0 }).set('.d0', { x: RX[0], y: 62 }).set('.d1, .d2', { fill: YOU, scaleX: 1 })
+      .set('.d1', { x: RX[1], y: 62 }).set('.d2', { x: RX[2], y: 62 }).set('.d3', { x: RX[3], y: 62, scale: 0 }).set('.l1', { opacity: 0, scale: 0.4 })
+    tapAt(tl, RX[3], 70, 0.3)
+    tl.to('.d3', { scale: 1, ease: 'back.out(3)' })
+      .to('.d2', { scaleX: 0, duration: 0.15 }).set('.d2', { fill: ME }).to('.d2', { scaleX: 1, duration: 0.15 })
+      .to('.d1', { scaleX: 0, duration: 0.15 }).set('.d1', { fill: ME }).to('.d1', { scaleX: 1, duration: 0.15 })
+      .to('.l1', { opacity: 1, scale: 1, ease: 'back.out(3)' })
+  }}>
+    <rect x={26} y={40} width={188} height={44} rx={10} fill="#2fbf8f" />
+    <RDisc cls="d0" color={ME} /><RDisc cls="d1" color={YOU} /><RDisc cls="d2" color={YOU} /><RDisc cls="d3" color={ME} />
+    <Tap />
+    <Pill cls="l1" x={120} y={122} text="trap a line of theirs to flip it" bg={ME} />
+  </Scene>
+)
+
+const RvCount = () => {
+  const cols = [ME, YOU, ME, ME, YOU, ME, ME, YOU, YOU, ME, ME, ME, YOU, ME, YOU, ME]
+  return (
+    <Scene build={(tl) => {
+      tl.set('.q', { scale: 0 }).set('.l1, .l2', { opacity: 0, scale: 0.4 })
+        .to('.q', { scale: 1, duration: 0.25, ease: 'back.out(3)', stagger: 0.05 }, 0.2)
+        .to('.l1', { opacity: 1, scale: 1, ease: 'back.out(3)' })
+        .to('.l2', { opacity: 1, scale: 1, ease: 'back.out(3)' }, '+=0.3')
+    }}>
+      <rect x={66} y={6} width={108} height={108} rx={10} fill="#2fbf8f" />
+      {cols.map((c, i) => <circle key={i} className="q" data-o cx={80 + (i % 4) * 27} cy={20 + Math.floor(i / 4) * 27} r={11} fill={c} />)}
+      <Pill cls="l1" x={70} y={134} text={`you ${cols.filter((c) => c === ME).length}`} bg={ME} />
+      <Pill cls="l2" x={170} y={134} text={`them ${cols.filter((c) => c === YOU).length}`} bg={YOU} />
+    </Scene>
+  )
+}
+
+/* ---------- Light Cycles ---------- */
+
+const CyDrive = () => (
+  <Scene build={(tl) => {
+    tl.set('.draw', { strokeDasharray: 1, strokeDashoffset: 1 }).set('.l1', { opacity: 0, scale: 0.4 }).set('.k', { scale: 1 })
+    ink(tl, '.tr1', 0.3, 1.6)
+    tl.to('.k1', { scale: 1.3, duration: 0.15, yoyo: true, repeat: 1 }, 0.75)
+      .to('.k2', { scale: 1.3, duration: 0.15, yoyo: true, repeat: 1 }, 1.3)
+      .to('.l1', { opacity: 1, scale: 1, ease: 'back.out(3)' })
+  }}>
+    <rect x={20} y={8} width={200} height={110} rx={10} fill="#132a52" />
+    <path className="draw tr1" pathLength={1} d="M36 100 H110 V40 H200" stroke={ME} strokeWidth={5} fill="none" strokeLinejoin="round" strokeLinecap="round" />
+    <g className="k k1" data-o transform="translate(110 100)"><rect x={-9} y={-9} width={18} height={18} rx={4} fill="#fff" /><path d="M-4 3 L0 -3 L4 3" stroke="#1d3a6e" strokeWidth={2} fill="none" /></g>
+    <g className="k k2" data-o transform="translate(110 40)"><rect x={-9} y={-9} width={18} height={18} rx={4} fill="#fff" /><path d="M-3 -4 L3 0 L-3 4" stroke="#1d3a6e" strokeWidth={2} fill="none" /></g>
+    <Pill cls="l1" x={120} y={136} text="swipe or use arrows to turn" />
+  </Scene>
+)
+
+const CyCrash = () => (
+  <Scene build={(tl) => {
+    tl.set('.draw', { strokeDasharray: 1, strokeDashoffset: 1 }).set('.bang', { scale: 0 }).set('.l1', { opacity: 0, scale: 0.4 }).set('.tr2', { opacity: 1 })
+    ink(tl, '.tr1', 0.2, 1)
+    ink(tl, '.tr2', 0.5, 0.9)
+    tl.to('.bang', { scale: 1, ease: 'back.out(3)' }).to('.tr2', { opacity: 0.35, duration: 0.3 }, '<')
+      .to('.l1', { opacity: 1, scale: 1, ease: 'back.out(3)' })
+  }}>
+    <rect x={20} y={8} width={200} height={110} rx={10} fill="#132a52" />
+    <path className="draw tr1" pathLength={1} d="M40 64 H200" stroke={ME} strokeWidth={5} fill="none" strokeLinecap="round" />
+    <path className="draw tr2" pathLength={1} d="M150 112 V100 H130 V68" stroke={YOU} strokeWidth={5} fill="none" strokeLinejoin="round" strokeLinecap="round" />
+    <g className="bang" data-o transform="translate(130 66)"><path d="M0 -14 L4 -5 L14 -6 L7 1 L12 12 L0 6 L-12 12 L-7 1 L-14 -6 L-4 -5Z" fill="#ffb424" /></g>
+    <Pill cls="l1" x={120} y={136} text="hit any wall or trail = out" bg="#ff5d73" />
+  </Scene>
+)
+
+const CyWin = () => (
+  <Scene build={(tl) => {
+    tl.set('.pip', { fill: 'transparent' }).set('.l1', { opacity: 0, scale: 0.4 })
+      .to('.pip', { fill: ME, duration: 0.2, stagger: 0.5 }, 0.4)
+      .to('.l1', { opacity: 1, scale: 1, ease: 'back.out(3)' })
+  }}>
+    <rect x={60} y={30} width={120} height={60} rx={30} fill={ME} opacity={0.2} />
+    <text x={120} y={58} textAnchor="middle" className="rs-num" fontSize={20} fill="#fff">ROUNDS</text>
+    {[0, 1, 2].map((i) => <circle key={i} className="pip" cx={96 + i * 24} cy={76} r={7} stroke={ME} strokeWidth={3} />)}
+    <Pill cls="l1" x={120} y={124} text="last rider moving wins the round" bg={ME} />
+  </Scene>
+)
+
+/* ---------- Quick Draw ---------- */
+
+function Desert({ cls }: { cls?: string }) {
+  return (
+    <g>
+      <rect className={cls} x={20} y={6} width={200} height={112} rx={12} fill="#ffc93c" />
+      <circle cx={170} cy={40} r={18} fill="#fff3c4" />
+      <path d="M20 96 Q120 86 220 96 V118 H20Z" fill="#c97a3a" />
+      <g fill="#2fbf8f"><rect x={44} y={66} width={8} height={34} rx={4} /><rect x={36} y={74} width={6} height={12} rx={3} /><rect x={54} y={72} width={6} height={12} rx={3} /></g>
+    </g>
+  )
+}
+const QdFake = () => (
+  <Scene build={(tl) => {
+    tl.set('.weed', { x: 10, rotation: 0 }).set('.l1', { opacity: 0, scale: 0.4 })
+      .to('.weed', { x: 230, rotation: 540, duration: 2, ease: 'none' }, 0.2)
+      .to('.l1', { opacity: 1, scale: 1, ease: 'back.out(3)' }, 0.8)
+  }}>
+    <Desert />
+    <text x={120} y={58} textAnchor="middle" className="rs-num" fontSize={22} fill="#fff">WAIT…</text>
+    <g className="weed"><g transform="translate(0 90)"><circle r={9} fill="none" stroke="#8a6b3d" strokeWidth={2} /><path d="M-7 -3 Q0 6 7 -4 M0 -9 Q-4 0 0 9" stroke="#8a6b3d" strokeWidth={2} fill="none" /></g></g>
+    <Pill cls="l1" x={120} y={136} text="fakes roll by — don't tap yet!" />
+  </Scene>
+)
+
+const QdDraw = () => (
+  <Scene build={(tl) => {
+    tl.set('.bg', { fill: '#ffc93c' }).set('.dw', { scale: 0 }).set('.ms', { opacity: 0 }).set('.tap', { x: 200, y: 140, opacity: 0 }).set('.l1', { opacity: 0, scale: 0.4 })
+      .to('.bg', { fill: '#ff3d5a', duration: 0.05 }, 0.8)
+      .to('.dw', { scale: 1, duration: 0.25, ease: 'back.out(3)' }, 0.8)
+    tapAt(tl, 120, 80, 0.95)
+    tl.to('.ms', { opacity: 1, duration: 0.1 }).to('.l1', { opacity: 1, scale: 1, ease: 'back.out(3)' })
+  }}>
+    <Desert cls="bg" />
+    <text className="dw" data-o x={120} y={62} textAnchor="middle" fontSize={30} fill="#fff" style={{ fontFamily: 'var(--font-display)' }}>DRAW!</text>
+    <text className="ms rs-num" x={190} y={26} textAnchor="middle" fontSize={13} fill="#fff">184ms</text>
+    <Tap />
+    <Pill cls="l1" x={120} y={136} text="fastest tap takes the point" bg={ME} />
+  </Scene>
+)
+
+const QdFoul = () => (
+  <Scene build={(tl) => {
+    tl.set('.tap', { x: 200, y: 140, opacity: 0 }).set('.foul', { scale: 0 }).set('.l1', { opacity: 0, scale: 0.4 })
+    tapAt(tl, 120, 80, 0.4)
+    tl.to('.foul', { scale: 1, ease: 'back.out(3)' }).to('.l1', { opacity: 1, scale: 1, ease: 'back.out(3)' })
+  }}>
+    <Desert />
+    <text x={120} y={40} textAnchor="middle" className="rs-num" fontSize={16} fill="#fff">WAIT…</text>
+    <g className="foul" data-o><text x={120} y={70} textAnchor="middle" fontSize={22} fill="#ff3d5a" style={{ fontFamily: 'var(--font-display)' }}>TOO EARLY!</text></g>
+    <Tap />
+    <Pill cls="l1" x={120} y={136} text="early tap = out for that round" bg="#ff5d73" />
+  </Scene>
+)
+
+/* ---------- Showdown ---------- */
+
+function HandIcon({ kind, color }: { kind: string; color: string }) {
+  if (kind === 'rock') return <path d="M-12 0 C-14 -10 -6 -15 0 -14 C10 -16 15 -8 13 2 C15 11 7 15 0 14 C-9 15 -15 9 -12 0Z" fill={color} />
+  if (kind === 'paper') return <rect x={-11} y={-14} width={22} height={28} rx={3} fill={color} transform="rotate(-6)" />
+  return <g fill={color}><path d="M-2 2 L14 -12 L16 -9 L1 5Z" /><path d="M-2 -2 L14 12 L16 9 L1 -5Z" /><circle cx={-8} cy={-6} r={5} fill="none" stroke={color} strokeWidth={3} /><circle cx={-8} cy={6} r={5} fill="none" stroke={color} strokeWidth={3} /></g>
+}
+const SdPick = () => (
+  <Scene build={(tl) => {
+    tl.set('.tap', { x: 200, y: 140, opacity: 0 }).set('.h', { scale: 1 }).set('.card2', { fill: '#fff' }).set('.ok', { scale: 0 }).set('.l1', { opacity: 0, scale: 0.4 })
+      .set('.timer', { scaleX: 1, transformOrigin: '0% 50%' })
+      .to('.timer', { scaleX: 0, duration: 3, ease: 'none' }, 0)
+    tapAt(tl, 120, 70, 0.6)
+    tl.to('.card2', { fill: '#d9f66b', duration: 0.2 }).to('.ok', { scale: 1, ease: 'back.out(3)' }, '<')
+      .to('.l1', { opacity: 1, scale: 1, ease: 'back.out(3)' })
+  }}>
+    <rect className="timer" x={40} y={10} width={160} height={6} rx={3} fill={ME} />
+    {['rock', 'paper', 'scissors'].map((k, i) => (
+      <g key={k} transform={`translate(${64 + i * 56} 66)`}>
+        <rect className={`card${i + 1}`} x={-22} y={-28} width={44} height={56} rx={10} fill="#fff" stroke="#1d3a6e" strokeWidth={2} />
+        <HandIcon kind={k} color="#1d3a6e" />
+      </g>
+    ))}
+    <g className="ok" data-o transform="translate(138 42)"><circle r={8} fill={ME} /><path d="M-4 0 L-1 3 L4 -3" stroke="#fff" strokeWidth={2} fill="none" /></g>
+    <Tap />
+    <Pill cls="l1" x={120} y={124} text="pick in secret before time runs out" />
+  </Scene>
+)
+
+const SdScore = () => {
+  const ps = [{ k: 'rock', c: ME, g: 2 }, { k: 'scissors', c: YOU, g: 1 }, { k: 'scissors', c: '#ffb424', g: 1 }, { k: 'paper', c: '#2fbf8f', g: 1 }]
+  return (
+    <Scene build={(tl) => {
+      tl.set('.rc', { scaleX: 0 }).set('.gn', { scale: 0 }).set('.l1', { opacity: 0, scale: 0.4 })
+        .to('.rc', { scaleX: 1, duration: 0.3, ease: 'back.out(2)', stagger: 0.15 }, 0.3)
+        .to('.gn', { scale: 1, ease: 'back.out(3)', stagger: 0.1 })
+        .to('.l1', { opacity: 1, scale: 1, ease: 'back.out(3)' })
+    }}>
+      {ps.map((p, i) => (
+        <g key={i} transform={`translate(${48 + i * 48} 60)`}>
+          <g className="rc" data-o>
+            <rect x={-20} y={-26} width={40} height={52} rx={9} fill="#fff" stroke={p.c} strokeWidth={3} />
+            <HandIcon kind={p.k} color={p.c} />
+          </g>
+          <g className="gn" data-o transform="translate(16 -26)"><circle r={9} fill={p.g > 1 ? ME : '#1d3a6e'} /><text dy="0.36em" textAnchor="middle" fontSize={9} fill="#fff" className="rs-pill">+{p.g}</text></g>
+        </g>
+      ))}
+      <Pill cls="l1" x={120} y={124} text="1 point for every player you beat" bg={ME} />
+    </Scene>
+  )
+}
+
+/* ---------- Quick Maths ---------- */
+
+const QM_OPTS = [40, 42, 48, 36]
+function Sum() {
+  return (
+    <g>
+      <rect x={60} y={6} width={120} height={36} rx={10} fill="#fff" stroke="#1d3a6e" strokeWidth={2} />
+      <text x={120} y={30} textAnchor="middle" fontSize={20} fill="#1d3a6e" style={{ fontFamily: 'var(--font-display)' }}>6 × 7 = ?</text>
+      {QM_OPTS.map((v, i) => (
+        <g key={v} transform={`translate(${86 + (i % 2) * 68} ${62 + Math.floor(i / 2) * 32})`}>
+          <rect className={`o${i}`} x={-30} y={-12} width={60} height={24} rx={8} fill="#fff" stroke="#1d3a6e" strokeWidth={2} />
+          <text dy="0.36em" textAnchor="middle" fontSize={14} fill="#1d3a6e" style={{ fontFamily: 'var(--font-display)' }}>{v}</text>
+        </g>
+      ))}
+    </g>
+  )
+}
+const QmRight = () => (
+  <Scene build={(tl) => {
+    tl.set('.tap', { x: 210, y: 140, opacity: 0 }).set('.o1', { fill: '#fff' }).set('.plus', { opacity: 0, y: 0 }).set('.l1', { opacity: 0, scale: 0.4 })
+    tapAt(tl, 154, 66, 0.5)
+    tl.to('.o1', { fill: '#d9f66b', duration: 0.2 }).to('.plus', { opacity: 1, y: -10, ease: 'back.out(3)' }, '<')
+      .to('.l1', { opacity: 1, scale: 1, ease: 'back.out(3)' })
+  }}>
+    <Sum />
+    <text className="plus rs-num" x={196} y={58} textAnchor="middle" fontSize={16} fill={ME}>+1</text>
+    <Tap />
+    <Pill cls="l1" x={120} y={136} text="first right answer scores" bg={ME} />
+  </Scene>
+)
+const QmWrong = () => (
+  <Scene build={(tl) => {
+    tl.set('.tap', { x: 210, y: 140, opacity: 0 }).set('.o2', { fill: '#fff' }).set('.lk', { opacity: 0, scale: 0.4 }).set('.l1', { opacity: 0, scale: 0.4 })
+    tapAt(tl, 86, 98, 0.5)
+    tl.to('.o2', { fill: '#ff5d73', duration: 0.2 }).to('.lk', { opacity: 1, scale: 1, ease: 'back.out(3)' })
+      .to('.l1', { opacity: 1, scale: 1, ease: 'back.out(3)' })
+  }}>
+    <Sum />
+    <g className="lk" data-o transform="translate(210 80)">
+      <rect x={-12} y={-4} width={24} height={18} rx={4} fill="#1d3a6e" />
+      <path d="M-7 -4 V-9 A7 7 0 0 1 7 -9 V-4" fill="none" stroke="#1d3a6e" strokeWidth={3.5} />
+    </g>
+    <Tap />
+    <Pill cls="l1" x={120} y={136} text="wrong = locked out for that sum" bg="#ff5d73" />
+  </Scene>
+)
+
 /* ---------- the books ---------- */
 
 export type RulePage = { title: string; text: string; Scene: ComponentType }
@@ -875,6 +1271,59 @@ export const RULES: Record<string, RuleBook> = {
       { title: 'Watch', text: 'The pads light up one after another. Watch the order closely.', Scene: EchoWatch },
       { title: 'Copy it', text: 'Now tap the same pads in the same order. Everyone does it at the same time.', Scene: EchoRepeat },
       { title: 'It keeps growing', text: 'Each round adds one more step. Tap a wrong pad or run out of time and you’re out. Last one left wins — if it’s a tie, the fastest wins.', Scene: EchoGrow },
+    ],
+  },
+  seabattle: {
+    goal: 'Sink all of the other player’s ships first.',
+    pages: [
+      { title: 'Hide your fleet', text: 'Your five ships are placed for you. Don’t like the spot? Shuffle them. Press Ready when you’re happy — you can’t see their ships, and they can’t see yours.', Scene: SeaHide },
+      { title: 'Take a shot', text: 'Tap a square on their sea. A splash means you missed and it’s their turn. A bang means you hit — and you get to shoot again!', Scene: SeaFire },
+      { title: 'Sink them all', text: 'Hit every square of a ship and it sinks. The first player to sink the whole enemy fleet wins.', Scene: SeaSink },
+    ],
+  },
+  checkers: {
+    goal: 'Take all of their pieces, or leave them with no move.',
+    pages: [
+      { title: 'Step forward', text: 'Pieces move one square diagonally, forward only. Tap a piece, then tap where it should go.', Scene: CkMove },
+      { title: 'Jump to capture', text: 'Hop over an enemy piece into the empty square behind it to take it. If you can jump, you must! If you can jump again, keep going.', Scene: CkJump },
+      { title: 'Crown a king', text: 'Reach the far side and your piece becomes a king. Kings can move forwards and backwards.', Scene: CkKing },
+    ],
+  },
+  reversi: {
+    goal: 'Have the most discs of your colour when the board fills up.',
+    pages: [
+      { title: 'Trap and flip', text: 'Place a disc so a line of their discs is stuck between two of yours — across, up and down, or diagonally. All of them flip to your colour. Every move has to flip at least one.', Scene: RvFlip },
+      { title: 'Count up', text: 'Can’t flip anything? Your turn is skipped. When nobody can move, the player with the most discs wins.', Scene: RvCount },
+    ],
+  },
+  cycles: {
+    goal: 'Be the last rider still moving.',
+    pages: [
+      { title: 'Drive and turn', text: 'Your bike never stops and leaves a glowing wall behind it. Swipe, use the arrow buttons, or the arrow keys to turn.', Scene: CyDrive },
+      { title: 'Don’t crash', text: 'Hit the edge, your own wall, or anyone else’s wall and you’re out of the round. Cut in front of people to box them in!', Scene: CyCrash },
+      { title: 'Win rounds', text: 'The last rider moving wins the round. Win enough rounds (three with two players, two with more) to win the game.', Scene: CyWin },
+    ],
+  },
+  quickdraw: {
+    goal: 'Tap faster than everyone when it says DRAW!',
+    pages: [
+      { title: 'Wait for it', text: 'Keep your finger still. Tumbleweeds, birds and dust will try to fool you.', Scene: QdFake },
+      { title: 'DRAW!', text: 'When the screen turns red and says DRAW!, tap as fast as you can. The fastest tap wins the round.', Scene: QdDraw },
+      { title: 'No cheating', text: 'Tap too early and you’re out for that round. Seven rounds — most wins takes it.', Scene: QdFoul },
+    ],
+  },
+  showdown: {
+    goal: 'Beat as many players as you can with rock, paper or scissors.',
+    pages: [
+      { title: 'Pick a hand', text: 'Everyone picks rock, paper or scissors in secret. You can change your mind until the timer runs out. No pick? You get a random one.', Scene: SdPick },
+      { title: 'Score points', text: 'Rock beats scissors, scissors beats paper, paper beats rock. You get one point for every player you beat. Seven rounds, most points wins.', Scene: SdScore },
+    ],
+  },
+  quickmaths: {
+    goal: 'Answer the most sums right, first.',
+    pages: [
+      { title: 'Be quick', text: 'A sum pops up with four answers. Everyone races — the first right answer gets the point. The sums get harder as you go.', Scene: QmRight },
+      { title: 'Be sure', text: 'Pick a wrong answer and you’re locked out of that sum. Ten sums in all, most points wins.', Scene: QmWrong },
     ],
   },
 }

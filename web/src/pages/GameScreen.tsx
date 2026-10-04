@@ -21,6 +21,13 @@ const GAMES: Record<string, ComponentType<GameProps>> = {
   memory: lazy(() => import('../games/Memory')),
   oddone: lazy(() => import('../games/OddOne')),
   echo: lazy(() => import('../games/Echo')),
+  seabattle: lazy(() => import('../games/SeaBattle')),
+  checkers: lazy(() => import('../games/Checkers')),
+  reversi: lazy(() => import('../games/Reversi')),
+  cycles: lazy(() => import('../games/Cycles')),
+  quickdraw: lazy(() => import('../games/QuickDraw')),
+  showdown: lazy(() => import('../games/Showdown')),
+  quickmaths: lazy(() => import('../games/QuickMaths')),
 }
 const Rulebook = lazy(() => import('../components/Rulebook'))
 
@@ -31,6 +38,8 @@ export default function GameScreen() {
   const me = useNet((s) => s.profile.pid)
   const { go } = useTransition()
   const [rules, setRules] = useState(false)
+  // let the winning move land on the board before the podium covers it
+  const [showResults, setShowResults] = useState(false)
   const gid = state?.game ?? room.game?.id
   const meta = gameMeta(gid)
   const Game = gid ? GAMES[gid] : undefined
@@ -46,6 +55,12 @@ export default function GameScreen() {
     }, root)
     return () => ctx.revert()
   }, [])
+
+  useEffect(() => {
+    if (!state?.over) { setShowResults(false); return }
+    const t = window.setTimeout(() => setShowResults(true), 1300)
+    return () => window.clearTimeout(t)
+  }, [state?.over, state?.instance]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (state?.over && state.results) {
@@ -99,7 +114,7 @@ export default function GameScreen() {
       <Intro key={state?.instance ?? 'none'} />
 
       {rules && meta && <Suspense fallback={null}><Rulebook g={meta} onClose={() => setRules(false)} /></Suspense>}
-      {state?.over && state.results && <Results state={state} room={room} me={me} />}
+      {showResults && state?.over && state.results && <Results state={state} room={room} me={me} />}
     </div>
   )
 }

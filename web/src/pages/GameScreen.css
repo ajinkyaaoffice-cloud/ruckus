@@ -16,3 +16,9 @@
 @media (max-width: 600px) { .gs-pong .gs-top-players { display: none; } }
 .gs-help { background: #fff; color: var(--navy); font-size: calc(var(--tb-btn) * 0.5); }
 .gs-help span { padding-top: 0.15em; }
+.score-chips { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.score-chips span { color: #fff; padding: 6px 14px 2px; border-radius: 999px; font-size: clamp(14px, 2vw, 18px); box-shadow: 0 4px 0 var(--navy); transition: opacity 0.3s, filter 0.3s; }
+.score-chips span.me { outline: 3px solid #fff; }
+.score-chips span.dim { filter: grayscale(0.8); opacity: 0.55; }
+.timer-bar { width: min(88vw, 560px); height: 12px; border-radius: 99px; background: rgba(29, 58, 110, 0.18); overflow: hidden; }
+.timer-bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--magenta), var(--amber)); transform-origin: left; transition: opacity 0.3s; }

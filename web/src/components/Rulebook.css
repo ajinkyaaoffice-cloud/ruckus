@@ -92,3 +92,25 @@
   .rb-art { width: 26svh; height: 26svh; }
 }
 @media (prefers-reduced-motion: reduce) { .rb-nav.next { animation: none; } }
+
+/* Sea Battle: chart paper and sonar rings */
+.rb-seabattle { --rb-paper: #f2f8ff; --rs-bg: #dcebff; --rs-ink: #1d3a6e; --rb-accent: #3d8bff; }
+.rb-seabattle .rb-deco { background: repeating-radial-gradient(circle at 80% 20%, transparent 0 22px, rgba(61, 139, 255, 0.16) 22px 24px); }
+/* Checkers: the board itself */
+.rb-checkers { --rb-paper: #fff5f7; --rs-bg: #ffe3ea; --rs-ink: #1d3a6e; --rb-accent: #ff5d73; }
+.rb-checkers .rb-deco { background: repeating-conic-gradient(rgba(255, 93, 115, 0.14) 0 25%, transparent 0 50%) 0 0 / 36px 36px; }
+/* Reversi: green felt */
+.rb-reversi { --rb-paper: #f3fff9; --rs-bg: #d8f5e8; --rs-ink: #1d3a6e; --rb-accent: #2fbf8f; }
+.rb-reversi .rb-deco { background: radial-gradient(circle, rgba(47, 191, 143, 0.22) 6px, transparent 6.5px) 0 0 / 30px 30px; }
+/* Light Cycles: neon grid at night */
+.rb-cycles { --rb-paper: #f4f8ff; --rs-bg: #0b1a36; --rs-ink: #fff; --rb-accent: #e64fe0; }
+.rb-cycles .rb-deco { background: linear-gradient(rgba(167, 236, 255, 0.16) 1px, transparent 1px) 0 0 / 22px 22px, linear-gradient(90deg, rgba(167, 236, 255, 0.16) 1px, transparent 1px) 0 0 / 22px 22px; }
+/* Quick Draw: wanted poster */
+.rb-quickdraw { --rb-paper: #fff4dc; --rs-bg: #ffe9b8; --rs-ink: #1d3a6e; --rb-accent: #ff3d5a; }
+.rb-quickdraw .rb-deco { background: repeating-linear-gradient(-8deg, transparent 0 14px, rgba(201, 122, 58, 0.12) 14px 16px); }
+/* Showdown: candy stripes */
+.rb-showdown { --rb-paper: #fff2fa; --rs-bg: #ffe0f2; --rs-ink: #1d3a6e; --rb-accent: #e64fe0; }
+.rb-showdown .rb-deco { background: repeating-linear-gradient(45deg, transparent 0 16px, rgba(255, 154, 213, 0.22) 16px 30px); }
+/* Quick Maths: squared exercise-book paper */
+.rb-quickmaths { --rb-paper: #f6fffc; --rs-bg: #e3f8f1; --rs-ink: #1d3a6e; --rb-accent: #2fbf8f; }
+.rb-quickmaths .rb-deco { background: linear-gradient(rgba(29, 58, 110, 0.08) 1px, transparent 1px) 0 0 / 16px 16px, linear-gradient(90deg, rgba(29, 58, 110, 0.08) 1px, transparent 1px) 0 0 / 16px 16px; }

@@ -1,0 +1,11 @@
+.rv { display: flex; flex-direction: column; align-items: center; width: 100%; gap: 6px; }
+.rv-wrap { width: min(92vw, 56svh, 600px); }
+.rv-board { width: 100%; height: auto; display: block; overflow: visible; }
+.rv-hint { opacity: 0.45; animation: rv-hint 0.9s ease-in-out infinite alternate; pointer-events: none; }
+@keyframes rv-hint { to { opacity: 0.85; } }
+.rv-score { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.rv-score span { color: #fff; padding: 6px 16px 2px; border-radius: 999px; font-size: 18px; box-shadow: 0 4px 0 var(--navy); transition: transform 0.3s var(--ease-out); }
+.rv-score span.on { transform: translateY(-4px) rotate(-2deg); outline: 3px solid #fff; }
+.rv-score b { font-size: 1.3em; margin-left: 6px; }
+.rv-note { margin: 4px 0 0; color: var(--navy); font-weight: 700; text-align: center; min-height: 1.4em; }
+html.low-power .rv-hint { animation: none; opacity: 0.7; }

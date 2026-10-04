@@ -32,6 +32,20 @@ export const CATALOG: GameMeta[] = [
     blurb: 'Spot the glyph that is a little bit wrong — before your friends do.' },
   { id: 'echo', name: 'Echo', min: 2, max: 3, tag: 'Memory', bg: '#fad6fb', ink: '#1d3a6e',
     blurb: 'Watch the pads glow, then echo the pattern back. It grows every round.' },
+  { id: 'seabattle', name: 'Sea Battle', min: 2, max: 2, tag: 'Strategy', bg: '#3d8bff', ink: '#ffffff',
+    blurb: 'Hide your fleet, hunt theirs. A hit lets you fire again.' },
+  { id: 'checkers', name: 'Checkers', min: 2, max: 2, tag: 'Classic', bg: '#ff5d73', ink: '#ffffff',
+    blurb: 'Forced jumps, chain captures, crowned kings. The real rules.' },
+  { id: 'reversi', name: 'Reversi', min: 2, max: 2, tag: 'Strategy', bg: '#2fbf8f', ink: '#ffffff',
+    blurb: 'Trap their discs between yours and flip them to your colour.' },
+  { id: 'cycles', name: 'Light Cycles', min: 2, max: 5, tag: 'Realtime', bg: '#132a52', ink: '#d9f66b',
+    blurb: 'Neon bikes leave walls behind them. Last rider moving wins the round.' },
+  { id: 'quickdraw', name: 'Quick Draw', min: 2, max: 5, tag: 'Reflex', bg: '#ffc93c', ink: '#1d3a6e',
+    blurb: 'Wait for DRAW… then tap first. Jump the gun and you foul out.' },
+  { id: 'showdown', name: 'Showdown', min: 2, max: 5, tag: 'Party', bg: '#ff9ad5', ink: '#1d3a6e',
+    blurb: 'Rock, paper, scissors for the whole room. Beat as many as you can.' },
+  { id: 'quickmaths', name: 'Quick Maths', min: 2, max: 5, tag: 'Brain race', bg: '#7ee0c3', ink: '#1d3a6e',
+    blurb: 'A sum and four answers. First right tap scores; a wrong one locks you out.' },
 ]
 
 export const gameMeta = (id: string | undefined) => CATALOG.find((g) => g.id === id)
