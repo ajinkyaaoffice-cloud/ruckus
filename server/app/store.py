@@ -33,8 +33,12 @@ class SupabaseStore:
 
     def __init__(self, url: str, key: str) -> None:
         self.base = url.rstrip("/") + "/rest/v1"
-        self.client = httpx.AsyncClient(timeout=6.0, headers={
-            "apikey": key, "Authorization": f"Bearer {key}", "Content-Type": "application/json"})
+        headers = {"apikey": key, "Content-Type": "application/json"}
+        # legacy service_role keys are JWTs and also go in Authorization;
+        # the newer sb_secret_ keys aren't JWTs and must only be sent as apikey
+        if key.startswith("eyJ"):
+            headers["Authorization"] = f"Bearer {key}"
+        self.client = httpx.AsyncClient(timeout=6.0, headers=headers)
 
     async def save_profile(self, pid, name, avatar):
         r = await self.client.post(f"{self.base}/players", params={"on_conflict": "id"},

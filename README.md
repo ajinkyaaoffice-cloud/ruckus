@@ -91,8 +91,8 @@ Things to know:
 
 | Variable | Purpose |
 | --- | --- |
-| `SUPABASE_URL` | Project URL |
-| `SUPABASE_SERVICE_KEY` | Service-role key (server side only, never ship it to the browser) |
+| `SUPABASE_URL` | Project URL from Project Settings → Data API (`https://<ref>.supabase.co`) |
+| `SUPABASE_SERVICE_KEY` | Secret key (`sb_secret_…`) or legacy service_role key from Project Settings → API Keys. Server side only, never ship it to the browser |
 | `RUCKUS_DB` | Path of the SQLite fallback file (default `server/ruckus.db`) |
 | `PUBLIC_URL` | Public base URL used in invite links and QR codes when hosted |
 
