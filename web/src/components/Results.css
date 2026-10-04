@@ -1,8 +1,8 @@
-.rs { position: fixed; inset: 0; z-index: 600; display: grid; place-items: center; padding: 16px; overflow-y: auto; }
+.rs { position: fixed; inset: 0; z-index: 600; display: flex; flex-direction: column; padding: calc(var(--safe-t) + 16px) var(--gutter-r) calc(var(--safe-b) + 16px) var(--gutter-l); overflow-y: auto; overscroll-behavior: contain; }
 .rs-back { position: fixed; inset: 0; background: var(--navy); }
-.rs-confetti { position: fixed; left: 50%; top: 50%; z-index: 1; pointer-events: none; }
+.rs-confetti { position: fixed; left: 50%; top: 50%; z-index: 3; pointer-events: none; }
 .rs-confetti svg { position: absolute; translate: -50% -50%; }
-.rs-inner { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; width: 100%; max-width: 900px; }
+.rs-inner { position: relative; z-index: 2; margin: auto; display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; width: 100%; max-width: 900px; }
 .rs-title { font-size: clamp(56px, 10vw, 140px); margin: 4px 0 0; color: var(--pink); text-shadow: 0 7px 0 var(--magenta); }
 .rs-sum { margin: 0; color: #fff; font-weight: 600; font-size: 18px; }
 .rs-podium { display: flex; align-items: flex-end; justify-content: center; gap: 14px; margin-top: 30px; width: 100%; }
@@ -22,3 +22,18 @@
 .rs-wait span:nth-child(2) { animation-delay: 0.15s; }
 .rs-wait span:nth-child(3) { animation-delay: 0.3s; }
 @keyframes rs-dot { 50% { transform: translateY(-10px); } }
+
+/* phones: smaller podium so the whole screen fits without scrolling */
+@media (max-width: 600px), (max-height: 640px) {
+  .rs-title { font-size: clamp(44px, 13vw, 90px); }
+  .rs-podium { gap: 8px; margin-top: 16px; }
+  .rs-face { width: clamp(64px, 20vw, 110px); }
+  .place-0 .rs-face { width: clamp(78px, 25vw, 130px); }
+  .rs-step { margin-top: 46px; font-size: 40px; border-radius: 18px 18px 0 0; }
+  .place-0 .rs-step { height: 96px; }
+  .place-1 .rs-step { height: 66px; }
+  .place-2 .rs-step { height: 46px; }
+  .rs-detail { font-size: 11px; white-space: normal; width: 120%; line-height: 1.2; }
+  .rs-actions { margin-top: 18px; }
+  .rs-actions .bubble-btn.big { font-size: 20px; padding: 14px 26px; }
+}
