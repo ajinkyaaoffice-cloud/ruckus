@@ -19,6 +19,7 @@ log = logging.getLogger("ruckus.rooms")
 MAX_PLAYERS = 5
 CODE_ALPHABET = "".join(c for c in string.ascii_uppercase if c not in "IOQ")
 RECONNECT_GRACE = 45.0
+NET_INTERVAL = 1 / 30   # most game snapshots per second sent to clients
 SEND_TIMEOUT = 2.5
 
 
@@ -156,6 +157,7 @@ class Room:
         self.loop_task = asyncio.create_task(self._loop())
 
     async def _loop(self) -> None:
+        last_sync = 0.0
         try:
             while self.game and not self.game.over:
                 g = self.game
@@ -163,7 +165,11 @@ class Room:
                 if g is not self.game:
                     break
                 g.update()
-                if g.dirty:
+                # physics may tick at 60 Hz, but phones only need ~30 snapshots a second
+                # (clients extrapolate between them); events like hits still go out at once
+                now = time.monotonic()
+                if g.dirty and (g.events or now - last_sync >= NET_INTERVAL):
+                    last_sync = now
                     await self.sync_game()
                 if g.over:
                     await self._conclude()

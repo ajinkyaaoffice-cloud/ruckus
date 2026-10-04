@@ -8,16 +8,15 @@
 html.is-transitioning .tr-root { pointer-events: all; }
 .tr-svg { position: absolute; inset: -6%; width: 112%; height: 112%; overflow: visible; }
 .tr-glyphs { position: absolute; left: 50%; top: 50%; }
-.tr-glyph { position: absolute; transform: translate(-50%, -50%) scale(0); }
-.tr-glyph svg { transform: translate(-50%, -50%); }
+.tr-glyph { position: absolute; left: 0; top: 0; transform: translate(-50%, -50%) scale(0); }
+.tr-glyph svg { display: block; }
 .tr-label {
   position: absolute;
   left: 50%;
   top: 50%;
-  translate: -50% -50%;
   font-size: clamp(64px, 13vw, 210px);
   color: #fff;
   white-space: nowrap;
   text-shadow: 0 6px 0 #1d3a6e, 0 12px 0 rgba(29, 58, 110, 0.35);
-  transform: scale(0);
+  transform: translate(-50%, -50%) scale(0);
 }

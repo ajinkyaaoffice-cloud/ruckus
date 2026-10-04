@@ -57,8 +57,9 @@ export function TransitionProvider({ children }: { children: ReactNode }) {
     lab.textContent = opts.label ?? ''
     const kids = Array.from(glyphs.current!.children) as HTMLElement[]
     const rnd = gsap.utils.random
-    gsap.set(kids, { x: 0, y: 0, scale: 0, rotate: 0 })
-    gsap.set(lab, { scale: 0, rotate: -24, yPercent: 0 })
+    // centring lives in GSAP's own transform (xPercent/yPercent) so it can't be folded away mid-tween
+    gsap.set(kids, { xPercent: -50, yPercent: -50, x: 0, y: 0, scale: 0, rotate: 0 })
+    gsap.set(lab, { xPercent: -50, yPercent: -50, x: 0, y: 0, scale: 0, rotate: -24 })
     document.documentElement.classList.add('is-transitioning')
     sfx.whoosh()
 
