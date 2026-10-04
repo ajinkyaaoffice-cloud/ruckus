@@ -11,7 +11,7 @@
 .lz-title { font-size: clamp(90px, 13vw, 200px); margin: 0; }
 .lz-half.host .lz-title { color: #fff; text-shadow: 0 8px 0 var(--navy); }
 .lz-half.join .lz-title { color: var(--pink); text-shadow: 0 8px 0 var(--magenta); }
-.lz-title .split-word { overflow: hidden; padding: 0.04em 0.04em 0.1em; }
+.lz-title .split-word { overflow: hidden; padding-top: 0.22em !important; margin-top: -0.22em; padding-inline: 0.06em !important; margin-inline: -0.06em; padding: 0.04em 0.04em 0.1em; }
 .lz-glyph { position: absolute; z-index: 1; }
 .lz-code { display: flex; gap: 12px; }
 .lz-box {

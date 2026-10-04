@@ -1,0 +1,9 @@
+.dots { display: flex; flex-direction: column; align-items: center; width: 100%; }
+.dots-board { background: #fff; border-radius: 34px; padding: 12px; box-shadow: 0 10px 0 var(--navy); rotate: -1deg; }
+.dots-svg { width: 100%; height: auto; display: block; overflow: visible; }
+.dots-dot { fill: var(--navy); }
+.dots-hit { fill: transparent; cursor: pointer; }
+.dots-ghost { stroke-width: 14; stroke-linecap: round; opacity: 0.4; stroke-dasharray: 4 22; animation: dots-march 0.6s linear infinite; pointer-events: none; }
+@keyframes dots-march { to { stroke-dashoffset: -26; } }
+.dots-score { display: flex; gap: 14px; margin-top: 22px; }
+.dots-score span { display: inline-flex; gap: 8px; align-items: center; color: #fff; font-size: 26px; padding: 8px 18px 4px; border-radius: 999px; box-shadow: 0 5px 0 var(--navy); }

@@ -2,8 +2,10 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import Lenis from 'lenis'
-import Logotype from '../components/Logotype'
 import Avatar from '../components/Avatar'
+import Mascot from '../components/Mascot'
+import { MenuButton } from '../components/Menu'
+import { setLenis } from '../lib/ui'
 import Glyph from '../components/Glyph'
 import GameArt from '../components/GameArt'
 import { Split, SoundToggle } from '../components/Chrome'
@@ -16,13 +18,16 @@ import './Landing.css'
 
 gsap.registerPlugin(ScrollTrigger)
 
+// The loader plays once per full page load (reloads included), not on in-app returns.
+let bootDone = false
+
 type Leader = { id: string; name: string; avatar: Partial<AvatarConfig>; wins: number; games: number; points: number }
 
 export default function Landing() {
   const root = useRef<HTMLDivElement>(null)
   const { go } = useTransition()
   const me = useNet((s) => s.profile)
-  const [loaded, setLoaded] = useState(() => sessionStorage.getItem('ruckus.loaded') === '1')
+  const [loaded, setLoaded] = useState(bootDone)
   const [leaders, setLeaders] = useState<Leader[]>([])
   const crowd = useMemo(() => Array.from({ length: 15 }, () => randomAvatar()), [])
   const heroFaces = useMemo(() => [me.avatar, randomAvatar(), randomAvatar(), randomAvatar()], [me.avatar])
@@ -44,7 +49,7 @@ export default function Landing() {
       const out = root.current!.querySelector('.ld-num span')!
       const tl = gsap.timeline({
         onComplete: () => {
-          sessionStorage.setItem('ruckus.loaded', '1')
+          bootDone = true
           setLoaded(true)
         },
       })
@@ -65,44 +70,64 @@ export default function Landing() {
     if (!loaded) return
     const lenis = new Lenis({ lerp: 0.09, wheelMultiplier: 1 })
     lenis.on('scroll', ScrollTrigger.update)
+    setLenis(lenis)
     const raf = (t: number) => lenis.raf(t * 1000)
     gsap.ticker.add(raf)
     gsap.ticker.lagSmoothing(0)
 
+    let heroMove: ((e: PointerEvent) => void) | null = null
     const ctx = gsap.context(() => {
       const q = gsap.utils.selector(root)
       const rnd = gsap.utils.random
 
-      /* hero: geometric logotype assembles from scattered pieces */
-      const pieces = q('.lt-piece')
-      gsap.from(pieces, {
-        x: () => rnd(-500, 500), y: () => rnd(-400, 400), rotate: () => rnd(-270, 270), scale: () => rnd(0.2, 2.2),
-        transformOrigin: '50% 50%', duration: 1.4, ease: 'expo.out', stagger: { each: 0.035, from: 'random' }, delay: 0.15,
-      })
-      gsap.from(q('.hero-sub .split-char'), { yPercent: 120, rotate: 12, duration: 0.8, ease: 'back.out(2)', stagger: 0.012, delay: 0.9 })
-      gsap.from(q('.hero-face'), { scale: 0, rotate: () => rnd(-60, 60), duration: 1, ease: 'elastic.out(1, 0.55)', stagger: 0.12, delay: 1.1 })
-      gsap.from(q('.hero-cta'), { y: 120, rotate: -20, duration: 0.9, ease: 'back.out(2)', delay: 1.3 })
-      gsap.from(q('.hero-glyph'), { scale: 0, rotate: 180, duration: 0.9, ease: 'back.out(2)', stagger: 0.07, delay: 1.2 })
+      /* hero: kinetic headline + orbiting game tokens.
+         Each motion layer owns its own element so entrance, scroll-scrub,
+         pointer parallax and hover never fight over the same transform. */
+      const hero = gsap.timeline({ delay: 0.1 })
+      hero
+        .from(q('.hb-in'), { scale: 0, rotate: -120, duration: 1.4, ease: 'expo.out' }, 0)
+        .from(q('.ht-row .split-char'), { yPercent: 115, rotate: (i: number) => (i % 2 ? 14 : -14), duration: 0.9, ease: 'back.out(1.8)', stagger: 0.035 }, 0.15)
+        .from(q('.ht-face-in'), { scale: 0, rotate: -200, duration: 1.2, ease: 'elastic.out(1, 0.55)' }, 0.35)
+        .from(q('.ht-tag'), { scale: 0, rotate: 60, y: -80, duration: 0.7, ease: 'back.out(3)' }, 0.8)
+        .from(q('.ht-crowd > *'), { x: -60, scale: 0, duration: 0.6, ease: 'back.out(2.4)', stagger: 0.08 }, 0.9)
+        .from(q('.tk-in'), {
+          x: (_i: number, el: HTMLElement) => { const r = el.getBoundingClientRect(); return window.innerWidth / 2 - (r.left + r.width / 2) },
+          y: (_i: number, el: HTMLElement) => { const r = el.getBoundingClientRect(); return window.innerHeight / 2 - (r.top + r.height / 2) },
+          scale: 0, rotate: () => rnd(-360, 360), duration: 1.3, ease: 'expo.out', stagger: 0.06,
+        }, 0.5)
+        .from(q('.hero-sub .split-char'), { yPercent: 120, duration: 0.6, ease: 'back.out(2)', stagger: 0.008 }, 1)
+        .from(q('.hero-badge'), { scale: 0, rotate: -180, duration: 1, ease: 'back.out(2)' }, 1.05)
+        .from(q('.hero-band'), { xPercent: -110, duration: 1, ease: 'expo.out' }, 1.1)
 
-      // logotype pieces jiggle on hover
-      q('.lt-letter').forEach((letter: Element) => {
-        letter.addEventListener('mouseenter', () => {
-          sfx.hover()
-          gsap.fromTo(letter.querySelectorAll('.lt-piece'), { rotate: 0 }, {
-            rotate: () => rnd(-14, 14), y: () => rnd(-14, 6), duration: 0.25, yoyo: true, repeat: 1, ease: 'power2.out',
-            transformOrigin: '50% 50%', stagger: 0.04,
-          })
-        })
+      // pointer parallax for the tokens and burst (depth from data attribute)
+      const tos = (q('.hero-token') as HTMLElement[]).map((t) => {
+        const par = t.querySelector('.tk-par')!
+        return { d: Number(t.dataset.depth ?? 1), x: gsap.quickTo(par, 'x', { duration: 0.9, ease: 'power3.out' }), y: gsap.quickTo(par, 'y', { duration: 0.9, ease: 'power3.out' }) }
       })
+      const bx = gsap.quickTo('.hb-par', 'x', { duration: 1.4, ease: 'power3.out' })
+      const by = gsap.quickTo('.hb-par', 'y', { duration: 1.4, ease: 'power3.out' })
+      heroMove = (e: PointerEvent) => {
+        const nx = e.clientX / window.innerWidth - 0.5, ny = e.clientY / window.innerHeight - 0.5
+        tos.forEach((t) => { t.x(nx * 70 * t.d); t.y(ny * 50 * t.d) })
+        bx(nx * -40); by(ny * -30)
+      }
+      window.addEventListener('pointermove', heroMove)
 
-      // hero parallax out
-      gsap.timeline({ scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: true } })
-        .to('.hero-logo', { yPercent: -40, scale: 0.8, rotate: -4, ease: 'none' }, 0)
-        .to('.hero-face.f0', { x: -220, y: -120, rotate: -40, ease: 'none' }, 0)
-        .to('.hero-face.f1', { x: 240, y: -160, rotate: 30, ease: 'none' }, 0)
-        .to('.hero-face.f2', { x: -260, y: 120, rotate: 20, ease: 'none' }, 0)
-        .to('.hero-face.f3', { x: 260, y: 160, rotate: -30, ease: 'none' }, 0)
-        .to('.hero-glyph', { y: (i) => (i % 2 ? -300 : 300), rotate: 180, ease: 'none' }, 0)
+      // tokens wobble when hovered
+      ;(q('.tk-hov') as HTMLElement[]).forEach((t) => t.addEventListener('mouseenter', () => {
+        sfx.hover()
+        gsap.fromTo(t, { rotate: 0, scale: 1 }, { rotate: rnd(-30, 30), scale: 1.15, duration: 0.25, yoyo: true, repeat: 1, ease: 'power2.out', overwrite: true })
+      }))
+
+      // scroll: rows slide apart, mascot zooms, tokens scatter upward
+      gsap.timeline({ scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: 0.6 } })
+        .fromTo('.ht-row.r1', { xPercent: 0 }, { xPercent: -28, ease: 'none' }, 0)
+        .fromTo('.ht-row.r2', { xPercent: 0 }, { xPercent: 22, ease: 'none' }, 0)
+        .fromTo('.ht-row.r3', { xPercent: 0 }, { xPercent: -14, ease: 'none' }, 0)
+        .fromTo('.ht-face', { scale: 1, rotate: 0 }, { scale: 1.5, rotate: 25, ease: 'none' }, 0)
+        .fromTo('.hero-token', { y: 0, rotate: 0 }, { y: (i: number) => -200 - (i % 3) * 160, rotate: (i: number) => (i % 2 ? 120 : -120), ease: 'none' }, 0)
+        .fromTo('.hero-burst', { scale: 1, rotate: 0 }, { scale: 1.6, rotate: 90, ease: 'none' }, 0)
+        .fromTo('.hero-band-move', { xPercent: 0 }, { xPercent: -12, ease: 'none' }, 0)
 
       /* generic: headings rise letter by letter, stickers slap on */
       q('[data-split]').forEach((el: Element) => {
@@ -213,9 +238,11 @@ export default function Landing() {
     const refresh = setTimeout(() => ScrollTrigger.refresh(), 400)
     return () => {
       clearTimeout(refresh)
+      if (heroMove) window.removeEventListener('pointermove', heroMove)
       offs.forEach((f) => f())
       ctx.revert()
       gsap.ticker.remove(raf)
+      setLenis(null)
       lenis.destroy()
     }
   }, [loaded])
@@ -238,9 +265,7 @@ export default function Landing() {
       )}
 
       <nav className="land-nav">
-        <button className="wavy" aria-label="Back to top" onClick={() => window.scrollTo({ top: 0 })} data-cursor="TOP">
-          <svg viewBox="0 0 40 30" width="44" height="34"><path d="M2 6 q5 -5 9 0 t9 0 t9 0 t9 0 M2 15 q5 -5 9 0 t9 0 t9 0 t9 0 M2 24 q5 -5 9 0 t9 0 t9 0 t9 0" fill="none" stroke="currentColor" strokeWidth="3.4" strokeLinecap="round" /></svg>
-        </button>
+        <MenuButton />
         <div className="land-nav-r">
           <SoundToggle />
           <button className="bubble-btn magenta" onClick={play} data-cursor="GO!">
@@ -251,27 +276,60 @@ export default function Landing() {
 
       {/* ------------------------------ HERO ------------------------------ */}
       <section className="hero">
-        <div className="hero-glyphs" aria-hidden>
-          <Glyph className="hero-glyph g1" name="x" color="#fff" size={110} />
-          <Glyph className="hero-glyph g2" name="o" color="#fff" size={90} />
-          <Glyph className="hero-glyph g3" name="star" color="#d9f66b" size={70} />
-          <Glyph className="hero-glyph g4" name="squiggle" color="#1d3a6e" size={120} strokeWidth={9} />
-          <Glyph className="hero-glyph g5" name="plus" color="#e64fe0" size={64} />
-          <Glyph className="hero-glyph g6" name="moon" color="#ffb424" size={80} />
+        <div className="hero-burst" aria-hidden>
+          <div className="hb-in"><div className="hb-par">
+            <svg viewBox="-100 -100 200 200">
+              {Array.from({ length: 18 }, (_, i) => <path key={i} d="M0 0 L-11 -160 L11 -160Z" transform={`rotate(${i * 20})`} />)}
+            </svg>
+          </div></div>
         </div>
-        <div className="hero-logo">
-          <Logotype className="logotype" />
+
+        <div className="hero-tokens" aria-hidden>
+          {TOKENS.map((t) => (
+            <div key={t.k} className={`hero-token t-${t.k}`} data-depth={t.d}>
+              <div className="tk-in"><div className="tk-par"><div className="tk-hov"><div className="tk"><Token kind={t.k} /></div></div></div></div>
+            </div>
+          ))}
         </div>
-        <p className="hero-sub"><Split text="Tiny realtime party games for 2–3 friends" /></p>
-        {heroFaces.map((a, i) => (
-          <div key={i} className={`hero-face f${i}`}>
-            <Avatar config={a} size="100%" track="mouse" depth={1.4} badge />
-          </div>
-        ))}
-        <button className="bubble-btn big hero-cta" onClick={play} data-magnetic data-cursor="PLAY">
-          <Glyph name="x" color="#e64fe0" size={22} /> Start a ruckus
-        </button>
-        <div className="scroll-hint display"><span>scroll</span><Glyph name="arc" size={26} color="#1d3a6e" strokeWidth={12} /></div>
+
+        <h1 className="hero-title display" aria-label="Play loud with tiny crowds">
+          <span className="ht-row r1">
+            <span className="ht-line"><Split text="Play" /></span>
+            <span className="ht-tag sticker">2–3 players</span>
+          </span>
+          <span className="ht-row r2">
+            <span className="ht-face"><span className="ht-face-in">
+              <span className="ht-ring" />
+              <Mascot className="ht-mascot" />
+            </span></span>
+            <span className="ht-line loud"><Split text="loud" /></span>
+          </span>
+          <span className="ht-row r3">
+            <span className="ht-line serif"><Split text="with tiny crowds" /></span>
+            <span className="ht-crowd">
+              {heroFaces.slice(1).map((a, i) => <span key={i}><Avatar config={a} size="100%" track="mouse" badge /></span>)}
+            </span>
+          </span>
+        </h1>
+
+        <div className="hero-foot">
+          <p className="hero-sub"><Split text="Eight realtime mini games. One room code. Zero sign-ups." /></p>
+          <button className="hero-badge" onClick={play} data-magnetic data-cursor="PLAY" aria-label="Start a ruckus">
+            <svg viewBox="0 0 200 200" className="hb-ring" aria-hidden>
+              <defs><path id="hb-circle" d="M100 100 m-74 0 a74 74 0 1 1 148 0 a74 74 0 1 1 -148 0" /></defs>
+              <text><textPath href="#hb-circle" textLength="462">START A RUCKUS ✦ START A RUCKUS ✦</textPath></text>
+            </svg>
+            <span className="hb-core display">Go!</span>
+          </button>
+        </div>
+
+        <div className="hero-band" aria-hidden>
+          <div className="hero-band-move"><div className="hero-band-track display">
+            {[...CATALOG, ...CATALOG, ...CATALOG].map((g, i) => (
+              <span key={i}>{g.name}<Glyph name={(['star', 'x', 'o', 'bolt'] as const)[i % 4]} color={['#d9f66b', '#f6b8f7', '#a7ecff', '#ffb424'][i % 4]} size={34} /></span>
+            ))}
+          </div></div>
+        </div>
       </section>
 
       {/* ----------------------------- MISSION ---------------------------- */}
@@ -425,4 +483,55 @@ export default function Landing() {
       </footer>
     </div>
   )
+}
+
+/* ---------------- hero tokens: tiny props from every game ---------------- */
+type TokenKind = 'uno' | 'x' | 'o' | 'disc' | 'paddle' | 'memory' | 'dots' | 'pad'
+const TOKENS: { k: TokenKind; d: number }[] = [
+  { k: 'uno', d: 1.4 }, { k: 'x', d: 0.7 }, { k: 'disc', d: 1.1 }, { k: 'paddle', d: 1.6 },
+  { k: 'memory', d: 0.9 }, { k: 'o', d: 0.5 }, { k: 'dots', d: 1.2 }, { k: 'pad', d: 0.8 },
+]
+
+function Token({ kind }: { kind: TokenKind }) {
+  switch (kind) {
+    case 'uno':
+      return (
+        <svg viewBox="0 0 100 150"><rect x="4" y="4" width="92" height="142" rx="14" fill="#fff" /><rect x="12" y="12" width="76" height="126" rx="10" fill="#ff5d73" />
+          <ellipse cx="50" cy="75" rx="30" ry="50" transform="rotate(28 50 75)" fill="#fff" />
+          <text x="50" y="92" textAnchor="middle" fontFamily="Luckiest Guy" fontSize="46" fill="#ff5d73">+4</text></svg>
+      )
+    case 'x':
+      return <Glyph name="x" color="#fff" size={120} strokeWidth={18} />
+    case 'o':
+      return <Glyph name="o" color="#a7ecff" size={100} strokeWidth={18} />
+    case 'disc':
+      return (
+        <svg viewBox="0 0 100 100"><circle cx="50" cy="54" r="44" fill="#c98500" /><circle cx="50" cy="48" r="44" fill="#ffb424" />
+          <circle cx="50" cy="48" r="28" fill="none" stroke="#000" strokeOpacity=".14" strokeWidth="7" /></svg>
+      )
+    case 'paddle':
+      return (
+        <svg viewBox="0 0 120 150"><rect x="50" y="88" width="20" height="56" rx="8" fill="#1d3a6e" /><circle cx="60" cy="58" r="52" fill="#e64fe0" />
+          <circle cx="60" cy="58" r="40" fill="none" stroke="#fff" strokeOpacity=".35" strokeWidth="6" /><circle cx="104" cy="20" r="12" fill="#fff" /></svg>
+      )
+    case 'memory':
+      return (
+        <svg viewBox="0 0 100 120"><rect x="4" y="4" width="92" height="112" rx="14" fill="#a596ff" />
+          <rect x="14" y="14" width="72" height="92" rx="8" fill="none" stroke="#fff" strokeWidth="4" strokeDasharray="8 7" />
+          <path d="M50 34 l6 13 14 2 -10 10 2 14 -12 -7 -12 7 2 -14 -10 -10 14 -2z" fill="#d9f66b" /></svg>
+      )
+    case 'dots':
+      return (
+        <svg viewBox="0 0 110 110"><rect x="16" y="16" width="38" height="38" rx="6" fill="#45b8ff" />
+          <path d="M15 15 H55 V55 M55 15 H95" stroke="#1d3a6e" strokeWidth="7" strokeLinecap="round" fill="none" />
+          {[15, 55, 95].flatMap((y) => [15, 55, 95].map((x) => <circle key={`${x}${y}`} cx={x} cy={y} r="8" fill="#fff" />))}</svg>
+      )
+    case 'pad':
+      return (
+        <svg viewBox="0 0 110 110"><path d="M55 8 A47 47 0 0 1 102 55 L70 55 A15 15 0 0 0 55 40Z" fill="#d9f66b" />
+          <path d="M102 55 A47 47 0 0 1 55 102 L55 70 A15 15 0 0 0 70 55Z" fill="#ff9a62" />
+          <path d="M55 102 A47 47 0 0 1 8 55 L40 55 A15 15 0 0 0 55 70Z" fill="#45b8ff" />
+          <path d="M8 55 A47 47 0 0 1 55 8 L55 40 A15 15 0 0 0 40 55Z" fill="#e64fe0" /></svg>
+      )
+  }
 }

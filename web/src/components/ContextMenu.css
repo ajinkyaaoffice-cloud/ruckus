@@ -1,0 +1,9 @@
+.cm { position: fixed; z-index: 2500; min-width: 230px; background: var(--cream); border: 3px solid var(--navy); border-radius: 22px; padding: 8px; box-shadow: 6px 8px 0 var(--navy); }
+.cm-row { width: 100%; display: flex; align-items: center; gap: 12px; padding: 8px 10px; border-radius: 14px; color: var(--navy); font-weight: 700; font-size: 15px; text-align: left; transition: background 0.2s, translate 0.25s var(--ease-back); }
+.cm-row:hover { background: var(--pink); translate: 4px 0; }
+.cm-row:hover .cm-ico { rotate: -14deg; scale: 1.15; }
+.cm-ico { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; border: 2px solid var(--navy); flex: none; transition: 0.3s var(--ease-back); }
+.cm-label { flex: 1; }
+.cm-hint { font-size: 13px; opacity: 0.5; }
+.cm-sep { height: 0; border-top: 2.5px dashed rgba(29, 58, 110, 0.25); margin: 6px 8px; }
+.cm-foot { font-size: 13px; color: rgba(29, 58, 110, 0.55); padding: 6px 10px 2px; }

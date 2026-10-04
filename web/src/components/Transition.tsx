@@ -77,6 +77,7 @@ export function TransitionProvider({ children }: { children: ReactNode }) {
     await new Promise((r) => setTimeout(r, opts.label ? 380 : 160))
 
     await new Promise<void>((resolve) => {
+      sfx.unwhoosh()
       const tl = gsap.timeline({ onComplete: resolve })
       tl.to(lab, { scale: 0, rotate: 14, duration: 0.32, ease: 'back.in(2)' })
         .to(kids, { x: (i) => (i % 2 ? '+=' : '-=') + w * 0.6, scale: 0, rotate: '+=180', duration: 0.6, ease: 'power3.in', stagger: 0.01 }, 0)

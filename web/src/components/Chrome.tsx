@@ -1,3 +1,4 @@
+import { MenuButton } from './Menu'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import gsap from 'gsap'
 import { useNet } from '../lib/net'
@@ -78,7 +79,7 @@ export function Logo({ onClick, small }: { onClick?: () => void; small?: boolean
 export function TopBar({ left, right }: { left?: ReactNode; right?: ReactNode }) {
   return (
     <header className="topbar">
-      <div className="topbar-side">{left ?? <Logo small />}</div>
+      <div className="topbar-side"><MenuButton />{left ?? <Logo small />}</div>
       <div className="topbar-side right">{right}<SoundToggle /></div>
     </header>
   )

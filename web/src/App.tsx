@@ -2,6 +2,8 @@ import { lazy, Suspense } from 'react'
 import { Route, Routes } from 'react-router-dom'
 import { TransitionProvider } from './components/Transition'
 import Cursor from './components/Cursor'
+import Menu from './components/Menu'
+import ContextMenu from './components/ContextMenu'
 import { Toasts } from './components/Chrome'
 import Landing from './pages/Landing'
 import LobbyZone from './pages/LobbyZone'
@@ -26,6 +28,8 @@ export default function App() {
         </Route>
         <Route path="*" element={<LobbyZone />} />
       </Routes>
+      <Menu />
+      <ContextMenu />
       <Toasts />
       <Cursor />
     </TransitionProvider>
