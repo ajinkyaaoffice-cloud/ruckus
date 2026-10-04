@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { memo, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import gsap from 'gsap'
 import GameArt from './GameArt'
@@ -6,6 +6,7 @@ import { Split } from './Chrome'
 import { RULES } from './RuleScenes'
 import type { GameMeta } from '../lib/catalog'
 import { sfx } from '../lib/sound'
+import { lowPower } from '../lib/perf'
 import './Rulebook.css'
 
 /**
@@ -13,7 +14,16 @@ import './Rulebook.css'
  * Page 0 is the cover; every page after has a looping demo and one short
  * paragraph. Turn pages with the arrows, the dots, a swipe or the keyboard.
  */
-export default function Rulebook({ g, onClose }: { g: GameMeta; onClose: () => void }) {
+type Props = { g: GameMeta; onClose: () => void }
+
+// The game screen re-renders on every state tick; the book (and its big SVG demos)
+// only needs to when a different game's rules are opened.
+export default memo(Rulebook, (a, b) => a.g.id === b.g.id)
+
+function Rulebook({ g, onClose: closeProp }: Props) {
+  const closeRef = useRef(closeProp)
+  closeRef.current = closeProp
+  const onClose = () => closeRef.current()
   const book = RULES[g.id]
   const root = useRef<HTMLDivElement>(null)
   const leaf = useRef<HTMLDivElement>(null)
@@ -25,7 +35,8 @@ export default function Rulebook({ g, onClose }: { g: GameMeta; onClose: () => v
   useLayoutEffect(() => {
     const ctx = gsap.context(() => {
       gsap.fromTo('.rb-dim', { opacity: 0 }, { opacity: 1, duration: 0.3 })
-      gsap.fromTo('.rb', { y: 140, scale: 0.5, rotate: -14 }, { y: 0, scale: 1, rotate: 0, duration: 0.7, ease: 'back.out(1.6)' })
+      if (lowPower) gsap.fromTo('.rb', { y: 60, opacity: 0 }, { y: 0, opacity: 1, duration: 0.35, ease: 'power3.out', clearProps: 'transform' })
+      else gsap.fromTo('.rb', { y: 140, scale: 0.5, rotate: -14 }, { y: 0, scale: 1, rotate: 0, duration: 0.7, ease: 'back.out(1.6)' })
     }, root)
     return () => ctx.revert()
   }, [])
@@ -33,6 +44,10 @@ export default function Rulebook({ g, onClose }: { g: GameMeta; onClose: () => v
   // each new page settles in: title letters hop, the copy slides up
   useLayoutEffect(() => {
     const ctx = gsap.context(() => {
+      if (lowPower) {   // phones: one cheap fade instead of per-letter hops
+        gsap.fromTo('.rb-page .rb-copy, .rb-page h3', { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.3, ease: 'power2.out' })
+        return
+      }
       gsap.fromTo('.rb-page h3 .split-char', { yPercent: 110 }, { yPercent: 0, duration: 0.45, ease: 'back.out(2.2)', stagger: 0.018, delay: 0.05 })
       gsap.fromTo('.rb-page .rb-copy', { y: 16, opacity: 0 }, { y: 0, opacity: 1, duration: 0.45, ease: 'power3.out', delay: 0.12 })
       gsap.fromTo('.rb-cover .rb-art', { scale: 0.3, rotate: -40 }, { scale: 1, rotate: 0, duration: 0.8, ease: 'elastic.out(1, 0.55)' })
@@ -52,6 +67,13 @@ export default function Rulebook({ g, onClose }: { g: GameMeta; onClose: () => v
     turning.current = true
     sfx.whoosh()
     const dir = to > page ? 1 : -1
+    if (lowPower) {   // a flat slide: 3D page turns over SVG demos stutter on phones
+      gsap.timeline({ onComplete: () => { turning.current = false } })
+        .to(leaf.current, { x: -40 * dir, opacity: 0, duration: 0.14, ease: 'power2.in' })
+        .add(() => setPage(to))
+        .fromTo(leaf.current, { x: 40 * dir }, { x: 0, opacity: 1, duration: 0.24, ease: 'power2.out' })
+      return
+    }
     gsap.timeline({ onComplete: () => { turning.current = false } })
       .to(leaf.current, { rotateY: -82 * dir, duration: 0.2, ease: 'power2.in', transformOrigin: dir > 0 ? '0% 50%' : '100% 50%' })
       .add(() => setPage(to))

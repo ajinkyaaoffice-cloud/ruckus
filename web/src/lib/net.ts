@@ -16,6 +16,12 @@ export type RoomPlayer = {
 
 export type HistoryItem = { game: string; winners: string[]; tie: boolean; summary: string; at: number }
 
+/** Shared background music. `pos` seconds into `track` at server time `at` (unix seconds). */
+export type MusicState = { track: string | null; playing: boolean; pos: number; at: number; vol: number; by: string | null }
+
+/** Present on game state while a game is frozen waiting for dropped players. Times are server unix seconds. */
+export type PauseInfo = { waiting: { id: string; until: number }[]; resumeAt: number | null; now: number }
+
 export type Room = {
   code: string
   host: string | null
@@ -23,6 +29,7 @@ export type Room = {
   players: RoomPlayer[]
   game: { id: string; participants: string[]; over: boolean; options: Record<string, unknown> } | null
   history: HistoryItem[]
+  music: MusicState
 }
 
 export type GameResults = {
@@ -79,6 +86,16 @@ let joinedResolvers: ((code: string | null, err?: string) => void)[] = []
 export const SERVER = ((import.meta.env.VITE_SERVER_URL as string | undefined) ?? '').replace(/\/$/, '')
 export const api = (path: string) => `${SERVER}${path}`
 
+/* Server clock: offset (ms) between the server's clock and ours, taken from the
+   fastest ping round trip seen, so countdowns and the music agree on every device. */
+let clockOffset = 0
+let bestRtt = Infinity
+let pingSentAt = 0
+export const serverNow = () => Date.now() + clockOffset
+function roughClock(serverSec: unknown) {
+  if (bestRtt === Infinity && typeof serverSec === 'number') clockOffset = serverSec * 1000 - Date.now()
+}
+
 function wsUrl(): string {
   const env = import.meta.env.VITE_WS_URL as string | undefined
   if (env) return env
@@ -94,6 +111,7 @@ export function connect(): void {
   ws = sock
   sock.onopen = () => {
     retry = 0
+    pingSentAt = 0
     useNet.setState({ status: 'open' })
     const { profile } = useNet.getState()
     sock.send(JSON.stringify({ t: 'hello', pid: profile.pid, name: profile.name || 'Player', avatar: profile.avatar }))
@@ -105,8 +123,9 @@ export function connect(): void {
     pingTimer = window.setInterval(() => {
       // background tabs still ping (throttled) so the server keeps their seat
       if (!document.hidden && Date.now() - lastHeard > 9000) return reconnect()
-      send({ t: 'ping' })
+      ping()
     }, 3000)
+    ping()
   }
   sock.onmessage = (e) => {
     lastHeard = Date.now()
@@ -117,6 +136,22 @@ export function connect(): void {
       return
     }
     switch (msg.t) {
+      case 'pong': {
+        const rtt = Date.now() - pingSentAt
+        if (pingSentAt && typeof msg.at === 'number' && rtt >= 0 && rtt < 5000) {
+          // the server stamped the reply roughly halfway through the round trip
+          if (rtt <= bestRtt * 1.25 || bestRtt === Infinity) {
+            bestRtt = Math.min(bestRtt, rtt)
+            clockOffset = msg.at * 1000 + rtt / 2 - Date.now()
+          }
+        }
+        pingSentAt = 0
+        break
+      }
+      case 'music':
+        roughClock(msg.now)
+        useNet.setState((s) => (s.room ? { room: { ...s.room, music: msg.music } } : {}))
+        break
       case 'hello':
         if (!msg.room) useNet.setState({ room: null, game: null })
         break
@@ -125,6 +160,7 @@ export function connect(): void {
         joinedResolvers = []
         break
       case 'room':
+        roughClock(msg.room?.now)
         useNet.setState((s) => ({ room: msg.room, game: msg.room.game ? s.game : null }))
         break
       case 'game': {
@@ -156,6 +192,11 @@ export function connect(): void {
   }
 }
 
+function ping() {
+  if (!pingSentAt) pingSentAt = Date.now()
+  send({ t: 'ping' })
+}
+
 /** Drop the current socket (even a silently dead one) and dial again now. */
 export function reconnect(): void {
   const old = ws
@@ -177,7 +218,7 @@ function wake() {
   if (document.hidden || !ws) return
   if (ws.readyState !== WebSocket.OPEN) return reconnect()
   const asked = Date.now()
-  send({ t: 'ping' })
+  ping()
   window.setTimeout(() => { if (lastHeard < asked) reconnect() }, 2500)
 }
 if (typeof window !== 'undefined') {
@@ -202,10 +243,17 @@ function awaitJoin(msg: unknown): Promise<string> {
       if (code) resolve(code)
       else reject(new Error(err || 'Could not join'))
     }
-    const timer = window.setTimeout(() => {
-      done(null, 'The server took too long — try again')
-      toast.error('The server took too long — try again')
-    }, 8000)
+    // the clock only runs once the line is up: a sleeping server can take most of a minute
+    // to wake, and the wake-up toast already tells people what's happening
+    let timer = 0
+    const arm = () => {
+      timer = window.setTimeout(() => {
+        if (useNet.getState().status !== 'open') return arm()
+        done(null, 'The server took too long — try again')
+        toast.error('The server took too long — try again')
+      }, 8000)
+    }
+    arm()
     joinedResolvers.push(done)
     send(msg)
   })
@@ -219,6 +267,8 @@ export const startGame = (game: string, options: Record<string, unknown> = {}) =
 export const backToLobby = () => send({ t: 'lobby' })
 export const rematch = () => send({ t: 'rematch' })
 export const emote = (emoji: string) => send({ t: 'emote', emoji })
+export const musicOp = (op: 'select' | 'next' | 'play' | 'pause' | 'seek' | 'vol', extra: Record<string, unknown> = {}) =>
+  send({ t: 'music', op, ...extra })
 
 export function pushProfile(ready?: boolean): void {
   const { profile } = useNet.getState()

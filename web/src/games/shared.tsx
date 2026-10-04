@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef, type RefObject } from 'react'
 import gsap from 'gsap'
-import { playerHex, type GameState, type Room, type RoomPlayer } from '../lib/net'
+import { playerHex, useNet, type GameState, type Room, type RoomPlayer } from '../lib/net'
 
 /** Animate stroke-dashoffset on matching paths once, when the board mounts. */
 export function useDrawOn(root: RefObject<HTMLElement | null>, selector: string, opts: { duration?: number; stagger?: number; delay?: number } = {}) {
@@ -43,15 +43,19 @@ export function ScoreChips({ room, players, score, dim = [], me, suffix = '' }: 
 }
 
 /** Countdown bar that drains from the server's remaining time; restarts whenever `k` changes. */
+/** True while the game is frozen waiting for someone to reconnect. Local timers should hold still. */
+export const usePaused = () => useNet((s) => !!s.game?.pause)
+
 export function TimerBar({ left, total, k, running }: { left: number | null | undefined; total: number; k: unknown; running: boolean }) {
   const ref = useRef<HTMLElement>(null)
+  const paused = usePaused()
   useLayoutEffect(() => {
     const el = ref.current
     if (!el) return
-    gsap.killTweensOf(el)
-    if (!running || left == null) return
+    gsap.killTweensOf(el)                       // a pause leaves the bar where it is
+    if (!running || left == null || paused) return
     const tw = gsap.fromTo(el, { scaleX: Math.min(1, left / total) }, { scaleX: 0, duration: left, ease: 'none' })
     return () => { tw.kill() }
-  }, [k, running]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [k, running, paused]) // eslint-disable-line react-hooks/exhaustive-deps
   return <div className="timer-bar"><i ref={ref} style={{ opacity: running ? 1 : 0 }} /></div>
 }

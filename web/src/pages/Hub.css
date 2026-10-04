@@ -13,7 +13,7 @@
 .hub-title { font-size: clamp(54px, 7vw, 110px); margin: 0; color: #fff; text-shadow: 0 6px 0 var(--navy); }
 .hub-title .split-word { overflow: hidden; padding-top: 0.22em !important; margin-top: -0.22em; padding-inline: 0.06em !important; margin-inline: -0.06em; padding: 0.04em 0 0.1em; }
 .hub-hint { margin: 6px 0 0; font-weight: 600; }
-.hub-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 20px; perspective: 900px; }
+.hub-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 20px; }
 .hub-card {
   position: relative; border-radius: 30px; padding: 18px; text-align: left; display: flex; flex-direction: column; min-height: 270px;
   box-shadow: 0 10px 0 rgba(29, 58, 110, 0.2); transform-style: preserve-3d; transition: box-shadow 0.3s;
@@ -21,7 +21,7 @@
 .hub-card:hover { box-shadow: 0 16px 0 rgba(29, 58, 110, 0.25); }
 .hub-card { cursor: pointer; }
 .hc-foot { margin-top: auto; display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; transform: translateZ(30px); }
-.hub-card h3 { font-size: 30px; margin: 0; min-width: 0; }
+.hub-card h3 { font-size: 30px; line-height: 0.95; margin: 0; min-width: 0; overflow-wrap: anywhere; }
 .hc-rules { flex: none; display: inline-flex; align-items: center; gap: 4px; padding: 6px 10px 5px 8px; border-radius: 999px; background: rgba(255, 255, 255, 0.92); color: var(--navy); font-weight: 800; font-size: 12px; box-shadow: 0 3px 0 rgba(29, 58, 110, 0.25); transition: transform 0.3s var(--ease-back); }
 .hc-rules:hover { transform: scale(1.1) rotate(-4deg); }
 .hc-rules svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linejoin: round; }
@@ -29,11 +29,12 @@
 .ss-rules u { text-decoration-thickness: 2px; text-underline-offset: 3px; }
 .hub-card.locked { filter: saturate(0.4); }
 .hub-card.locked .hc-art { opacity: 0.6; }
-.hc-top { display: flex; justify-content: space-between; align-items: center; transform: translateZ(20px); }
-.hc-tag { font-family: var(--font-serif); font-style: italic; font-size: 18px; background: rgba(255, 255, 255, 0.92); color: var(--navy); padding: 0 10px; border-radius: 6px; rotate: -4deg; }
-.hc-p { font-size: 20px; }
+.hc-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; min-height: 28px; transform: translateZ(20px); }
+.hc-tag { font-family: var(--font-serif); font-style: italic; font-size: 18px; line-height: 1; background: rgba(255, 255, 255, 0.92); color: var(--navy); padding: 4px 10px 5px; border-radius: 8px; white-space: nowrap; }
+.hc-p { font-size: 20px; line-height: 1; padding-top: 0.12em; white-space: nowrap; }
 .hc-art { width: 100%; height: 150px; transform: translateZ(40px); }
-.hc-flag { position: absolute; right: 14px; top: 52px; background: var(--navy); color: #fff; font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 999px; rotate: -5deg; }
+.hc-name { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.hc-flag { background: var(--navy); color: #fff; font-size: 11.5px; font-weight: 700; line-height: 1; padding: 5px 10px; border-radius: 999px; white-space: nowrap; }
 .hc-flag.soft { background: #fff; color: var(--navy); }
 
 .hub-side { position: relative; z-index: 2; display: flex; flex-direction: column; gap: 16px; }
@@ -51,6 +52,7 @@
 .hub-panel.qr { background: var(--cyan); }
 .hub-panel.qr .qr-card { padding: 12px; }
 
+.hub-dock-row { display: flex; gap: 10px; align-items: center; }
 .hub-dock { position: fixed; left: 50%; bottom: calc(var(--safe-b) + var(--tb-pad)); translate: -50% 0; z-index: 30; display: flex; gap: 12px; align-items: center; }
 
 .ss-modal { position: fixed; inset: 0; z-index: 800; background: rgba(19, 42, 82, 0.5); backdrop-filter: blur(6px); display: grid; place-items: center; padding: 16px; }
@@ -78,6 +80,8 @@
   .hub-card { min-height: 210px; padding: 12px; }
   .hc-art { height: 100px; }
   .hub-card h3 { font-size: 22px; }
+  .hc-tag { font-size: 15px; padding: 3px 8px 4px; }
+  .hc-p { font-size: 17px; }
   .emote-bar button { width: 34px; height: 34px; font-size: 18px; }
 }
 @media (max-width: 520px) {
@@ -88,3 +92,5 @@
 /* phones: card art holds still in the grid (SVG animations repaint on the main thread); the start sheet still animates */
 html.low-power .hub-card [class*="art-"] { animation: none; }
 html.low-power .ss-modal { backdrop-filter: none; background: rgba(19, 42, 82, 0.72); }
+html.low-power .hc-top, html.low-power .hc-art, html.low-power .hc-foot { transform: none; }
+@media (max-width: 440px) { .hub .topbar .logo { display: none; } }

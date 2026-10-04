@@ -6,6 +6,7 @@ import { isTouch } from './lib/perf'
 import Menu from './components/Menu'
 import ContextMenu from './components/ContextMenu'
 import { Toasts } from './components/Toasts'
+import Splash from './components/Splash'
 import Landing from './pages/Landing'
 import LobbyZone from './pages/LobbyZone'
 import JoinLink from './pages/JoinLink'
@@ -33,6 +34,7 @@ export default function App() {
       <ContextMenu />
       <Toasts />
       {!isTouch && <Cursor />}
+      <Splash />
     </TransitionProvider>
   )
 }

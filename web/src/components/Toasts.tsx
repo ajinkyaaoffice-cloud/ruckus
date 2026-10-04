@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactElement } from 'react'
 import gsap from 'gsap'
-import { useNet } from '../lib/net'
+import { api, reconnect, useNet } from '../lib/net'
 import { sfx } from '../lib/sound'
 import { toast, useToasts, type Toast, type ToastKind } from '../lib/toast'
 import './Toasts.css'
@@ -15,9 +15,9 @@ const ICON: Record<ToastKind, ReactElement> = {
 /** Stack of dismissable, self-expiring notices. Also reports the socket dropping. */
 export function Toasts() {
   const items = useToasts((s) => s.items)
-  useConnectionToast()
   return (
     <div className="toasts" aria-live="polite">
+      <ServerWake />
       {items.map((t) => <ToastCard key={t.id} t={t} />)}
     </div>
   )
@@ -99,21 +99,113 @@ function ToastCard({ t }: { t: Toast }) {
   )
 }
 
-/** "Reconnecting…" only after a short grace period, then "back" once it recovers. */
-function useConnectionToast() {
+/* The free server sleeps when nobody has played for a while and needs roughly
+   this long to boot again. */
+const WAKE_SECS = 50
+const SHOW_AFTER = 1500      // short blips never show anything
+const BLIP = 4000            // after a drop, call it "reconnecting" this long before assuming a restart
+
+type Outage = { start: number; first: boolean }
+
+/** A pinned card while the line is down: a live countdown to when the server
+    should be awake, then how long it actually took once it answers. */
+function ServerWake() {
   const status = useNet((s) => s.status)
-  const shown = useRef(false)
+  const everOpen = useRef(false)
+  const [outage, setOutage] = useState<Outage | null>(null)
+  const [done, setDone] = useState<{ took: number; first: boolean } | null>(null)
+  const [visible, setVisible] = useState(false)
+  const [, tick] = useState(0)
+  const ref = useRef<HTMLDivElement>(null)
+
+  // start / end an outage
   useEffect(() => {
-    if (status === 'closed') {
-      const timer = window.setTimeout(() => {
-        shown.current = true
-        toast.warn('Reconnecting to the party…', { id: 'conn', ttl: 0 })
-      }, 1200)
-      return () => clearTimeout(timer)
+    if (status === 'open') {
+      if (outage && visible) setDone({ took: (Date.now() - outage.start) / 1000, first: outage.first })
+      everOpen.current = true
+      setOutage(null)
+      return
     }
-    if (status === 'open' && shown.current) {
-      shown.current = false
-      toast.success('Back in the party!', { id: 'conn' })
+    if (!outage) setOutage({ start: Date.now(), first: !everOpen.current })
+  }, [status]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // only show it if the outage outlasts a blip
+  useEffect(() => {
+    if (!outage) return
+    const t = window.setTimeout(() => { setDone(null); setVisible(true) }, SHOW_AFTER)
+    return () => clearTimeout(t)
+  }, [outage])
+
+  // tick the countdown in real time, and knock on the server's door every couple of seconds:
+  // the moment it answers, dial straight in instead of waiting out the socket's backoff
+  useEffect(() => {
+    if (!outage || !visible) return
+    let raf = 0
+    const frame = () => { tick((n) => n + 1); raf = window.setTimeout(frame, 200) }
+    frame()
+    const knock = window.setInterval(async () => {
+      try {
+        const ctl = new AbortController()
+        const t = window.setTimeout(() => ctl.abort(), 4000)
+        const r = await fetch(api('/api/health'), { cache: 'no-store', signal: ctl.signal })
+        clearTimeout(t)
+        if (r.ok && useNet.getState().status !== 'open') reconnect()
+      } catch { /* still asleep */ }
+    }, 2500)
+    return () => { clearTimeout(raf); clearInterval(knock) }
+  }, [outage, visible])
+
+  // the success card leaves on its own
+  useEffect(() => {
+    if (!done) return
+    sfx.point()
+    const t = window.setTimeout(() => {
+      gsap.to(ref.current, { x: 440, rotate: 10, duration: 0.38, ease: 'power3.in', onComplete: () => { setVisible(false); setDone(null) } })
+    }, 3400)
+    return () => clearTimeout(t)
+  }, [done])
+
+  useLayoutEffect(() => {
+    if (visible && ref.current) gsap.fromTo(ref.current, { y: -26, scale: 0.7, rotate: -5 }, { y: 0, scale: 1, rotate: 0, duration: 0.6, ease: 'back.out(2.4)', clearProps: 'transform' })
+  }, [visible])
+  useLayoutEffect(() => {
+    if (done && ref.current) gsap.fromTo(ref.current, { rotate: -4, scale: 1.06 }, { rotate: 0, scale: 1, duration: 0.5, ease: 'elastic.out(1, 0.4)', clearProps: 'transform' })
+  }, [done])
+
+  if (!visible || (!outage && !done)) return null
+
+  let kind: ToastKind = 'warn', title = '', sub = '', progress = 0, badge = '…'
+  if (done) {
+    kind = 'success'
+    const took = Math.max(1, Math.round(done.took))
+    const early = WAKE_SECS - took
+    title = done.first || done.took * 1000 > BLIP ? `Server's awake — took ${took}s` : 'Back in the party!'
+    sub = early >= 2 && done.took * 1000 > BLIP ? `${early}s sooner than expected. Let's go!` : 'All set.'
+    progress = 1
+  } else if (outage) {
+    const el = (Date.now() - outage.start) / 1000
+    const left = Math.ceil(WAKE_SECS - el)
+    if (!outage.first && el * 1000 < BLIP) {
+      title = 'Reconnecting to the party…'
+      sub = 'Hang tight'
+    } else if (left > 0) {
+      title = outage.first ? 'Waking up the server…' : 'The server is restarting…'
+      sub = `Ready in about ${left}s · it naps when nobody's playing`
+      badge = String(left)
+    } else {
+      title = 'Almost there…'
+      sub = `Taking a little longer than usual · ${Math.round(el)}s`
     }
-  }, [status])
+    progress = Math.min(1, el / WAKE_SECS)
+  }
+
+  return (
+    <div ref={ref} className={`toast wake k-${kind}`} role="status">
+      <span className="toast-icon">
+        {done ? <svg viewBox="0 0 24 24" aria-hidden>{ICON.success}</svg> : <span className="wake-num display">{badge}</span>}
+      </span>
+      <p className="toast-msg"><b>{title}</b><small>{sub}</small></p>
+      <i className="wake-bar" style={{ transform: `scaleX(${progress})` }} />
+    </div>
+  )
 }

@@ -2,11 +2,13 @@ import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState, type Comp
 import gsap from 'gsap'
 import { intro } from '../lib/ui'
 import { BrushMarks, TopBar } from '../components/Chrome'
-import { EmoteBar, EmoteLayer, PlayerChip } from '../components/Players'
+import { EmoteBar, PlayerChip } from '../components/Players'
 import Results from '../components/Results'
 import { useTransition } from '../components/Transition'
 import { gameMeta } from '../lib/catalog'
-import { leaveRoom, useNet, type GameState, type Room, type RoomPlayer } from '../lib/net'
+import { leaveRoom, onGameEvents, useNet, type GameState, type Room, type RoomPlayer } from '../lib/net'
+import PauseOverlay from '../components/PauseOverlay'
+import { toast } from '../lib/toast'
 import { sfx } from '../lib/sound'
 import './GameScreen.css'
 
@@ -29,7 +31,10 @@ const GAMES: Record<string, ComponentType<GameProps>> = {
   showdown: lazy(() => import('../games/Showdown')),
   quickmaths: lazy(() => import('../games/QuickMaths')),
 }
-const Rulebook = lazy(() => import('../components/Rulebook'))
+const loadRulebook = () => import('../components/Rulebook')
+const Rulebook = lazy(loadRulebook)
+// fetch the rulebook while idle so the first tap on Rules opens instantly
+const idle = (fn: () => void) => ('requestIdleCallback' in window ? requestIdleCallback(fn, { timeout: 4000 }) : setTimeout(fn, 2000))
 
 export default function GameScreen() {
   const root = useRef<HTMLDivElement>(null)
@@ -48,6 +53,7 @@ export default function GameScreen() {
     .filter(Boolean) as RoomPlayer[]
   const spectator = !participants.some((p) => p.id === me)
   const turn: string | undefined = state && !state.over ? state.turn : undefined
+  useEffect(() => { idle(() => { void loadRulebook() }) }, [])
 
   useLayoutEffect(() => {
     const ctx = gsap.context(() => {
@@ -69,6 +75,17 @@ export default function GameScreen() {
     }
   }, [state?.over]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // tell everyone when someone drops out mid-game and when play picks back up
+  useEffect(() => onGameEvents((evs) => {
+    const r = useNet.getState().room
+    const who = (pid: string) => (pid === me ? 'You' : r?.players.find((p) => p.id === pid)?.name ?? 'Someone')
+    for (const e of evs) {
+      if (e.kind === 'paused') { sfx.hit(0.6); toast.warn(`${who(e.pid)} lost connection — game paused`, { id: `drop:${e.pid}` }) }
+      if (e.kind === 'back') { toast.dismiss(`drop:${e.pid}`); toast.success(`${who(e.pid)} ${e.pid === me ? 'are' : 'is'} back!`, { id: `back:${e.pid}` }) }
+      if (e.kind === 'resumed') sfx.slam()
+    }
+  }), [me])
+
   const leave = () => {
     if (!confirm('Leave the room? You will forfeit this game.')) return
     leaveRoom()
@@ -78,7 +95,6 @@ export default function GameScreen() {
   return (
     <div ref={root} className={`gs gs-${gid}`} style={{ ['--gbg' as string]: meta?.bg ?? '#f6b8f7' }}>
       <BrushMarks opacity={0.18} />
-      <EmoteLayer />
       <TopBar
         left={<span className="gs-name display">{meta?.name ?? 'Game'}</span>}
         right={
@@ -112,6 +128,8 @@ export default function GameScreen() {
       <div className="gs-dock"><EmoteBar compact /></div>
 
       <Intro key={state?.instance ?? 'none'} />
+
+      {state?.pause && !state.over && <PauseOverlay pause={state.pause} room={room} me={me} />}
 
       {rules && meta && <Suspense fallback={null}><Rulebook g={meta} onClose={() => setRules(false)} /></Suspense>}
       {showResults && state?.over && state.results && <Results state={state} room={room} me={me} />}

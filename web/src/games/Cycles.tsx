@@ -4,6 +4,7 @@ import type { GameProps } from '../pages/GameScreen'
 import { act, onGameEvents, playerHex } from '../lib/net'
 import { sfx } from '../lib/sound'
 import { lowPower } from '../lib/perf'
+import { usePaused } from './shared'
 import './Cycles.css'
 
 type Rider = { x: number; y: number; d: number; alive: boolean; corners: [number, number][]; slot: number }
@@ -201,13 +202,15 @@ export default function Cycles({ state, me, room, spectator }: GameProps) {
 /** Seconds left, counted down locally (the server only sends the remaining time when something changes). */
 function useCountdown(left: number | null | undefined, k: unknown) {
   const [n, setN] = useState<number | null>(null)
+  const paused = usePaused()
   useEffect(() => {
     if (left == null) { setN(null); return }
+    if (paused) return                          // hold the number; resume from the server's fresh value
     const end = performance.now() + left * 1000
     const tick = () => setN(Math.max(1, Math.ceil((end - performance.now()) / 1000)))
     tick()
     const id = window.setInterval(tick, 100)
     return () => window.clearInterval(id)
-  }, [left == null, k]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [left == null, k, paused]) // eslint-disable-line react-hooks/exhaustive-deps
   return n
 }

@@ -6,13 +6,13 @@ import Avatar from '../components/Avatar'
 import Glyph from '../components/Glyph'
 import { BrushMarks, Split, TopBar } from '../components/Chrome'
 import { useTransition } from '../components/Transition'
-import { CATEGORIES, randomAvatar, type AvatarConfig, type Category } from '../lib/avatar'
+import { CATEGORIES, LOOK_LABELS, randomAvatar, type AvatarConfig, type Category } from '../lib/avatar'
 import { pushProfile, useNet } from '../lib/net'
 import { sfx } from '../lib/sound'
 import './Customize.css'
 
 const SPOTS: Record<string, [number, number]> = {
-  hat: [30, 7], hair: [70, 8], eyes: [12, 27], extra: [88, 28], detail: [6, 50],
+  look: [50, 0], hat: [24, 9], hair: [76, 9], eyes: [12, 27], extra: [88, 28], detail: [6, 50],
   nose: [94, 50], brows: [12, 72], face: [88, 72], beard: [24, 92], mouth: [76, 92], top: [50, 99],
 }
 
@@ -166,6 +166,7 @@ export default function Customize() {
               {cat.options.map((o) => (
                 <button key={o} className={`cz-opt ${a[cat.key] === o ? 'on' : ''}`} onClick={() => set({ [cat.key]: o })} data-cursor={o.toUpperCase()} title={o}>
                   {o === 'none' ? <Glyph name="x" color="#1d3a6e" size={34} strokeWidth={12} /> : <Avatar config={{ ...a, [cat.key]: o }} size="100%" track="none" />}
+                  {cat.key === 'look' && <span className="cz-optlabel">{LOOK_LABELS[o]}</span>}
                 </button>
               ))}
             </div>

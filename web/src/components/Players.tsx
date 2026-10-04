@@ -6,6 +6,7 @@ import { Reaction, REACTIONS } from './Reactions'
 import type { Expression } from '../lib/avatar'
 import { emote, PLAYER_HEX, useNet, type RoomPlayer } from '../lib/net'
 import { sfx } from '../lib/sound'
+import { lowPower } from '../lib/perf'
 import './Players.css'
 
 
@@ -40,6 +41,7 @@ export function EmoteLayer() {
   const room = useNet((s) => s.room)
   const seen = useRef(new Set<number>())
   const [pops, setPops] = useState<Pop[]>([])
+  const [showers, setShowers] = useState<Shower[]>([])
   useEffect(() => {
     const fresh: Pop[] = []
     for (const e of emotes) {
@@ -60,11 +62,43 @@ export function EmoteLayer() {
     if (fresh.length) {
       sfx.pop()
       setPops((p) => [...p.slice(-10), ...fresh])
+      setShowers((s) => [...s.slice(-3), ...fresh.map((f) => ({ key: f.key, id: f.id, color: f.color }))])
     }
   }, [emotes]) // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <div className="emote-layer" aria-hidden>
+      {showers.map((s) => <StickerShower key={s.key} shower={s} onDone={() => setShowers((all) => all.filter((x) => x.key !== s.key))} />)}
       {pops.map((p) => <PopSticker key={p.key} pop={p} onDone={() => setPops((all) => all.filter((x) => x.key !== p.key))} />)}
+    </div>
+  )
+}
+
+type Shower = { key: number; id: string; color: string }
+
+/** The same sticker floats up across the whole screen, so nobody misses a reaction. */
+function StickerShower({ shower, onDone }: { shower: Shower; onDone: () => void }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const n = lowPower ? 6 : 12
+  const [xs] = useState(() => Array.from({ length: n }, (_, i) => ((i + 0.5) / n) * 100 + (Math.random() - 0.5) * (80 / n)))
+  useLayoutEffect(() => {
+    const H = window.innerHeight
+    const tl = gsap.timeline({ onComplete: onDone })
+    ref.current!.querySelectorAll<HTMLElement>('.emote-drop').forEach((el, i) => {
+      const dur = gsap.utils.random(2, 3.2)
+      const at = (i / n) * 0.9 + Math.random() * 0.15
+      tl.fromTo(el, { y: 0, x: 0, scale: gsap.utils.random(0.55, 1.15), rotate: gsap.utils.random(-30, 30), opacity: 1 },
+        { y: -(H + 140), x: gsap.utils.random(-60, 60), rotate: `+=${gsap.utils.random(-90, 90)}`, duration: dur, ease: 'power1.in' }, at)
+        .to(el, { opacity: 0, duration: 0.5 }, at + dur - 0.5)
+    })
+    return () => { tl.kill() }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  return (
+    <div ref={ref} className="emote-shower" style={{ ['--pc' as string]: shower.color }}>
+      {xs.map((x, i) => (
+        <div key={i} className="emote-drop" style={{ left: `${x}%` }}>
+          <Reaction id={shower.id} size={lowPower ? 44 : 56} />
+        </div>
+      ))}
     </div>
   )
 }

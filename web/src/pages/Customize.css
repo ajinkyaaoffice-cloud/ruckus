@@ -31,6 +31,9 @@
 }
 .cz-opt:hover { transform: scale(1.1) rotate(-6deg); }
 .cz-opt.on { border-color: var(--magenta); background: var(--cyan); }
+.cz-opt { position: relative; }
+.cz-optlabel { position: absolute; left: 50%; bottom: 4px; translate: -50% 0; background: var(--navy); color: #fff; font-size: 9px; font-weight: 800; line-height: 1; padding: 4px 7px 3px; border-radius: 99px; white-space: nowrap; pointer-events: none; }
+.cz-opt.on .cz-optlabel { background: var(--magenta); }
 .cz-arrow { width: 40px; height: 40px; border-radius: 50%; color: var(--magenta); font-size: 34px; line-height: 1; display: grid; place-items: center; font-weight: 800; }
 .cz-arrow:hover { background: var(--pink-2); }
 .cz-swatches { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; max-width: 94vw; }

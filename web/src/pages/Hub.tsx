@@ -1,4 +1,4 @@
-import { lazy, Suspense, useLayoutEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import gsap from 'gsap'
 import { intro } from '../lib/ui'
 import { lowPower } from '../lib/perf'
@@ -7,7 +7,8 @@ import GameArt from '../components/GameArt'
 import Glyph from '../components/Glyph'
 import Avatar from '../components/Avatar'
 import InviteModal, { InviteCard } from '../components/Invite'
-import { EmoteBar, EmoteLayer, PlayerChip } from '../components/Players'
+import { MusicButton } from '../components/Music'
+import { EmoteBar, PlayerChip } from '../components/Players'
 import { useTransition } from '../components/Transition'
 import { CATALOG, gameMeta, type GameMeta } from '../lib/catalog'
 import { leaveRoom, MAX_PLAYERS, startGame, useNet } from '../lib/net'
@@ -16,7 +17,10 @@ import './Hub.css'
 import { toast } from '../lib/toast'
 
 // fetched the first time someone opens a rulebook
-const Rulebook = lazy(() => import('../components/Rulebook'))
+const loadRulebook = () => import('../components/Rulebook')
+const Rulebook = lazy(loadRulebook)
+// fetch the rulebook while idle so the first tap on Rules opens instantly
+const idle = (fn: () => void) => ('requestIdleCallback' in window ? requestIdleCallback(fn, { timeout: 4000 }) : setTimeout(fn, 2000))
 
 export default function Hub() {
   const root = useRef<HTMLDivElement>(null)
@@ -30,6 +34,7 @@ export default function Hub() {
   const ready = room.players.filter((p) => p.status === 'ready' && p.connected)
   const ranked = [...room.players].sort((a, b) => b.points - a.points || b.wins - a.wins)
   const leader = ranked[0] && ranked[0].points > 0 ? ranked[0].id : null
+  useEffect(() => { idle(() => { void loadRulebook() }) }, [])
 
   useLayoutEffect(() => {
     const ctx = gsap.context(() => {
@@ -56,7 +61,7 @@ export default function Hub() {
     const r = el.getBoundingClientRect()
     const x = (e.clientX - r.left) / r.width - 0.5
     const y = (e.clientY - r.top) / r.height - 0.5
-    gsap.to(el, { rotateY: x * 16, rotateX: -y * 16, duration: 0.4, ease: 'power2.out' })
+    gsap.to(el, { rotateY: x * 16, rotateX: -y * 16, transformPerspective: 900, duration: 0.4, ease: 'power2.out' })
   }
   const untilt = (e: React.PointerEvent<HTMLElement>) => e.pointerType === 'mouse' && gsap.to(e.currentTarget, { rotateY: 0, rotateX: 0, duration: 0.8, ease: 'elastic.out(1, 0.4)' })
 
@@ -85,7 +90,6 @@ export default function Hub() {
   return (
     <div ref={root} className="hub">
       <BrushMarks />
-      <EmoteLayer />
       <TopBar
         left={<Logo small onClick={leave} />}
         right={
@@ -138,15 +142,17 @@ export default function Hub() {
                 </div>
                 <GameArt id={g.id} className="hc-art" />
                 <div className="hc-foot">
-                  <h3 className="display">{g.name}</h3>
+                  <div className="hc-name">
+                    {locked && <span className="hc-flag">Needs {g.min} ready</span>}
+                    {!locked && sitOut && <span className="hc-flag soft">{ready.length - g.max} sits out</span>}
+                    <h3 className="display">{g.name}</h3>
+                  </div>
                   <button className="hc-rules" aria-label={`How to play ${g.name}`} data-cursor="RULES"
                     onClick={(e) => { e.stopPropagation(); sfx.click(); setRules(g) }}>
                     <svg viewBox="0 0 24 24" aria-hidden><path d="M4 5.5C7 4 10 4.5 12 6c2-1.5 5-2 8-.5V19c-3-1.5-6-1-8 .5-2-1.5-5-2-8-.5Z M12 6v13.5" /></svg>
                     <span>Rules</span>
                   </button>
                 </div>
-                {locked && <span className="hc-flag">Needs {g.min} ready</span>}
-                {!locked && sitOut && <span className="hc-flag soft">{ready.length - g.max} sits out</span>}
               </div>
             )
           })}
@@ -191,9 +197,12 @@ export default function Hub() {
 
       <div className="hub-dock">
         <EmoteBar />
-        <button className="bubble-btn" onClick={() => go(`/room/${room.code}/avatar`, { label: 'DRESS UP!' })} data-cursor="EDIT">
-          <Glyph name="heart" color="#e64fe0" size={18} /> Edit look
-        </button>
+        <div className="hub-dock-row">
+          <MusicButton />
+          <button className="bubble-btn" onClick={() => go(`/room/${room.code}/avatar`, { label: 'DRESS UP!' })} data-cursor="EDIT">
+            <Glyph name="heart" color="#e64fe0" size={18} /> Edit look
+          </button>
+        </div>
       </div>
 
       {invite && <InviteModal code={room.code} onClose={() => setInvite(false)} />}

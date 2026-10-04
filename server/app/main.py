@@ -135,11 +135,10 @@ async def ws_endpoint(ws: WebSocket) -> None:
                             await old.close()
                         except Exception:
                             pass
+                    room.returned(pid)
                 await ws.send_json({"t": "hello", "pid": pid, "room": room.code if room else None})
                 if room:
-                    await room.sync()
-                    if room.game:
-                        await room.sync_game()
+                    await room.sync_all()
                 continue
             if pid is None:
                 await err("Say hello first")
@@ -160,6 +159,7 @@ async def ws_endpoint(ws: WebSocket) -> None:
                     if pid in target.players:
                         p = target.players[pid]
                         p.ws, p.left_at = ws, None
+                        target.returned(pid)
                     else:
                         if len(target.players) >= MAX_PLAYERS:
                             raise GameError(f"That room is full ({MAX_PLAYERS} max)")
@@ -199,6 +199,9 @@ async def ws_endpoint(ws: WebSocket) -> None:
                 elif t == "emote":
                     if msg.get("emoji") in EMOTES:
                         await room.broadcast({"t": "emote", "pid": pid, "emoji": msg["emoji"]})
+                elif t == "music":
+                    if room.music_op(pid, msg):
+                        await room.broadcast({"t": "music", "music": room.music, "now": time.time()})
                 elif t == "leave":
                     await leave_current(pid)
                     await ws.send_json({"t": "left"})
@@ -217,8 +220,9 @@ async def ws_endpoint(ws: WebSocket) -> None:
                 p = room.players[pid]
                 if p.ws is ws:
                     p.ws, p.left_at = None, time.time()
+                    room.dropped(pid)
                     try:
-                        await room.sync()
+                        await room.sync_all()
                     except Exception:
                         pass
 

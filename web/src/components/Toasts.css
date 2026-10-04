@@ -100,3 +100,13 @@
 @media (prefers-reduced-motion: reduce) {
   .toast-wait { animation: none; }
 }
+
+/* server wake-up card: a live countdown instead of a timer bar */
+.toast.wake { padding-right: 14px; }
+.toast.wake .toast-msg b { display: block; }
+.toast.wake .toast-msg small { display: block; font-weight: 600; font-size: 12.5px; opacity: 0.75; margin-top: 1px; }
+.wake-num { color: #fff; font-size: 15px; line-height: 1; translate: 0 1px; }
+.wake-bar {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 5px;
+  background: var(--tk); transform-origin: left center; transition: transform 0.25s linear;
+}

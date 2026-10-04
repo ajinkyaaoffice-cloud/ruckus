@@ -54,10 +54,37 @@ class Game:
         self.events: list[dict[str, Any]] = []      # notable events since last broadcast (animation cues)
         self._timers: list[tuple[float, Callable[[], None]]] = []
 
+    # pause bookkeeping (class defaults so subclasses can read the clock before super().__init__ ends)
+    _paused_at: float | None = None
+    _paused_total: float = 0.0
+
     # --- helpers -----------------------------------------------------------
     @staticmethod
-    def now() -> float:
+    def wall() -> float:
         return time.monotonic()
+
+    def now(self) -> float:
+        """Game time: the wall clock, except it stands still while the game is paused,
+        so every timer, deadline and physics step simply freezes and carries on later."""
+        t = self._paused_at if self._paused_at is not None else self.wall()
+        return t - self._paused_total
+
+    @property
+    def paused(self) -> bool:
+        return self._paused_at is not None
+
+    def pause(self) -> None:
+        if self.over or self.paused:
+            return
+        self._paused_at = self.wall()
+        self.dirty = True
+
+    def resume(self) -> None:
+        if self._paused_at is None:
+            return
+        self._paused_total += self.wall() - self._paused_at
+        self._paused_at = None
+        self.dirty = True
 
     def later(self, delay: float, fn: Callable[[], None]) -> None:
         self._timers.append((self.now() + delay, fn))

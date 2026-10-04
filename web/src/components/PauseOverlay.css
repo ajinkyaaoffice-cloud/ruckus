@@ -1,0 +1,61 @@
+.po {
+  position: fixed;
+  inset: 0;
+  z-index: 650;
+  display: grid;
+  place-items: center;
+  padding: max(16px, var(--safe-t)) var(--gutter-r) max(16px, var(--safe-b)) var(--gutter-l);
+  background: rgba(29, 58, 110, 0.55);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+.po.flat { backdrop-filter: none; -webkit-backdrop-filter: none; background: rgba(29, 58, 110, 0.72); }
+
+.po-card {
+  width: min(420px, 100%);
+  background: #fff;
+  color: var(--navy);
+  border: 4px solid var(--navy);
+  border-radius: 30px;
+  box-shadow: 0 10px 0 var(--navy);
+  padding: 22px 20px 18px;
+  text-align: center;
+}
+.po-tag {
+  display: inline-block;
+  background: var(--magenta);
+  color: #fff;
+  font-size: clamp(22px, 5vw, 30px);
+  padding: 6px 18px 2px;
+  border-radius: 999px;
+  rotate: -3deg;
+  box-shadow: 0 4px 0 var(--navy);
+}
+.po-list { list-style: none; margin: 18px 0 6px; padding: 0; display: grid; gap: 10px; }
+.po-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px 8px 8px;
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--pc) 16%, #fff);
+  border: 3px solid var(--pc);
+  text-align: left;
+}
+.po-face { flex: none; width: 52px; height: 52px; border-radius: 50%; overflow: hidden; background: var(--pc); }
+.po-who { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.2; }
+.po-who b { font-size: 17px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.po-who small { font-size: 13px; font-weight: 600; opacity: 0.7; }
+.po-timer { flex: none; font-size: 26px; color: var(--pc); font-variant-numeric: tabular-nums; -webkit-text-stroke: 1px var(--navy); }
+.po-sub { margin: 10px 4px 0; font-size: 13.5px; font-weight: 600; opacity: 0.75; line-height: 1.35; }
+.po-count {
+  font-size: clamp(90px, 26vw, 150px);
+  line-height: 1;
+  margin: 16px 0 0;
+  color: var(--lime);
+  text-shadow: 0 6px 0 var(--navy);
+  -webkit-text-stroke: 3px var(--navy);
+  animation: po-pop 0.5s var(--ease-back);
+}
+@keyframes po-pop { from { transform: scale(0.3) rotate(-14deg); } to { transform: scale(1) rotate(0); } }
+@media (prefers-reduced-motion: reduce) { .po-count { animation: none; } }

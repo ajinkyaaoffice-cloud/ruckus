@@ -4,6 +4,8 @@ import { joinRoom, useNet } from '../lib/net'
 import { useTransition } from '../components/Transition'
 import { gameMeta } from '../lib/catalog'
 import Glyph from '../components/Glyph'
+import Music from '../components/Music'
+import { EmoteLayer } from '../components/Players'
 import './RoomGuard.css'
 
 /**
@@ -66,5 +68,11 @@ export default function RoomGuard() {
       </div>
     )
   }
-  return <Outlet />
+  return (
+    <>
+      <Outlet />
+      <EmoteLayer />
+      <Music />
+    </>
+  )
 }

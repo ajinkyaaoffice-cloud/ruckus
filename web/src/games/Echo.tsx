@@ -4,6 +4,7 @@ import type { GameProps } from '../pages/GameScreen'
 import { act, onGameEvents, playerHex } from '../lib/net'
 import { sfx } from '../lib/sound'
 import Avatar from '../components/Avatar'
+import { usePaused } from './shared'
 import './Echo.css'
 
 const COLORS = ['#e64fe0', '#45b8ff', '#ffb424', '#d9f66b', '#a596ff', '#ff9a62']
@@ -42,12 +43,17 @@ export default function Echo({ state, me, room, spectator }: GameProps) {
     return () => timers.forEach(clearTimeout)
   }, [phase, state.round]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  const paused = usePaused()
+  const barRound = useRef(-1)
   useLayoutEffect(() => {
     const bar = root.current?.querySelector('.ec-timer i')
     if (!bar) return
-    if (phase === 'input' && state.timeLeft) gsap.fromTo(bar, { scaleX: 1 }, { scaleX: 0, duration: state.timeLeft, ease: 'none' })
-    else gsap.set(bar, { scaleX: 0 })
-  }, [phase, state.round]) // eslint-disable-line react-hooks/exhaustive-deps
+    gsap.killTweensOf(bar)
+    if (phase !== 'input' || !state.timeLeft) { gsap.set(bar, { scaleX: 0 }); return }
+    if (barRound.current !== state.round) { barRound.current = state.round; gsap.set(bar, { scaleX: 1 }) }
+    // after a pause the bar carries on from where it stopped, using the server's fresh time left
+    if (!paused) gsap.to(bar, { scaleX: 0, duration: state.timeLeft, ease: 'none' })
+  }, [phase, state.round, paused]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useLayoutEffect(() => {
     gsap.fromTo(root.current!.querySelector('.ec-status'), { scale: 0.3, rotate: -10 }, { scale: 1, rotate: 0, duration: 0.5, ease: 'back.out(3)' })

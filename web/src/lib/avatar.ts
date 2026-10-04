@@ -1,4 +1,5 @@
 export type AvatarConfig = {
+  look: string
   face: string
   skin: string
   hair: string
@@ -33,9 +34,16 @@ export type Category = {
   colors?: string[]
 }
 
+export const LOOKS = ['fem', 'neutral', 'masc']
+export const LOOK_LABELS: Record<string, string> = { fem: 'Feminine', neutral: 'Neutral', masc: 'Masculine' }
+export const HAIRS = ['part', 'curly', 'spiky', 'buzz', 'bowl', 'mohawk', 'afro', 'long', 'wavy', 'bob', 'ponytail', 'bun', 'pigtails', 'none']
+const FEM_HAIR = ['long', 'wavy', 'bob', 'ponytail', 'bun', 'pigtails', 'curly', 'afro', 'part']
+const MASC_HAIR = ['part', 'curly', 'spiky', 'buzz', 'bowl', 'mohawk', 'afro', 'ponytail', 'none']
+
 export const CATEGORIES: Category[] = [
+  { key: 'look', label: 'Look', options: LOOKS },
   { key: 'hat', label: 'Hats', options: ['none', 'cap', 'beanie', 'crown', 'party', 'phones', 'halo'], colorKey: 'hatColor', colors: HAT_COLORS },
-  { key: 'hair', label: 'Hair', options: ['curly', 'spiky', 'bowl', 'long', 'bun', 'mohawk', 'afro', 'none'], colorKey: 'hairColor', colors: HAIR_COLORS },
+  { key: 'hair', label: 'Hair', options: HAIRS, colorKey: 'hairColor', colors: HAIR_COLORS },
   { key: 'eyes', label: 'Eyes', options: ['goggle', 'dots', 'round', 'sleepy', 'stars', 'lashes'] },
   { key: 'brows', label: 'Brows', options: ['thick', 'thin', 'angry', 'worried', 'none'] },
   { key: 'extra', label: 'Jewellery', options: ['none', 'glasses', 'shades', 'earrings', 'nosering', 'monocle'] },
@@ -48,7 +56,7 @@ export const CATEGORIES: Category[] = [
 ]
 
 export const DEFAULT_AVATAR: AvatarConfig = {
-  face: 'round', skin: SKINS[1], hair: 'curly', hairColor: HAIR_COLORS[0], brows: 'thick', eyes: 'goggle',
+  look: 'neutral', face: 'round', skin: SKINS[1], hair: 'curly', hairColor: HAIR_COLORS[0], brows: 'thick', eyes: 'goggle',
   nose: 'button', mouth: 'smile', beard: 'none', hat: 'none', hatColor: HAT_COLORS[0], extra: 'none',
   detail: 'blush', bg: BG_COLORS[0], top: 'hoodie', topColor: TOP_COLORS[0],
 }
@@ -58,19 +66,22 @@ const pick = <T,>(a: T[]) => a[Math.floor(Math.random() * a.length)]
 export function randomAvatar(): AvatarConfig {
   const weighted = (opts: string[], noneBias = 0.45) =>
     opts.includes('none') && Math.random() < noneBias ? 'none' : pick(opts.filter((o) => o !== 'none'))
+  const look = pick(LOOKS)
+  const hairs = look === 'fem' ? FEM_HAIR : look === 'masc' ? MASC_HAIR : HAIRS.filter((h) => h !== 'none')
   return {
-    face: pick(CATEGORIES.find((c) => c.key === 'face')!.options),
+    look,
+    face: pick(look === 'masc' ? ['round', 'square', 'bean', 'egg'] : look === 'fem' ? ['round', 'pear', 'egg', 'bean'] : CATEGORIES.find((c) => c.key === 'face')!.options),
     skin: pick(SKINS.slice(0, 7).concat(Math.random() < 0.15 ? SKINS.slice(7) : [])),
-    hair: weighted(CATEGORIES.find((c) => c.key === 'hair')!.options, 0.08),
+    hair: Math.random() < 0.05 ? 'none' : pick(hairs.filter((h) => h !== 'none')),
     hairColor: pick(HAIR_COLORS),
     brows: weighted(CATEGORIES.find((c) => c.key === 'brows')!.options, 0.1),
     eyes: pick(CATEGORIES.find((c) => c.key === 'eyes')!.options),
     nose: pick(CATEGORIES.find((c) => c.key === 'nose')!.options),
     mouth: pick(CATEGORIES.find((c) => c.key === 'mouth')!.options),
-    beard: weighted(CATEGORIES.find((c) => c.key === 'beard')!.options, 0.7),
+    beard: look === 'masc' ? weighted(CATEGORIES.find((c) => c.key === 'beard')!.options, 0.5) : 'none',
     hat: weighted(CATEGORIES.find((c) => c.key === 'hat')!.options, 0.55),
     hatColor: pick(HAT_COLORS),
-    extra: weighted(CATEGORIES.find((c) => c.key === 'extra')!.options, 0.6),
+    extra: look === 'fem' && Math.random() < 0.35 ? 'earrings' : weighted(CATEGORIES.find((c) => c.key === 'extra')!.options, 0.6),
     detail: weighted(CATEGORIES.find((c) => c.key === 'detail')!.options, 0.4),
     bg: pick(BG_COLORS),
     top: pick(CATEGORIES.find((c) => c.key === 'top')!.options),

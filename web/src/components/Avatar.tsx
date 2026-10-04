@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, type CSSProperties, type ReactNode } from 'react'
 import { lowPower, onFrame, watchVisible } from '../lib/perf'
 import { normalizeAvatar, shade, type AvatarConfig, type Expression } from '../lib/avatar'
+import { COVERS_EARS, HairBack, HairFront, HairShadow, HEADS } from './AvatarHair'
 import './Avatar.css'
 
 type Props = {
@@ -26,29 +27,10 @@ window.addEventListener('pointermove', (e) => {
  * one cel-shadow crescent (the shape re-drawn, nudged, and clipped) plus a
  * small highlight. No outlines, no muddy gradients.
  */
-const HEADS: Record<string, string> = {
-  round: 'M100 44 C138 44 164 72 164 112 C164 154 136 180 100 180 C64 180 36 154 36 112 C36 72 62 44 100 44Z',
-  bean: 'M100 42 C146 42 166 76 164 116 C162 156 138 180 100 180 C62 180 38 156 36 116 C34 76 54 42 100 42Z',
-  square: 'M80 46 L120 46 C148 46 164 62 164 90 L164 140 C164 166 148 180 120 180 L80 180 C52 180 36 166 36 140 L36 90 C36 62 52 46 80 46Z',
-  pear: 'M100 44 C134 44 150 70 154 100 C162 140 148 180 100 180 C52 180 38 140 46 100 C50 70 66 44 100 44Z',
-  egg: 'M100 40 C140 40 160 86 160 122 C160 158 134 182 100 182 C66 182 40 158 40 122 C40 86 60 40 100 40Z',
-}
-
 const EYE_L = 78, EYE_R = 122, EYE_Y = 116
 const INK = '#1b1f3f'
 const LIP = '#6b2347'
-
-function ring(cx: number, cy: number, r: number, from: number, to: number, n: number, size: number) {
-  const out: [number, number, number][] = []
-  for (let i = 0; i < n; i++) {
-    const a = ((from + ((to - from) * i) / (n - 1)) * Math.PI) / 180
-    out.push([cx + Math.cos(a) * r, cy + Math.sin(a) * r, size * (0.85 + ((i * 37) % 10) / 40)])
-  }
-  return out
-}
-const CURLS_BACK = ring(100, 108, 70, 150, 390, 15, 22)
-const CURLS_FRONT = [46, 61, 76, 92, 108, 124, 139, 154].map((x, i) => [x, 72 + (i % 2) * 6 + Math.abs(100 - x) * 0.14, 15 + (i % 3)])
-const AFRO = ring(100, 94, 82, 0, 345, 24, 26)
+const LIP_F = '#c23a6b'
 
 /** Flat shape with a cel-shadow crescent on the lower-right and a soft highlight. */
 function Shaded({ d, fill, uid, id, dx = -7, dy = -6 }: { d: string; fill: string; uid: string; id: string; dx?: number; dy?: number }) {
@@ -115,17 +97,18 @@ export default function Avatar({ config, size = 160, expression = 'idle', track 
     return () => { stop(); stopVis() }
   }, [track, depth])
 
-  const head = HEADS[c.face] ?? HEADS.round
+  const H = HEADS[c.face] ?? HEADS.round
+  const head = H.d
   const skinS = shade(c.skin, -0.14)
   const hair = c.hairColor
-  const hairBack = shade(hair, -0.22)
+  const look = c.look
+  const hatted = c.hat === 'cap' || c.hat === 'beanie'
+  const ears = !COVERS_EARS.has(c.hair)
   const ex = expression
   const sq = ex === 'happy' ? 0.4 : ex === 'shock' ? 1.15 : ex === 'focus' ? 0.72 : 1
   const brows = ex === 'focus' ? 'angry' : ex === 'sad' ? 'worried' : ex === 'shock' ? 'raised' : c.brows
   const mouth = ex === 'happy' ? 'grin' : ex === 'sad' ? 'frown' : ex === 'shock' ? 'o' : ex === 'focus' ? 'smirk' : c.mouth
   const eyes = ex === 'happy' && c.eyes !== 'stars' ? 'sleepy' : c.eyes
-  const fringe = HAIR_FRONT[c.hair]
-  const hasFringe = !!fringe && c.hat !== 'cap' && c.hat !== 'beanie'
 
   return (
     <svg ref={root} viewBox="-16 -14 232 232" width={size} height={size} className={`avatar ${className ?? ''} ex-${ex} trk-${track}`} style={style} aria-hidden>
@@ -140,26 +123,13 @@ export default function Avatar({ config, size = 160, expression = 'idle', track 
       <g className="av-body" clipPath={badge ? `url(#${uid}-badge)` : undefined}>
         {/* ---------- back layer: hair behind the head, ears, body ---------- */}
         <g ref={back}>
-          <Outfit kind={c.top} color={c.topColor} skin={c.skin} uid={uid} />
+          <Outfit kind={c.top} color={c.topColor} skin={c.skin} uid={uid} look={look} />
         </g>
         <g ref={skull}>
-          {c.hair === 'curly' && CURLS_BACK.map(([x, y, r], i) => <circle key={i} cx={x} cy={y} r={r} fill={hairBack} />)}
-          {c.hair === 'afro' && (
-            <g fill={hairBack}>
-              <circle cx="100" cy="94" r="82" />
-              {AFRO.map(([x, y, r], i) => <circle key={i} cx={x} cy={y} r={r} />)}
-            </g>
-          )}
-          {c.hair === 'long' && <path d="M30 110 C30 50 60 26 100 26 C140 26 170 50 170 110 L176 196 C150 210 50 210 24 196Z" fill={hairBack} />}
-          {c.hair === 'bun' && (
-            <g>
-              <circle cx="100" cy="30" r="25" fill={hairBack} />
-              <path d="M86 20 Q100 10 112 18" stroke="#fff" strokeOpacity="0.25" strokeWidth="5" fill="none" strokeLinecap="round" />
-            </g>
-          )}
+          <HairBack style={c.hair} head={H} color={hair} uid={uid} hatted={hatted} />
           {c.hat === 'phones' && <path d="M28 112 C28 22 172 22 172 112" fill="none" stroke={shade(c.hatColor, -0.2)} strokeWidth="13" strokeLinecap="round" />}
           {/* ears */}
-          {[38, 162].map((x) => (
+          {ears && [H.ear, 200 - H.ear].map((x) => (
             <g key={x}>
               <circle cx={x} cy="122" r="15" fill={skinS} />
               <circle cx={x + (x < 100 ? 2 : -2)} cy="122" r="7" fill={shade(c.skin, -0.26)} opacity="0.55" />
@@ -172,7 +142,7 @@ export default function Avatar({ config, size = 160, expression = 'idle', track 
           <Shaded d={head} fill={c.skin} uid={uid} id="hd" dx={-8} dy={-7} />
           <g clipPath={`url(#${uid}-head)`}>
             {/* hair casts a soft shadow on the forehead */}
-            {hasFringe && <path d={fringe} fill={skinS} opacity="0.75" transform="translate(4 9)" />}
+            <HairShadow style={c.hair} skin={c.skin} />
             <ellipse cx="70" cy="70" rx="22" ry="10" fill="#fff" opacity="0.28" transform="rotate(-24 70 70)" />
           </g>
 
@@ -183,11 +153,11 @@ export default function Avatar({ config, size = 160, expression = 'idle', track 
             </g>
             <Details kind={c.detail} />
             <Beard kind={c.beard} color={hair} />
-            <Mouth kind={mouth} />
+            <Mouth kind={mouth} lips={look === 'fem'} />
             <g className="av-eyes" style={{ transform: `scaleY(${sq})` }}>
-              <Eyes kind={eyes} pupilsRef={pupils} wink={ex === 'wink'} skin={c.skin} />
+              <Eyes kind={eyes} pupilsRef={pupils} wink={ex === 'wink'} skin={c.skin} lashes={look === 'fem' && eyes !== 'lashes'} />
             </g>
-            <Brows kind={brows} color={shade(hair, -0.3)} />
+            <Brows kind={brows} color={shade(hair, -0.3)} weight={look === 'masc' ? 1.3 : look === 'fem' ? 0.8 : 1} />
             <Nose kind={c.nose} skin={c.skin} />
             <Extra kind={c.extra} />
           </g>
@@ -195,13 +165,7 @@ export default function Avatar({ config, size = 160, expression = 'idle', track 
 
         {/* ---------- front layer ---------- */}
         <g ref={front}>
-          {fringe && c.hat !== 'cap' && c.hat !== 'beanie' && (
-            <g>
-              {c.hair === 'curly' && CURLS_FRONT.map(([x, y, r], i) => <circle key={i} cx={x} cy={y} r={r} fill={hair} />)}
-              <Shaded d={fringe} fill={hair} uid={uid} id="hf" dx={-5} dy={-6} />
-              <path d={SHEEN[c.hair] ?? 'M70 52 Q86 42 104 44'} stroke="#fff" strokeOpacity="0.35" strokeWidth="6" fill="none" strokeLinecap="round" />
-            </g>
-          )}
+          <HairFront style={c.hair} head={H} color={hair} uid={uid} hatted={hatted} />
           <Hat kind={c.hat} color={c.hatColor} uid={uid} />
         </g>
       </g>
@@ -211,23 +175,23 @@ export default function Avatar({ config, size = 160, expression = 'idle', track 
 
 /* ------------------------------------------------------------------ */
 
-const HAIR_FRONT: Record<string, string> = {
-  curly: 'M38 98 C36 54 66 32 100 32 C134 32 164 54 162 98 C148 82 128 76 100 76 C72 76 52 82 38 98Z',
-  spiky: 'M34 98 L42 54 L58 68 L66 30 L84 56 L100 18 L116 56 L134 30 L142 68 L158 54 L166 98 C148 80 128 72 100 72 C72 72 52 80 34 98Z',
-  bowl: 'M32 112 C28 48 64 28 100 28 C136 28 172 48 168 112 C162 100 158 92 152 88 L48 88 C42 92 38 100 32 112Z',
-  long: 'M36 106 C36 52 66 32 100 32 C140 32 166 56 164 110 C148 74 108 64 74 80 C58 88 46 96 36 106Z',
-  bun: 'M38 102 C38 56 66 40 100 40 C134 40 162 56 162 102 C148 80 128 70 100 70 C72 70 52 80 38 102Z',
-  mohawk: 'M88 78 C82 46 90 14 100 4 C110 14 118 46 112 78 C106 72 94 72 88 78Z',
-  afro: 'M42 98 C42 62 66 46 100 46 C134 46 158 62 158 98 C144 86 126 80 100 80 C74 80 56 86 42 98Z',
-}
-const SHEEN: Record<string, string> = {
-  spiky: 'M66 44 L74 58 M100 30 L104 50',
-  mohawk: 'M96 20 Q94 40 96 60',
-  bowl: 'M60 52 Q80 38 106 38',
-  long: 'M62 54 Q80 42 104 42',
+function Eyes(props: { kind: string; pupilsRef: React.Ref<SVGGElement>; wink: boolean; skin: string; lashes?: boolean }) {
+  if (!props.lashes || props.kind === 'stars') return <EyeShapes {...props} />
+  // two little flicks at the outer corner of each eye
+  const top = props.kind === 'dots' ? EYE_Y - 8 : props.kind === 'sleepy' ? EYE_Y - 2 : EYE_Y - 10
+  const off = props.kind === 'dots' ? 6 : props.kind === 'round' ? 13 : 10
+  const flick = (x: number, s: number) => (
+    <path key={x} d={`M${x + s * off} ${top + 3} l${s * 7} -6 M${x + s * (off + 2)} ${top + 9} l${s * 8} -2`} stroke={INK} strokeWidth="3.4" strokeLinecap="round" />
+  )
+  return (
+    <g>
+      <EyeShapes {...props} />
+      <g className="blink">{flick(EYE_L, -1)}{!props.wink && flick(EYE_R, 1)}</g>
+    </g>
+  )
 }
 
-function Eyes({ kind, pupilsRef, wink, skin }: { kind: string; pupilsRef: React.Ref<SVGGElement>; wink: boolean; skin: string }) {
+function EyeShapes({ kind, pupilsRef, wink, skin }: { kind: string; pupilsRef: React.Ref<SVGGElement>; wink: boolean; skin: string }) {
   const closed = (x: number) => <path d={`M${x - 12} ${EYE_Y + 2} Q${x} ${EYE_Y - 9} ${x + 12} ${EYE_Y + 2}`} stroke={INK} strokeWidth="5" fill="none" strokeLinecap="round" />
   const both = (fn: (x: number, right: boolean) => ReactNode) => (
     <>{fn(EYE_L, false)}{wink ? closed(EYE_R) : fn(EYE_R, true)}</>
@@ -297,10 +261,10 @@ function Star({ cx, cy, r, fill }: { cx: number; cy: number; r: number; fill: st
   return <polygon points={pts} fill={fill} stroke={fill} strokeWidth="3" strokeLinejoin="round" />
 }
 
-function Brows({ kind, color }: { kind: string; color: string }) {
+function Brows({ kind, color, weight = 1 }: { kind: string; color: string; weight?: number }) {
   const Y = 94
   const b = (x: number, rot: number, w = 22, h = 6.5) => (
-    <path d={`M${x - w / 2} ${Y + 2} Q${x} ${Y - 5} ${x + w / 2} ${Y + 2}`} stroke={color} strokeWidth={h} strokeLinecap="round" fill="none" transform={`rotate(${rot} ${x} ${Y})`} />
+    <path d={`M${x - w / 2} ${Y + 2} Q${x} ${Y - 5} ${x + w / 2} ${Y + 2}`} stroke={color} strokeWidth={h * weight} strokeLinecap="round" fill="none" transform={`rotate(${rot} ${x} ${Y})`} />
   )
   switch (kind) {
     case 'none':
@@ -345,8 +309,8 @@ function Nose({ kind, skin }: { kind: string; skin: string }) {
   }
 }
 
-function Mouth({ kind }: { kind: string }) {
-  const line = (d: string) => <path className="av-mouth" d={d} stroke={LIP} strokeWidth="5" fill="none" strokeLinecap="round" />
+function Mouth({ kind, lips }: { kind: string; lips?: boolean }) {
+  const line = (d: string) => <path className="av-mouth" d={d} stroke={lips ? LIP_F : LIP} strokeWidth={lips ? 6.5 : 5} fill="none" strokeLinecap="round" />
   switch (kind) {
     case 'grin':
       return (
@@ -525,12 +489,23 @@ function Hat({ kind, color, uid }: { kind: string; color: string; uid: string })
 }
 
 /** Neck + shoulders so every avatar reads as a little character bust. */
-function Outfit({ kind, color, skin, uid }: { kind: string; color: string; skin: string; uid: string }) {
-  const torso = 'M8 260 C10 218 40 196 78 190 Q100 204 122 190 C160 196 190 218 192 260Z'
+const TORSO: Record<string, string> = {
+  neutral: 'M8 260 C10 218 40 196 78 190 Q100 204 122 190 C160 196 190 218 192 260Z',
+  fem: 'M24 260 C26 224 52 202 82 193 Q100 204 118 193 C148 202 174 224 176 260Z',
+  masc: 'M-6 260 C-2 214 32 194 74 188 Q100 204 126 188 C168 194 202 214 206 260Z',
+}
+const NECK: Record<string, string> = {
+  neutral: 'M84 166 L84 198 Q100 208 116 198 L116 166Z',
+  fem: 'M88 166 L88 198 Q100 206 112 198 L112 166Z',
+  masc: 'M81 166 L80 198 Q100 210 120 198 L119 166Z',
+}
+
+function Outfit({ kind, color, skin, uid, look }: { kind: string; color: string; skin: string; uid: string; look: string }) {
+  const torso = TORSO[look] ?? TORSO.neutral
   const dark = shade(color, -0.22)
   return (
     <g>
-      <path d="M84 166 L84 198 Q100 208 116 198 L116 166Z" fill={shade(skin, -0.2)} />
+      <path d={NECK[look] ?? NECK.neutral} fill={shade(skin, -0.2)} />
       {kind === 'hoodie' && <path d="M58 196 Q100 230 142 196 Q132 178 100 180 Q68 178 58 196Z" fill={dark} />}
       <Shaded d={torso} fill={color} uid={uid} id="tor" dx={-10} dy={-4} />
       {kind === 'tee' && <path d="M80 191 Q100 210 120 191" stroke={dark} strokeWidth="6" fill="none" strokeLinecap="round" />}
