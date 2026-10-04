@@ -1,0 +1,15 @@
+.gs { position: relative; min-height: 100svh; background: var(--pink); display: flex; flex-direction: column; align-items: center; padding: 84px 12px 90px; overflow: hidden; }
+.gs-name { font-size: 28px; color: #fff; text-shadow: 0 4px 0 var(--navy); background: var(--magenta); padding: 10px 20px 6px; border-radius: 999px; rotate: -3deg; display: inline-block; }
+.gs-top-players { position: relative; z-index: 3; display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-bottom: 12px; }
+.gs-top-players .pchip { padding-right: 16px; }
+.gs-spec { position: relative; z-index: 3; background: var(--navy); color: #fff; padding: 8px 16px 4px; border-radius: 999px; font-size: 14px; margin-bottom: 10px; }
+.gs-stage { position: relative; z-index: 2; flex: 1; width: 100%; display: flex; justify-content: center; align-items: center; }
+.gs-dock { position: fixed; left: 50%; bottom: 16px; translate: -50% 0; z-index: 30; }
+.gs-intro { position: fixed; inset: 0; z-index: 400; display: grid; place-items: center; pointer-events: none; }
+.gs-intro span { grid-area: 1 / 1; font-size: clamp(90px, 18vw, 260px); color: #fff; text-shadow: 0 8px 0 var(--navy), 0 16px 0 rgba(29, 58, 110, 0.3); transform: scale(0); }
+.gs-intro .w2 { color: var(--lime); }
+
+/* shared bits for game boards */
+.turn-banner { font-family: var(--font-display); font-size: clamp(22px, 3vw, 34px); color: var(--navy); text-align: center; margin: 0 0 14px; min-height: 1.1em; }
+.turn-banner.mine { color: #fff; text-shadow: 0 4px 0 var(--magenta); }
+@media (max-width: 600px) { .gs { padding-top: 76px; } .gs-name { font-size: 20px; } }

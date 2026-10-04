@@ -1,0 +1,55 @@
+.cz { position: relative; min-height: 100svh; overflow: hidden; background: var(--pink); display: flex; flex-direction: column; align-items: center; }
+.cz-code { background: var(--navy); color: #fff; padding: 12px 18px 8px; border-radius: 999px; font-size: 16px; }
+.cz-title {
+  position: relative; z-index: 2; margin: 2vh 0 0; font-size: clamp(64px, 11vw, 170px); color: #fff;
+  text-shadow: 0 7px 0 var(--magenta); white-space: nowrap; transform-origin: 50% 100%;
+}
+.cz-title .split-char { transform-origin: 50% 100%; }
+.cz-stage { position: relative; z-index: 2; width: min(760px, 96vw); height: min(58svh, 560px); margin-top: -2vh; }
+.cz-avatar { position: absolute; left: 50%; top: 50%; width: min(44svh, 62vw, 430px); aspect-ratio: 1; translate: -50% -50%; cursor: pointer; perspective: 600px; }
+.cz-bubble {
+  position: absolute; translate: -50% -50%; background: #fff; color: var(--navy); font-size: 15px; padding: 12px 18px 9px; border-radius: 999px;
+  box-shadow: var(--shadow-pop); transition: background 0.25s, color 0.25s, transform 0.35s var(--ease-back); white-space: nowrap;
+}
+.cz-bubble::after {
+  content: ''; position: absolute; bottom: -7px; width: 16px; height: 16px; background: inherit; border-radius: 3px; rotate: 45deg; z-index: -1;
+}
+.cz-bubble.l::after { right: 18px; }
+.cz-bubble.r::after { left: 18px; }
+.cz-bubble:hover { transform: scale(1.1) rotate(-4deg); }
+.cz-bubble.on { background: var(--magenta); color: #fff; transform: scale(1.12) rotate(3deg); }
+
+.cz-panel { position: relative; z-index: 3; display: flex; flex-direction: column; align-items: center; gap: 14px; margin-top: 1vh; }
+.cz-rail { display: flex; align-items: center; gap: 6px; background: #fff; border-radius: 999px; padding: 8px; box-shadow: var(--shadow-pop); max-width: 96vw; }
+.cz-opts { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+.cz-opt {
+  flex: none; width: 66px; height: 66px; border-radius: 50%; background: var(--pink-2); display: grid; place-items: center; padding: 2px; overflow: hidden;
+  border: 4px solid transparent; transition: transform 0.3s var(--ease-back), border-color 0.2s;
+}
+.cz-opt:hover { transform: scale(1.1) rotate(-6deg); }
+.cz-opt.on { border-color: var(--magenta); background: var(--cyan); }
+.cz-arrow { width: 40px; height: 40px; border-radius: 50%; color: var(--magenta); font-size: 34px; line-height: 1; display: grid; place-items: center; font-weight: 800; }
+.cz-arrow:hover { background: var(--pink-2); }
+.cz-swatches { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; max-width: 94vw; }
+.cz-swatch { width: 40px; height: 40px; border-radius: 50%; border: 4px solid #fff; box-shadow: 0 4px 0 rgba(29, 58, 110, 0.15); transition: transform 0.3s var(--ease-back); }
+.cz-swatch:hover { transform: scale(1.15); }
+.cz-swatch.on { outline: 4px solid var(--navy); transform: scale(1.18); }
+
+.cz-bottom { position: fixed; left: 0; right: 0; bottom: 0; z-index: 4; display: flex; justify-content: space-between; align-items: flex-end; padding: 0 clamp(16px, 3vw, 32px) 24px; pointer-events: none; }
+.cz-bottom > * { pointer-events: auto; }
+.cz-name { display: flex; align-items: center; gap: 10px; background: #fff; border-radius: 999px; padding: 8px 8px 8px 20px; box-shadow: var(--shadow-pop); transform-origin: left; }
+.cz-name span { font-size: 15px; color: var(--magenta); padding-top: 3px; }
+.cz-name input { border: 0; outline: 0; background: var(--pink-2); border-radius: 999px; padding: 10px 16px; width: 180px; font-weight: 700; font-size: 16px; color: var(--navy); }
+
+.cz-friends { position: fixed; right: clamp(16px, 3vw, 32px); top: 50%; translate: 0 -50%; z-index: 4; display: flex; flex-direction: column; gap: 10px; }
+.cz-friend { position: relative; }
+.cz-friend span { position: absolute; right: -4px; bottom: -2px; background: var(--navy); color: #fff; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 800; }
+
+@media (max-width: 760px) {
+  .cz-stage { height: auto; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; padding-top: min(68vw, 300px); }
+  .cz-avatar { top: 0; translate: -50% 0; width: min(66vw, 290px); }
+  .cz-bubble { position: relative; left: auto !important; top: auto !important; translate: none; font-size: 13px; padding: 9px 13px 7px; }
+  .cz-bubble::after { display: none; }
+  .cz-bottom { position: relative; flex-direction: column; align-items: center; gap: 14px; margin-top: 20px; }
+  .cz-friends { display: none; }
+}

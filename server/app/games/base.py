@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import random
 import time
+import uuid
 from dataclasses import dataclass, field
 from typing import Any, Callable
 
@@ -49,6 +50,7 @@ class Game:
         self.results: Results | None = None
         self.dirty = True
         self.seq = 0
+        self.instance = uuid.uuid4().hex[:10]
         self.events: list[dict[str, Any]] = []      # notable events since last broadcast (animation cues)
         self._timers: list[tuple[float, Callable[[], None]]] = []
 
@@ -107,6 +109,7 @@ class Game:
         v["players"] = self.players
         v["over"] = self.over
         v["seq"] = self.seq
+        v["instance"] = self.instance
         v["results"] = self.results.to_dict() if self.results else None
         return v
 

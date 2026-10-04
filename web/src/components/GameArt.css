@@ -1,0 +1,20 @@
+.art-float-a { animation: art-float 3.4s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+.art-float-b { animation: art-float 3.4s ease-in-out -1.7s infinite; transform-box: fill-box; transform-origin: center; }
+.art-slide-a { animation: art-slide 2.2s ease-in-out infinite alternate; }
+.art-slide-b { animation: art-slide 2.2s ease-in-out -1.1s infinite alternate-reverse; }
+.art-bounce { animation: art-bounce 1.1s ease-in-out infinite alternate; }
+.art-drop { animation: art-drop 1.8s cubic-bezier(.5,0,.75,0) infinite; }
+.art-spin { animation: art-spin 8s linear infinite; transform-box: fill-box; transform-origin: center; }
+.art-wiggle { animation: art-wiggle 1.4s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+.art-flip { animation: art-flip 3s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+.art-pad { animation: art-pad 2.4s steps(1) infinite; }
+.art-pad-1 { animation-delay: .4s } .art-pad-2 { animation-delay: .8s } .art-pad-3 { animation-delay: 1.2s }
+.art-pad-4 { animation-delay: 1.6s } .art-pad-5 { animation-delay: 2s }
+@keyframes art-float { 0%,100% { transform: translateY(0) rotate(0) } 50% { transform: translateY(-8px) rotate(3deg) } }
+@keyframes art-slide { from { transform: translateX(-22px) } to { transform: translateX(22px) } }
+@keyframes art-bounce { from { transform: translate(-30px, 40px) } to { transform: translate(24px, -42px) } }
+@keyframes art-drop { 0% { transform: translateY(0) } 70%,100% { transform: translateY(54px) } }
+@keyframes art-spin { to { transform: rotate(360deg) } }
+@keyframes art-wiggle { 0%,100% { transform: rotate(0) } 50% { transform: rotate(18deg) scale(1.1) } }
+@keyframes art-flip { 0%,40% { transform: scaleX(1) } 50% { transform: scaleX(0) } 60%,100% { transform: scaleX(1) } }
+@keyframes art-pad { 0% { opacity: .35 } 16% { opacity: 1 } }

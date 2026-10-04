@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import re
+import socket
 import time
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -45,6 +47,20 @@ async def health() -> dict[str, Any]:
 @app.get("/api/games")
 async def games() -> list[dict[str, Any]]:
     return [{"id": g.id, "name": g.name, "min": g.min_players, "max": g.max_players} for g in REGISTRY.values()]
+
+
+@app.get("/api/net")
+async def net() -> dict[str, Any]:
+    """Best-guess LAN address so QR codes generated on localhost work for phones on the same Wi-Fi."""
+    ip = None
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("10.255.255.255", 1))
+        ip = s.getsockname()[0]
+        s.close()
+    except OSError:
+        pass
+    return {"lan": ip, "public": os.getenv("PUBLIC_URL")}
 
 
 @app.get("/api/rooms/{code}")

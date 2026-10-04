@@ -1,0 +1,24 @@
+.rs { position: fixed; inset: 0; z-index: 600; display: grid; place-items: center; padding: 16px; overflow-y: auto; }
+.rs-back { position: fixed; inset: 0; background: var(--navy); }
+.rs-confetti { position: fixed; left: 50%; top: 50%; z-index: 1; pointer-events: none; }
+.rs-confetti svg { position: absolute; translate: -50% -50%; }
+.rs-inner { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; width: 100%; max-width: 900px; }
+.rs-title { font-size: clamp(56px, 10vw, 140px); margin: 4px 0 0; color: var(--pink); text-shadow: 0 7px 0 var(--magenta); }
+.rs-sum { margin: 0; color: #fff; font-weight: 600; font-size: 18px; }
+.rs-podium { display: flex; align-items: flex-end; justify-content: center; gap: 14px; margin-top: 30px; width: 100%; }
+.rs-col { display: flex; flex-direction: column; align-items: center; flex: 0 1 240px; }
+.rs-faces { display: flex; gap: 6px; justify-content: center; }
+.rs-face { position: relative; width: clamp(90px, 14vw, 150px); aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; }
+.place-0 .rs-face { width: clamp(110px, 17vw, 190px); }
+.rs-name { position: absolute; bottom: -6px; padding: 5px 12px 3px; border-radius: 999px; color: #fff; font-weight: 800; font-size: 14px; white-space: nowrap; box-shadow: 0 4px 0 rgba(0, 0, 0, 0.2); }
+.rs-detail { position: absolute; top: calc(100% + 16px); font-size: 12px; font-weight: 600; color: #fff; opacity: 0.8; white-space: nowrap; }
+.rs-step { width: 100%; margin-top: 54px; border-radius: 24px 24px 0 0; display: grid; place-items: center; font-size: 60px; color: var(--navy); padding-top: 8px; }
+.place-0 .rs-step { height: 150px; background: var(--lime); }
+.place-1 .rs-step { height: 100px; background: var(--cyan); }
+.place-2 .rs-step { height: 70px; background: var(--orange); }
+.rs-actions { display: flex; gap: 14px; margin-top: 30px; flex-wrap: wrap; justify-content: center; }
+.rs-wait { color: #fff; font-size: 24px; }
+.rs-wait span { display: inline-block; animation: rs-dot 1s ease-in-out infinite; }
+.rs-wait span:nth-child(2) { animation-delay: 0.15s; }
+.rs-wait span:nth-child(3) { animation-delay: 0.3s; }
+@keyframes rs-dot { 50% { transform: translateY(-10px); } }

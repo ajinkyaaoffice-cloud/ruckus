@@ -1,0 +1,6 @@
+.guard { min-height: 100svh; display: grid; place-items: center; align-content: center; gap: 24px; }
+.guard p { font-size: 32px; color: var(--navy); }
+.guard-spin { display: flex; gap: 6px; }
+.guard-spin svg { animation: guard-hop 0.8s var(--ease-back) infinite alternate; }
+.guard-spin svg:last-child { animation-delay: 0.4s; }
+@keyframes guard-hop { from { transform: translateY(0) rotate(0) } to { transform: translateY(-22px) rotate(90deg) } }

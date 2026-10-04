@@ -1,0 +1,21 @@
+.qr-modal { position: fixed; inset: 0; z-index: 800; background: rgba(19, 42, 82, 0.55); display: grid; place-items: center; padding: 16px; backdrop-filter: blur(6px); }
+.qr-sheet { background: var(--cream); border-radius: 36px; padding: 28px; display: flex; flex-direction: column; align-items: center; gap: 18px; box-shadow: 0 16px 0 rgba(0, 0, 0, 0.2); max-width: 420px; width: 100%; }
+.qr-sheet h3 { font-size: 34px; margin: 0; color: var(--navy); }
+.qr-view { position: relative; width: 100%; aspect-ratio: 1; border-radius: 24px; overflow: hidden; background: var(--navy); }
+.qr-view video { width: 100%; height: 100%; object-fit: cover; }
+.qr-corner { position: absolute; width: 46px; height: 46px; border: 7px solid var(--lime); }
+.qr-corner.tl { left: 16px; top: 16px; border-right: 0; border-bottom: 0; border-radius: 14px 0 0 0; }
+.qr-corner.tr { right: 16px; top: 16px; border-left: 0; border-bottom: 0; border-radius: 0 14px 0 0; }
+.qr-corner.bl { left: 16px; bottom: 16px; border-right: 0; border-top: 0; border-radius: 0 0 0 14px; }
+.qr-corner.br { right: 16px; bottom: 16px; border-left: 0; border-top: 0; border-radius: 0 0 14px 0; }
+.qr-line { position: absolute; left: 12%; right: 12%; height: 5px; border-radius: 9px; background: var(--magenta); box-shadow: 0 0 18px var(--magenta); animation: qr-scan 1.8s ease-in-out infinite alternate; }
+@keyframes qr-scan { from { top: 14%; } to { top: 84%; } }
+.qr-err { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 30px; text-align: center; color: #fff; font-weight: 600; }
+
+.qr-card { background: #fff; border-radius: 28px; padding: 18px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.qr-card svg { width: 100%; height: auto; }
+.qr-url { font-size: 12px; font-weight: 600; word-break: break-all; text-align: center; opacity: 0.7; }
+.inv-code { display: flex; gap: 8px; }
+.inv-code span { width: 58px; height: 70px; display: grid; place-items: center; padding-top: 6px; font-size: 44px; background: var(--magenta); color: #fff; border-radius: 16px; box-shadow: 0 6px 0 var(--navy); }
+.inv-code span:nth-child(even) { background: var(--navy); rotate: 5deg; box-shadow: 0 6px 0 var(--magenta); }
+.inv-code span:nth-child(odd) { rotate: -4deg; }
