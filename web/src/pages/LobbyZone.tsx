@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import gsap from 'gsap'
 import { intro } from '../lib/ui'
-import { lowPower } from '../lib/perf'
+import { isTouch, lowPower } from '../lib/perf'
 import { TopBar, BrushMarks, Split } from '../components/Chrome'
 import Avatar from '../components/Avatar'
 import Glyph from '../components/Glyph'
@@ -23,9 +23,19 @@ export default function LobbyZone() {
   const [scan, setScan] = useState(false)
   const [side, setSide] = useState<'host' | 'join' | null>(null)
   const inputs = useRef<(HTMLInputElement | null)[]>([])
+  // hover focus is a desktop nicety; on touch a tap fires mouseenter and would reflow the whole page
+  const hover = (s: 'host' | 'join' | null) => () => { if (!isTouch) setSide(s) }
 
   useLayoutEffect(() => {
     const ctx = gsap.context(() => {
+      if (lowPower) {
+        // phones: a light fade-and-rise; sliding two rotated, clipped full-screen panels repaints every frame
+        gsap.timeline({ delay: 0.1, defaults: { ease: 'power3.out', clearProps: 'transform,opacity,visibility' } })
+          .fromTo('.lz-half', { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.35, stagger: 0.08 })
+          .fromTo('.lz-inner', { y: 28 }, { y: 0, duration: 0.5, stagger: 0.08 }, 0)
+          .fromTo('.lz-me', { scale: 0.4, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.5, ease: 'back.out(2)' }, 0.25)
+        return
+      }
       const tl = gsap.timeline({ delay: 0.15 })
       tl.fromTo('.lz-half.host', ...intro({ xPercent: -110, rotate: -8, duration: 1, ease: 'expo.out' }))
         .fromTo('.lz-half.join', ...intro({ xPercent: 110, rotate: 8, duration: 1, ease: 'expo.out' }), 0.06)
@@ -80,7 +90,7 @@ export default function LobbyZone() {
     setCode(next)
     if (ch) {
       sfx.place()
-      gsap.fromTo(inputs.current[i], { scale: 1.35, rotate: -10 }, { scale: 1, rotate: 0, duration: 0.5, ease: 'back.out(3)' })
+      if (!lowPower) gsap.fromTo(inputs.current[i], { scale: 1.35, rotate: -10 }, { scale: 1, rotate: 0, duration: 0.5, ease: 'back.out(3)' })
       if (i < 3) inputs.current[i + 1]?.focus()
       else if (next.every(Boolean)) void join(next.join(''))
     }
@@ -103,7 +113,7 @@ export default function LobbyZone() {
   return (
     <div ref={root} className={`lz ${side ? `focus-${side}` : ''}`}>
       <TopBar />
-      <section className="lz-half host" onMouseEnter={() => setSide('host')} onMouseLeave={() => setSide(null)}>
+      <section className="lz-half host" onMouseEnter={hover('host')} onMouseLeave={hover(null)}>
         <BrushMarks />
         <Glyph className="lz-glyph g-star" name="star" color="#d9f66b" size={90} style={{ left: '12%', top: '20%' }} />
         <Glyph className="lz-glyph g-squig" name="squiggle" color="#1d3a6e" size={120} strokeWidth={9} style={{ left: '8%', bottom: '18%' }} />
@@ -117,7 +127,7 @@ export default function LobbyZone() {
         </div>
       </section>
 
-      <section className="lz-half join" onMouseEnter={() => setSide('join')} onMouseLeave={() => setSide(null)}>
+      <section className="lz-half join" onMouseEnter={hover('join')} onMouseLeave={hover(null)}>
         <BrushMarks color="#a7ecff" opacity={0.18} />
         <Glyph className="lz-glyph g-o" name="o" color="#e64fe0" size={80} style={{ right: '12%', top: '18%' }} />
         <Glyph className="lz-glyph g-tri" name="tri" color="#ffb424" size={70} style={{ right: '8%', bottom: '16%' }} />

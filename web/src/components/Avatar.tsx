@@ -68,6 +68,7 @@ export default function Avatar({ config, size = 160, expression = 'idle', track 
   const uid = useId().replace(/:/g, '')
   const root = useRef<SVGSVGElement>(null)
   const back = useRef<SVGGElement>(null)
+  const skull = useRef<SVGGElement>(null)
   const face = useRef<SVGGElement>(null)
   const feat = useRef<SVGGElement>(null)
   const front = useRef<SVGGElement>(null)
@@ -100,10 +101,14 @@ export default function Avatar({ config, size = 160, expression = 'idle', track 
       lx += (tx - lx) * 0.08
       ly += (ty - ly) * 0.08
       const d = depth
-      back.current?.setAttribute('transform', `translate(${-lx * 5 * d} ${-ly * 3 * d})`)
-      face.current?.setAttribute('transform', `translate(${lx * 2 * d} ${ly * 2 * d})`)
-      feat.current?.setAttribute('transform', `translate(${lx * 9 * d} ${ly * 6 * d})`)
-      front.current?.setAttribute('transform', `translate(${lx * 5 * d} ${ly * 3 * d})`)
+      // the head is one rigid piece (back hair, ears, face, fringe, hat) so hair can never
+      // slide off it; only the body lags behind and the features lean forward for depth
+      const head = `translate(${lx * 3 * d} ${ly * 2 * d})`
+      back.current?.setAttribute('transform', `translate(${-lx * 3 * d} ${-ly * 1.5 * d})`)
+      skull.current?.setAttribute('transform', head)
+      face.current?.setAttribute('transform', head)
+      front.current?.setAttribute('transform', head)
+      feat.current?.setAttribute('transform', `translate(${lx * 5 * d} ${ly * 3.5 * d})`)
       pupils.current?.setAttribute('transform', `translate(${lx * 3.5} ${ly * 3})`)
     }
     const stop = onFrame(loop)
@@ -136,6 +141,8 @@ export default function Avatar({ config, size = 160, expression = 'idle', track 
         {/* ---------- back layer: hair behind the head, ears, body ---------- */}
         <g ref={back}>
           <Outfit kind={c.top} color={c.topColor} skin={c.skin} uid={uid} />
+        </g>
+        <g ref={skull}>
           {c.hair === 'curly' && CURLS_BACK.map(([x, y, r], i) => <circle key={i} cx={x} cy={y} r={r} fill={hairBack} />)}
           {c.hair === 'afro' && (
             <g fill={hairBack}>

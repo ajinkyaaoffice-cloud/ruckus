@@ -40,3 +40,8 @@
   .lz-glyph.g-o { right: var(--gutter-r) !important; top: 6% !important; }
   .lz-glyph.g-tri { right: var(--gutter-r) !important; bottom: calc(var(--safe-b) + 8%) !important; }
 }
+
+/* phones: no flex animation, isolate each panel's paint, no focus tilt on the code boxes */
+html.low-power .lz-half { transition: none; contain: paint; }
+html.low-power .lz-box { transition: box-shadow 0.2s; }
+html.low-power .lz-box:focus { transform: none; }

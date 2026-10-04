@@ -1,6 +1,7 @@
 import { lazy, Suspense, useLayoutEffect, useRef, useState } from 'react'
 import gsap from 'gsap'
 import { intro } from '../lib/ui'
+import { lowPower } from '../lib/perf'
 import { BrushMarks, Logo, Split, TopBar } from '../components/Chrome'
 import GameArt from '../components/GameArt'
 import Glyph from '../components/Glyph'
@@ -32,6 +33,12 @@ export default function Hub() {
 
   useLayoutEffect(() => {
     const ctx = gsap.context(() => {
+      if (lowPower) {
+        // phones: one cheap rise for each block instead of fifteen spinning cards
+        gsap.fromTo(['.hub-title', '.hub-players', '.hub-grid', '.hub-side', '.hub-dock'], { y: 24, autoAlpha: 0 },
+          { y: 0, autoAlpha: 1, duration: 0.45, ease: 'power3.out', stagger: 0.06, delay: 0.1, clearProps: 'transform,opacity,visibility' })
+        return
+      }
       const tl = gsap.timeline({ delay: 0.2 })
       tl.fromTo('.hub-title .split-char', ...intro({ yPercent: 140, rotate: () => gsap.utils.random(-30, 30), duration: 0.7, ease: 'back.out(2.2)', stagger: 0.025 }))
         .fromTo('.hub-players > *', ...intro({ y: -140, rotate: (i: number) => (i % 2 ? 20 : -20), duration: 0.8, ease: 'back.out(1.8)', stagger: 0.1 }), 0.1)
@@ -44,13 +51,14 @@ export default function Hub() {
 
   // tilt cards toward the pointer
   const tilt = (e: React.PointerEvent<HTMLElement>) => {
+    if (e.pointerType !== 'mouse') return   // a finger scrolling past shouldn't wobble cards in 3D
     const el = e.currentTarget
     const r = el.getBoundingClientRect()
     const x = (e.clientX - r.left) / r.width - 0.5
     const y = (e.clientY - r.top) / r.height - 0.5
     gsap.to(el, { rotateY: x * 16, rotateX: -y * 16, duration: 0.4, ease: 'power2.out' })
   }
-  const untilt = (e: React.PointerEvent<HTMLElement>) => gsap.to(e.currentTarget, { rotateY: 0, rotateX: 0, duration: 0.8, ease: 'elastic.out(1, 0.4)' })
+  const untilt = (e: React.PointerEvent<HTMLElement>) => e.pointerType === 'mouse' && gsap.to(e.currentTarget, { rotateY: 0, rotateX: 0, duration: 0.8, ease: 'elastic.out(1, 0.4)' })
 
   const choose = (g: GameMeta) => {
     if (!isHost) {
