@@ -71,6 +71,7 @@ export function onGameEvents(fn: Listener): () => void {
 let ws: WebSocket | null = null
 let retry = 0
 let pingTimer: number | undefined
+let lastHeard = 0
 const queue: unknown[] = []
 let joinedResolvers: ((code: string | null, err?: string) => void)[] = []
 
@@ -92,10 +93,18 @@ export function connect(): void {
     const { profile } = useNet.getState()
     sock.send(JSON.stringify({ t: 'hello', pid: profile.pid, name: profile.name || 'Player', avatar: profile.avatar }))
     while (queue.length) sock.send(JSON.stringify(queue.shift()))
+    lastHeard = Date.now()
     clearInterval(pingTimer)
-    pingTimer = window.setInterval(() => send({ t: 'ping' }), 20000)
+    // a phone that slept can leave a socket that looks open but is dead:
+    // ping often, and if the server has gone quiet, start over
+    pingTimer = window.setInterval(() => {
+      // background tabs still ping (throttled) so the server keeps their seat
+      if (!document.hidden && Date.now() - lastHeard > 9000) return reconnect()
+      send({ t: 'ping' })
+    }, 3000)
   }
   sock.onmessage = (e) => {
+    lastHeard = Date.now()
     let msg: any
     try {
       msg = JSON.parse(e.data)
@@ -142,10 +151,40 @@ export function connect(): void {
   }
 }
 
+/** Drop the current socket (even a silently dead one) and dial again now. */
+export function reconnect(): void {
+  const old = ws
+  ws = null
+  if (old) {
+    old.onclose = null
+    old.onmessage = null
+    try { old.close() } catch { /* already gone */ }
+  }
+  clearInterval(pingTimer)
+  retry = 0
+  connect()
+}
+
+/* Coming back to the tab, waking the phone or getting signal back: check the
+   line answers within a moment, otherwise reconnect straight away instead of
+   waiting for the old socket to time out. */
+function wake() {
+  if (document.hidden || !ws) return
+  if (ws.readyState !== WebSocket.OPEN) return reconnect()
+  const asked = Date.now()
+  send({ t: 'ping' })
+  window.setTimeout(() => { if (lastHeard < asked) reconnect() }, 2500)
+}
+if (typeof window !== 'undefined') {
+  document.addEventListener('visibilitychange', wake)
+  window.addEventListener('online', wake)
+  window.addEventListener('pageshow', (e) => { if (e.persisted) reconnect() })
+}
+
 export function send(msg: unknown): void {
   if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg))
   else {
-    queue.push(msg)
+    if ((msg as { t?: string })?.t !== 'ping') queue.push(msg)
     connect()
   }
 }

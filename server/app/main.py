@@ -97,6 +97,9 @@ async def leave_current(pid: str, keep: Room | None = None) -> None:
             manager.rooms.pop(room.code, None)
 
 
+IDLE_TIMEOUT = 75.0
+
+
 @app.websocket("/ws")
 async def ws_endpoint(ws: WebSocket) -> None:
     await ws.accept()
@@ -108,7 +111,8 @@ async def ws_endpoint(ws: WebSocket) -> None:
 
     try:
         while True:
-            msg = await ws.receive_json()
+            # clients ping every few seconds while visible; long silence = a dead line
+            msg = await asyncio.wait_for(ws.receive_json(), IDLE_TIMEOUT)
             if not isinstance(msg, dict):
                 continue
             t = msg.get("t")
@@ -202,7 +206,7 @@ async def ws_endpoint(ws: WebSocket) -> None:
                     raise GameError("Unknown message")
             except GameError as e:
                 await err(str(e))
-    except WebSocketDisconnect:
+    except (WebSocketDisconnect, asyncio.TimeoutError):
         pass
     except Exception:
         log.exception("socket error")

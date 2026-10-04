@@ -19,6 +19,7 @@ log = logging.getLogger("ruckus.rooms")
 MAX_PLAYERS = 5
 CODE_ALPHABET = "".join(c for c in string.ascii_uppercase if c not in "IOQ")
 RECONNECT_GRACE = 45.0
+SEND_TIMEOUT = 2.5
 
 
 def clean_name(name: Any) -> str:
@@ -96,10 +97,18 @@ class Room:
     async def send(self, p: Player, msg: dict[str, Any]) -> None:
         if p.ws is None:
             return
+        ws = p.ws
         try:
-            await p.ws.send_json(msg)
-        except Exception:                       # socket died mid-send; disconnect handler cleans up
-            pass
+            # a phone that went to sleep can stall a send forever; never let one
+            # stuck socket hold up the rest of the room
+            await asyncio.wait_for(ws.send_json(msg), SEND_TIMEOUT)
+        except Exception:
+            if p.ws is ws:
+                p.ws, p.left_at = None, time.time()
+                try:
+                    await ws.close()
+                except Exception:
+                    pass
 
     async def broadcast(self, msg: dict[str, Any]) -> None:
         await asyncio.gather(*(self.send(p, msg) for p in list(self.players.values())))
