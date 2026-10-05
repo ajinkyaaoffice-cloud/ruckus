@@ -130,10 +130,12 @@ function PopSticker({ pop, onDone }: { pop: Pop; onDone: () => void }) {
 
 export function EmoteBar({ compact = false }: { compact?: boolean }) {
   const [open, setOpen] = useState(!compact)
+  const enabled = useNet((st) => st.room?.settings?.emotes ?? true)
   const fire = (id: string) => {
     emote(id)
     if (compact) setOpen(false)
   }
+  if (!enabled) return null
   return (
     <div className={`emote-bar ${compact ? 'compact' : ''} ${open ? 'open' : ''}`}>
       {compact && (

@@ -10,7 +10,7 @@ import InviteModal, { InviteCard } from '../components/Invite'
 import { EmoteBar, PlayerChip } from '../components/Players'
 import { useTransition } from '../components/Transition'
 import { CATALOG, gameMeta, type GameMeta } from '../lib/catalog'
-import { leaveRoom, MAX_PLAYERS, startGame, useNet } from '../lib/net'
+import { leaveRoom, startGame, useNet } from '../lib/net'
 import { sfx } from '../lib/sound'
 import './Hub.css'
 import { toast } from '../lib/toast'
@@ -18,6 +18,8 @@ import { toast } from '../lib/toast'
 // fetched the first time someone opens a rulebook
 const loadRulebook = () => import('../components/Rulebook')
 const Rulebook = lazy(loadRulebook)
+// host-only, so nobody else downloads it
+const RoomSettings = lazy(() => import('../components/RoomSettings'))
 // fetch the rulebook while idle so the first tap on Rules opens instantly
 const idle = (fn: () => void) => ('requestIdleCallback' in window ? requestIdleCallback(fn, { timeout: 4000 }) : setTimeout(fn, 2000))
 
@@ -29,7 +31,9 @@ export default function Hub() {
   const [invite, setInvite] = useState(false)
   const [picked, setPicked] = useState<GameMeta | null>(null)
   const [rules, setRules] = useState<GameMeta | null>(null)
+  const [settings, setSettings] = useState(false)
   const isHost = room.host === pid
+  const canPick = isHost || room.settings.anyonePicks
   const ready = room.players.filter((p) => p.status === 'ready' && p.connected)
   const ranked = [...room.players].sort((a, b) => b.points - a.points || b.wins - a.wins)
   const leader = ranked[0] && ranked[0].points > 0 ? ranked[0].id : null
@@ -65,7 +69,7 @@ export default function Hub() {
   const untilt = (e: React.PointerEvent<HTMLElement>) => e.pointerType === 'mouse' && gsap.to(e.currentTarget, { rotateY: 0, rotateX: 0, duration: 0.8, ease: 'elastic.out(1, 0.4)' })
 
   const choose = (g: GameMeta) => {
-    if (!isHost) {
+    if (!canPick) {
       sfx.bad()
       toast.info('Only the host picks — nudge them with an emote!')
       return
@@ -84,7 +88,7 @@ export default function Hub() {
     go('/play', { label: 'BYE!', reverse: true })
   }
 
-  const empty = Math.min(1, Math.max(0, MAX_PLAYERS - room.players.length))
+  const empty = room.settings.locked ? 0 : Math.min(1, Math.max(0, room.settings.maxPlayers - room.players.length))
 
   return (
     <div ref={root} className="hub">
@@ -117,12 +121,13 @@ export default function Hub() {
         </section>
 
         <div className="hub-head">
-          <h1 className="hub-title display" key={isHost ? 'h' : 'g'}>
-            <Split text={isHost ? 'Pick a game' : 'Host is picking'} />
+          <h1 className="hub-title display" key={canPick ? 'h' : 'g'}>
+            <Split text={canPick ? 'Pick a game' : 'Host is picking'} />
           </h1>
           <p className="hub-hint">
-            {ready.length} ready · {isHost ? 'tap a card to set it up' : 'react while you wait'}
+            {ready.length} ready · {canPick ? 'tap a card to set it up' : 'react while you wait'}
             {room.players.some((p) => p.status !== 'ready') && ' · someone is still dressing up'}
+            {room.settings.locked && <span className="hub-lock">Room locked</span>}
           </p>
         </div>
 
@@ -134,7 +139,7 @@ export default function Hub() {
               <div key={g.id} role="button" tabIndex={0} className={`hub-card ${locked ? 'locked' : ''}`} style={{ background: g.bg, color: g.ink }}
                 onPointerMove={tilt} onPointerLeave={untilt} onClick={() => choose(g)} onMouseEnter={() => sfx.hover()}
                 onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && e.target === e.currentTarget && (e.preventDefault(), choose(g))}
-                data-cursor={isHost && !locked ? 'PLAY' : undefined}>
+                data-cursor={canPick && !locked ? 'PLAY' : undefined}>
                 <div className="hc-top">
                   <span className="hc-tag">{g.tag}</span>
                   <span className="hc-p display">{g.min === g.max ? g.min : `${g.min}-${g.max}`}P</span>
@@ -197,6 +202,12 @@ export default function Hub() {
       <div className="hub-dock">
         <EmoteBar />
         <div className="hub-dock-row">
+          {isHost && (
+            <button className="bubble-btn navy" onClick={() => { sfx.click(); setSettings(true) }} data-cursor="SETTINGS">
+              <svg className="ico" viewBox="0 0 24 24" aria-hidden><circle cx="12" cy="12" r="3.2" fill="none" stroke="currentColor" strokeWidth="2.4" /><path d="M12 2.5v3M12 18.5v3M21.5 12h-3M5.5 12h-3M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1M18.7 18.7l-2.1-2.1M7.4 7.4 5.3 5.3" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" /></svg>
+              Room settings
+            </button>
+          )}
           <button className="bubble-btn" onClick={() => go(`/room/${room.code}/avatar`, { label: 'DRESS UP!' })} data-cursor="EDIT">
             <Glyph name="heart" color="#e64fe0" size={18} /> Edit look
           </button>
@@ -205,6 +216,7 @@ export default function Hub() {
 
       {invite && <InviteModal code={room.code} onClose={() => setInvite(false)} />}
       {picked && <StartSheet g={picked} readyCount={ready.length} onClose={() => setPicked(null)} onRules={() => setRules(picked)} />}
+      {settings && isHost && <Suspense fallback={null}><RoomSettings onClose={() => setSettings(false)} /></Suspense>}
       {rules && <Suspense fallback={null}><Rulebook g={rules} onClose={() => setRules(null)} /></Suspense>}
     </div>
   )

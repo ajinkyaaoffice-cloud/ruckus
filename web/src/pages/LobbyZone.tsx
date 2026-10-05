@@ -69,7 +69,7 @@ export default function LobbyZone() {
     sfx.click()
     const info = await checkRoom(c)
     if (!info.exists || info.full) {
-      toast.error(info.exists ? 'That room is full (5 max)' : `No room called ${c}`)
+      toast.error(info.exists ? 'That room is full' : `No room called ${c}`)
       gsap.fromTo('.lz-code', { x: -14 }, { x: 0, duration: 0.5, ease: 'elastic.out(1, 0.25)' })
       setBusy(false)
       return

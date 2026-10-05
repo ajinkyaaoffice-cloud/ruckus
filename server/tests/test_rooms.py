@@ -1,4 +1,4 @@
-"""Room behaviour: pausing a game when a player drops."""
+"""Room behaviour: pausing a game when a player drops, and the host's room controls."""
 import asyncio
 import random
 import time
@@ -117,4 +117,81 @@ def test_opener_rotates_round_the_table():
             room.loop_task.cancel()
         # one full lap from wherever it started, then the same lap again
         assert sorted(openers[:3]) == ["alice", "bobby", "cara"] and openers[:3] == openers[3:]
+    asyncio.run(run())
+
+
+def test_only_host_changes_settings_and_values_are_checked():
+    room = make_room()
+    with pytest.raises(GameError):
+        room.configure("bobby", {"locked": True})
+    room.configure("alice", {"locked": True, "maxPlayers": 3, "grace": 120, "emotes": False})
+    assert room.settings["locked"] and room.settings["maxPlayers"] == 3 and room.grace == 120.0
+    assert room.public()["settings"]["emotes"] is False
+    for bad in ({"maxPlayers": 9}, {"maxPlayers": True}, {"grace": 7}, {"locked": "yes"}, {"nope": 1}):
+        with pytest.raises(GameError):
+            room.configure("alice", bad)
+    assert room.settings["maxPlayers"] == 3          # a rejected patch changes nothing
+
+
+def test_lock_and_size_keep_newcomers_out():
+    room = make_room()
+    room.can_join("carol")
+    room.configure("alice", {"maxPlayers": 2})
+    with pytest.raises(GameError, match="full"):
+        room.can_join("carol")
+    room.configure("alice", {"maxPlayers": 5, "locked": True})
+    with pytest.raises(GameError, match="locked"):
+        room.can_join("carol")
+
+
+def test_kick_bans_until_let_back_and_host_can_hand_over():
+    room = make_room()
+    with pytest.raises(GameError):
+        room.kick("bobby", "alice")
+    with pytest.raises(GameError):
+        room.kick("alice", "alice")
+    room.kick("alice", "bobby")
+    assert "bobby" not in room.players and room.public()["banned"] == [{"id": "bobby", "name": "Bobby"}]
+    with pytest.raises(GameError, match="removed"):
+        room.can_join("bobby")
+    room.unban_all("alice")
+    room.can_join("bobby")
+    room.add(Player("bobby", "Bobby", {}, ws=FakeWS()))
+    room.make_host("alice", "bobby")
+    assert room.host == "bobby"
+    with pytest.raises(GameError):
+        room.configure("alice", {"locked": True})
+
+
+def test_anyone_picks_and_reset_scores():
+    async def run():
+        room = make_room()
+        for p in room.players.values():
+            p.status = "ready"
+        with pytest.raises(GameError, match="host"):
+            await room.start("bobby", "quickmaths", {})
+        room.configure("alice", {"anyonePicks": True})
+        await room.start("bobby", "quickmaths", {})
+        assert room.phase == "playing"
+        room.players["alice"].points = 6
+        room.history.append({"game": "x"})
+        room.reset_scores("alice")
+        assert room.players["alice"].points == 0 and room.history == []
+        if room.loop_task:
+            room.loop_task.cancel()
+    asyncio.run(run())
+
+
+def test_no_pause_on_drop_when_switched_off():
+    async def run():
+        room = make_room()
+        for p in room.players.values():
+            p.status = "ready"
+        await room.start("alice", "quickmaths", {})
+        assert room.dropped("bobby") and room.game.paused
+        room.configure("alice", {"pauseOnDrop": False})
+        assert not room.waiting and room.resume_at is not None
+        room.returned("bobby")
+        assert not room.dropped("bobby")
+        room.loop_task.cancel()
     asyncio.run(run())

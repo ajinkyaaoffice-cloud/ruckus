@@ -15,7 +15,7 @@ export default function Results({ state, room, me }: { state: GameState; room: R
   const res = state.results!
   const tie = res.ranking.length === 1
   const iWon = res.winners.includes(me)
-  const isHost = room.host === me
+  const isHost = room.host === me || !!room.settings?.anyonePicks
   const headline = tie ? "It's a draw!" : iWon ? 'You win!' : res.winners.length ? `${room.players.find((p) => p.id === res.winners[0])?.name ?? 'Someone'} wins!` : 'Game over'
   const steps = res.ranking.slice(0, 3)
   const order = steps.length === 3 ? [1, 0, 2] : steps.length === 2 ? [1, 0] : [0]

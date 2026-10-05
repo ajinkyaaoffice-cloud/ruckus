@@ -94,3 +94,6 @@ html.low-power .hub-card [class*="art-"] { animation: none; }
 html.low-power .ss-modal { backdrop-filter: none; background: rgba(19, 42, 82, 0.72); }
 html.low-power .hc-top, html.low-power .hc-art, html.low-power .hc-foot { transform: none; }
 @media (max-width: 440px) { .hub .topbar .logo { display: none; } }
+
+/* room badges everyone sees */
+.hub-lock { display: inline-flex; align-items: center; gap: 5px; margin-left: 8px; padding: 3px 10px 2px; border-radius: 999px; background: var(--navy); color: #fff; font-size: 12px; font-weight: 800; vertical-align: 1px; }

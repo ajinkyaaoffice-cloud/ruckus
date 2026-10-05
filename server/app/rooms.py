@@ -18,7 +18,16 @@ log = logging.getLogger("ruckus.rooms")
 
 MAX_PLAYERS = 5
 CODE_ALPHABET = "".join(c for c in string.ascii_uppercase if c not in "IOQ")
-RECONNECT_GRACE = 60.0   # how long a dropped player keeps their seat (and a paused game waits)
+RECONNECT_GRACE = 60.0   # default for how long a dropped player keeps their seat (and a paused game waits)
+GRACE_CHOICES = (30, 60, 120, 300)
+DEFAULT_SETTINGS: dict[str, Any] = {
+    "locked": False,        # nobody new can join (people already in the room can always come back)
+    "maxPlayers": MAX_PLAYERS,
+    "anyonePicks": False,   # any player may start a game, not just the host
+    "pauseOnDrop": True,    # freeze the game while someone reconnects
+    "grace": int(RECONNECT_GRACE),
+    "emotes": True,
+}
 NET_INTERVAL = 1 / 30   # most game snapshots per second sent to clients
 SEND_TIMEOUT = 2.5
 RESUME_DELAY = 3.0       # countdown once everyone is back, so nobody is caught off guard
@@ -74,6 +83,8 @@ class Room:
         # players a running game is waiting on (pid -> when they dropped), and when play picks up again
         self.waiting: dict[str, float] = {}
         self.resume_at: float | None = None
+        self.settings: dict[str, Any] = dict(DEFAULT_SETTINGS)
+        self.banned: dict[str, str] = {}             # kicked by the host (pid -> name); kept out until let back
 
     # --- membership ---------------------------------------------------------
     def public(self) -> dict[str, Any]:
@@ -83,6 +94,8 @@ class Room:
             "game": ({"id": self.game.id, "participants": self.game.players, "over": self.game.over,
                       "options": self.game_options} if self.game else None),
             "history": self.history[-12:],
+            "settings": self.settings,
+            "banned": [{"id": k, "name": v} for k, v in self.banned.items()],
             "now": time.time(),
         }
 
@@ -152,14 +165,20 @@ class Room:
         if not g or g.over or not g.paused:
             return None
         return {
-            "waiting": [{"id": pid, "until": at + RECONNECT_GRACE} for pid, at in self.waiting.items()],
+            "waiting": [{"id": pid, "until": at + self.grace} for pid, at in self.waiting.items()],
             "resumeAt": self.resume_at,
             "now": time.time(),
         }
 
+    @property
+    def grace(self) -> float:
+        return float(self.settings["grace"])
+
     def dropped(self, pid: str) -> bool:
         """A player's line went dead. Freeze their game until they're back. True if that changed anything."""
         g = self.game
+        if not self.settings["pauseOnDrop"]:
+            return False
         if not g or g.over or pid not in g.players or pid in self.waiting:
             return False
         p = self.players.get(pid)
@@ -179,12 +198,82 @@ class Room:
             self._ensure_loop()
         return True
 
+    # --- host controls --------------------------------------------------------
+    def require_host(self, by: str) -> None:
+        if by != self.host:
+            raise GameError("Only the host can change room settings")
+
+    def can_join(self, pid: str) -> None:
+        """Raise if pid may not take a new seat here."""
+        if pid in self.banned:
+            raise GameError("The host removed you from this room")
+        if self.settings["locked"]:
+            raise GameError("That room is locked")
+        if len(self.players) >= self.settings["maxPlayers"]:
+            raise GameError(f"That room is full ({self.settings['maxPlayers']} max)")
+
+    def configure(self, by: str, patch: Any) -> None:
+        self.require_host(by)
+        if not isinstance(patch, dict):
+            raise GameError("Bad settings")
+        new = dict(self.settings)
+        for k, v in patch.items():
+            if k in ("locked", "anyonePicks", "pauseOnDrop", "emotes"):
+                if not isinstance(v, bool):
+                    raise GameError("Bad settings")
+                new[k] = v
+            elif k == "maxPlayers":
+                if not isinstance(v, int) or isinstance(v, bool) or not 2 <= v <= MAX_PLAYERS:
+                    raise GameError(f"Room size must be 2 to {MAX_PLAYERS}")
+                new[k] = v
+            elif k == "grace":
+                if v not in GRACE_CHOICES:
+                    raise GameError("Bad reconnect time")
+                new[k] = v
+            else:
+                raise GameError("Unknown setting")
+        was_pausing = self.settings["pauseOnDrop"]
+        self.settings = new
+        # switched off mid-pause: stop waiting and pick the game back up
+        if was_pausing and not new["pauseOnDrop"] and self.waiting:
+            self.waiting.clear()
+            if self.game and not self.game.over:
+                self.resume_at = time.time() + RESUME_DELAY
+                self._ensure_loop()
+
+    def kick(self, by: str, target: Any) -> Player:
+        self.require_host(by)
+        p = self.players.get(str(target))
+        if not p:
+            raise GameError("They already left")
+        if p.id == by:
+            raise GameError("You can't kick yourself — use Leave")
+        self.banned[p.id] = p.name
+        self.remove(p.id)
+        return p
+
+    def make_host(self, by: str, target: Any) -> None:
+        self.require_host(by)
+        if str(target) not in self.players:
+            raise GameError("They already left")
+        self.host = str(target)
+
+    def reset_scores(self, by: str) -> None:
+        self.require_host(by)
+        for p in self.players.values():
+            p.points = p.wins = p.played = 0
+        self.history.clear()
+
+    def unban_all(self, by: str) -> None:
+        self.require_host(by)
+        self.banned.clear()
+
     # --- games --------------------------------------------------------------
     def eligible(self) -> list[Player]:
         return [p for p in self.players.values() if p.status == "ready" and p.ws is not None]
 
     async def start(self, by: str, game_id: str, options: dict[str, Any]) -> None:
-        if by != self.host:
+        if by != self.host and not self.settings["anyonePicks"]:
             raise GameError("Only the host picks the game")
         cls = REGISTRY.get(game_id)
         if not cls:
@@ -301,7 +390,7 @@ class Room:
         asyncio.create_task(self.manager.persist_match(self.code, g.id, roster, res.to_dict(), awards))
 
     async def to_lobby(self, by: str) -> None:
-        if by != self.host:
+        if by != self.host and not self.settings["anyonePicks"]:
             raise GameError("Only the host can do that")
         if self.game and not self.game.over:
             raise GameError("Finish the game first")
@@ -354,7 +443,7 @@ class RoomManager:
             now = time.time()
             for code, room in list(self.rooms.items()):
                 gone = [p.id for p in room.players.values()
-                        if p.ws is None and p.left_at and now - p.left_at > RECONNECT_GRACE]
+                        if p.ws is None and p.left_at and now - p.left_at > room.grace]
                 for pid in gone:
                     room.remove(pid)
                 if gone and room.players:

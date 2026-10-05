@@ -16,7 +16,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from .games import REGISTRY, GameError
-from .rooms import MAX_PLAYERS, Player, Room, RoomManager, clean_avatar, clean_name
+from .rooms import Player, Room, RoomManager, clean_avatar, clean_name
 from .store import make_store
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
@@ -69,7 +69,8 @@ async def room_info(code: str) -> dict[str, Any]:
     if not room:
         return {"exists": False}
     return {"exists": True, "code": room.code, "players": len(room.players),
-            "full": len(room.players) >= MAX_PLAYERS, "phase": room.phase}
+            "full": len(room.players) >= room.settings["maxPlayers"], "locked": room.settings["locked"],
+            "phase": room.phase}
 
 
 @app.get("/api/leaderboard")
@@ -81,20 +82,25 @@ async def leaderboard() -> list[dict[str, Any]]:
         return []
 
 
+async def after_removal(room: Room) -> None:
+    """Someone just left the room: tell the others, or close it if it's empty."""
+    if room.players:
+        await room.sync()
+        if room.game:
+            await room.sync_game()
+            if room.game.over:
+                await room._conclude()
+    else:
+        if room.loop_task:
+            room.loop_task.cancel()
+        manager.rooms.pop(room.code, None)
+
+
 async def leave_current(pid: str, keep: Room | None = None) -> None:
     room = manager.find_player(pid)
     if room and room is not keep:
         room.remove(pid)
-        if room.players:
-            await room.sync()
-            if room.game:
-                await room.sync_game()
-                if room.game.over:
-                    await room._conclude()
-        else:
-            if room.loop_task:
-                room.loop_task.cancel()
-            manager.rooms.pop(room.code, None)
+        await after_removal(room)
 
 
 IDLE_TIMEOUT = 75.0
@@ -161,8 +167,7 @@ async def ws_endpoint(ws: WebSocket) -> None:
                         p.ws, p.left_at = ws, None
                         target.returned(pid)
                     else:
-                        if len(target.players) >= MAX_PLAYERS:
-                            raise GameError(f"That room is full ({MAX_PLAYERS} max)")
+                        target.can_join(pid)
                         await leave_current(pid, keep=target)
                         target.add(Player(pid, name, avatar, ws=ws))
                     await ws.send_json({"t": "joined", "code": target.code})
@@ -197,8 +202,32 @@ async def ws_endpoint(ws: WebSocket) -> None:
                         raise GameError("Nothing to rematch")
                     await room.start(pid, room.game.id, room.game_options)
                 elif t == "emote":
+                    if not room.settings["emotes"]:
+                        raise GameError("The host turned emotes off")
                     if msg.get("emoji") in EMOTES:
                         await room.broadcast({"t": "emote", "pid": pid, "emoji": msg["emoji"]})
+                elif t == "settings":
+                    room.configure(pid, msg.get("settings"))
+                    await room.sync()
+                    if room.game:
+                        await room.sync_game()
+                elif t == "kick":
+                    gone = room.kick(pid, msg.get("pid"))
+                    if gone.ws is not None:
+                        try:
+                            await gone.ws.send_json({"t": "kicked"})
+                        except Exception:
+                            pass
+                    await after_removal(room)
+                elif t == "host":
+                    room.make_host(pid, msg.get("pid"))
+                    await room.sync()
+                elif t == "reset_scores":
+                    room.reset_scores(pid)
+                    await room.sync()
+                elif t == "unban":
+                    room.unban_all(pid)
+                    await room.sync()
                 elif t == "leave":
                     await leave_current(pid)
                     await ws.send_json({"t": "left"})

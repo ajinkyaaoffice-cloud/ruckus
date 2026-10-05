@@ -19,7 +19,7 @@ export default function JoinLink() {
       const info = await checkRoom(code)
       if (cancelled) return
       if (!info.exists || info.full) {
-        toast.error(info.exists ? 'That room is full (5 max)' : `No room called ${code}`)
+        toast.error(info.exists ? 'That room is full' : `No room called ${code}`)
         go('/play', { label: 'OOPS', replace: true })
         return
       }

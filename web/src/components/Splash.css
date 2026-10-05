@@ -7,7 +7,6 @@
   background: var(--navy);
   clip-path: circle(150% at 50% 50%);
   overflow: hidden;
-  cursor: pointer;
 }
 .sp-bg { position: absolute; inset: 0; pointer-events: none; }
 .sp-glyph { position: absolute; opacity: 0.9; }
@@ -35,6 +34,7 @@ html.low-power .sp-mark { filter: none; }
   box-shadow: 0 5px 0 var(--magenta);
 }
 .sp-sub { color: #fff; opacity: 0.75; font-weight: 600; font-size: 14px; }
+.sp-go { margin-top: 18px; }
 
 .sp-refresh {
   position: fixed;

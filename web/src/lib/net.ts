@@ -20,6 +20,16 @@ export type HistoryItem = { game: string; winners: string[]; tie: boolean; summa
 /** Present on game state while a game is frozen waiting for dropped players. Times are server unix seconds. */
 export type PauseInfo = { waiting: { id: string; until: number }[]; resumeAt: number | null; now: number }
 
+/** Host-only room controls. */
+export type RoomSettings = {
+  locked: boolean
+  maxPlayers: number
+  anyonePicks: boolean
+  pauseOnDrop: boolean
+  grace: number
+  emotes: boolean
+}
+
 export type Room = {
   code: string
   host: string | null
@@ -27,6 +37,8 @@ export type Room = {
   players: RoomPlayer[]
   game: { id: string; participants: string[]; over: boolean; options: Record<string, unknown> } | null
   history: HistoryItem[]
+  settings: RoomSettings
+  banned: { id: string; name: string }[]
 }
 
 export type GameResults = {
@@ -167,6 +179,10 @@ export function connect(): void {
       case 'left':
         useNet.setState({ room: null, game: null })
         break
+      case 'kicked':
+        useNet.setState({ room: null, game: null })
+        toast.error('The host removed you from the room')
+        break
       case 'error':
         if (joinedResolvers.length) {
           joinedResolvers.forEach((r) => r(null, msg.msg))
@@ -260,13 +276,18 @@ export const startGame = (game: string, options: Record<string, unknown> = {}) =
 export const backToLobby = () => send({ t: 'lobby' })
 export const rematch = () => send({ t: 'rematch' })
 export const emote = (emoji: string) => send({ t: 'emote', emoji })
+export const configureRoom = (settings: Partial<RoomSettings>) => send({ t: 'settings', settings })
+export const kickPlayer = (pid: string) => send({ t: 'kick', pid })
+export const makeHost = (pid: string) => send({ t: 'host', pid })
+export const resetScores = () => send({ t: 'reset_scores' })
+export const unbanAll = () => send({ t: 'unban' })
 
 export function pushProfile(ready?: boolean): void {
   const { profile } = useNet.getState()
   send({ t: 'profile', name: profile.name || 'Player', avatar: profile.avatar, ready })
 }
 
-export async function checkRoom(code: string): Promise<{ exists: boolean; full?: boolean }> {
+export async function checkRoom(code: string): Promise<{ exists: boolean; full?: boolean; locked?: boolean }> {
   try {
     const r = await fetch(api(`/api/rooms/${encodeURIComponent(code.toUpperCase())}`))
     return await r.json()

@@ -20,8 +20,9 @@ function markSeen() {
 }
 
 /**
- * Plays once on the first load after each deploy: the logo assembles piece by
- * piece over the brand colours with a "fresh update" tag. Tap to skip.
+ * Shows on the first load after each deploy: the logo assembles piece by piece
+ * over the brand colours with a "fresh update" tag, then waits for a tap on the
+ * button so nobody misses that something changed. Tapping early skips to the button.
  * Also keeps an eye on /version.json so open tabs learn about newer deploys.
  */
 export default function Splash() {
@@ -29,25 +30,34 @@ export default function Splash() {
   const first = useRef(seenBuild() === null)
   const root = useRef<HTMLDivElement>(null)
   const tl = useRef<gsap.core.Timeline | null>(null)
+  const leaving = useRef(false)
 
   useLayoutEffect(() => {
     if (!show) return
-    markSeen()
     const el = root.current!
     const ctx = gsap.context(() => {
-      const t = gsap.timeline({ onComplete: () => setShow(false) })
+      const t = gsap.timeline()
       tl.current = t
       t.fromTo('.lt-piece', { scale: 0, rotate: () => gsap.utils.random(-120, 120), transformOrigin: '50% 50%', y: () => gsap.utils.random(-80, 80) },
         { scale: 1, rotate: 0, y: 0, duration: lowPower ? 0.45 : 0.6, ease: 'back.out(2)', stagger: { each: lowPower ? 0.03 : 0.045, from: 'random' } })
         .fromTo('.sp-glyph', { scale: 0, rotate: -90 }, { scale: 1, rotate: 0, duration: 0.5, ease: 'back.out(3)', stagger: 0.08 }, 0.2)
         .fromTo('.sp-tag', { yPercent: 120, autoAlpha: 0, rotate: 8 }, { yPercent: 0, autoAlpha: 1, rotate: -3, duration: 0.45, ease: 'back.out(2.4)' }, '-=0.25')
         .fromTo('.sp-sub', { autoAlpha: 0, y: 10 }, { autoAlpha: 1, y: 0, duration: 0.3 }, '-=0.2')
-        .to({}, { duration: 0.9 })
-        .to('.sp-logo', { scale: 1.15, autoAlpha: 0, duration: 0.3, ease: 'power2.in' })
-        .to(el, { clipPath: 'circle(0% at 50% 50%)', duration: 0.5, ease: 'power3.inOut' }, '-=0.1')
+        .fromTo('.sp-go', { scale: 0, rotate: -10 }, { scale: 1, rotate: 0, duration: 0.5, ease: 'back.out(2.6)',
+          onComplete: () => el.querySelector<HTMLButtonElement>('.sp-go')?.focus({ preventScroll: true }) }, '-=0.1')
     }, el)
     return () => ctx.revert()
   }, [show])
+
+  const dismiss = () => {
+    if (leaving.current || !root.current) return
+    leaving.current = true
+    markSeen()
+    tl.current?.progress(1)
+    gsap.timeline({ onComplete: () => setShow(false) })
+      .to(root.current.querySelector('.sp-logo'), { scale: 1.15, autoAlpha: 0, duration: 0.3, ease: 'power2.in' })
+      .to(root.current, { clipPath: 'circle(0% at 50% 50%)', duration: 0.5, ease: 'power3.inOut' }, '-=0.1')
+  }
 
   // a newer deploy while this tab is open: offer a refresh (never forced mid-game)
   useEffect(() => {
@@ -74,7 +84,7 @@ export default function Splash() {
   if (!show) return null
   const when = new Date(__BUILD_AT__).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
   return (
-    <div ref={root} className="sp" onClick={() => tl.current?.progress(1)} role="presentation">
+    <div ref={root} className="sp" onClick={() => tl.current?.progress(1)} role="dialog" aria-modal="true" aria-label={first.current ? 'Welcome to Ruckus' : 'Ruckus has been updated'}>
       <div className="sp-bg" aria-hidden>
         <span className="sp-glyph g1"><Glyph name="x" color="#e64fe0" size={120} /></span>
         <span className="sp-glyph g2"><Glyph name="o" color="#a7ecff" size={96} /></span>
@@ -85,6 +95,9 @@ export default function Splash() {
         <Logotype className="sp-mark" color="#fff" />
         <span className="sp-tag display">{first.current ? 'Let’s get loud' : 'Fresh update!'}</span>
         <span className="sp-sub">{first.current ? 'Party games for tiny crowds' : `New build · ${when}`}</span>
+        <button className="sp-go bubble-btn big magenta" onClick={(e) => { e.stopPropagation(); dismiss() }}>
+          {first.current ? 'Let’s play' : 'Got it, let’s go'}
+        </button>
       </div>
     </div>
   )
