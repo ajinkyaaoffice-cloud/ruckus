@@ -7,7 +7,6 @@ import GameArt from '../components/GameArt'
 import Glyph from '../components/Glyph'
 import Avatar from '../components/Avatar'
 import InviteModal, { InviteCard } from '../components/Invite'
-import { MusicButton } from '../components/Music'
 import { EmoteBar, PlayerChip } from '../components/Players'
 import { useTransition } from '../components/Transition'
 import { CATALOG, gameMeta, type GameMeta } from '../lib/catalog'
@@ -198,7 +197,6 @@ export default function Hub() {
       <div className="hub-dock">
         <EmoteBar />
         <div className="hub-dock-row">
-          <MusicButton />
           <button className="bubble-btn" onClick={() => go(`/room/${room.code}/avatar`, { label: 'DRESS UP!' })} data-cursor="EDIT">
             <Glyph name="heart" color="#e64fe0" size={18} /> Edit look
           </button>

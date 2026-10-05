@@ -16,8 +16,6 @@ export type RoomPlayer = {
 
 export type HistoryItem = { game: string; winners: string[]; tie: boolean; summary: string; at: number }
 
-/** Shared background music. `pos` seconds into `track` at server time `at` (unix seconds). */
-export type MusicState = { track: string | null; playing: boolean; pos: number; at: number; vol: number; by: string | null }
 
 /** Present on game state while a game is frozen waiting for dropped players. Times are server unix seconds. */
 export type PauseInfo = { waiting: { id: string; until: number }[]; resumeAt: number | null; now: number }
@@ -29,7 +27,6 @@ export type Room = {
   players: RoomPlayer[]
   game: { id: string; participants: string[]; over: boolean; options: Record<string, unknown> } | null
   history: HistoryItem[]
-  music: MusicState
 }
 
 export type GameResults = {
@@ -87,7 +84,7 @@ export const SERVER = ((import.meta.env.VITE_SERVER_URL as string | undefined) ?
 export const api = (path: string) => `${SERVER}${path}`
 
 /* Server clock: offset (ms) between the server's clock and ours, taken from the
-   fastest ping round trip seen, so countdowns and the music agree on every device. */
+   fastest ping round trip seen, so countdowns agree on every device. */
 let clockOffset = 0
 let bestRtt = Infinity
 let pingSentAt = 0
@@ -148,10 +145,6 @@ export function connect(): void {
         pingSentAt = 0
         break
       }
-      case 'music':
-        roughClock(msg.now)
-        useNet.setState((s) => (s.room ? { room: { ...s.room, music: msg.music } } : {}))
-        break
       case 'hello':
         if (!msg.room) useNet.setState({ room: null, game: null })
         break
@@ -267,8 +260,6 @@ export const startGame = (game: string, options: Record<string, unknown> = {}) =
 export const backToLobby = () => send({ t: 'lobby' })
 export const rematch = () => send({ t: 'rematch' })
 export const emote = (emoji: string) => send({ t: 'emote', emoji })
-export const musicOp = (op: 'select' | 'next' | 'play' | 'pause' | 'seek' | 'vol', extra: Record<string, unknown> = {}) =>
-  send({ t: 'music', op, ...extra })
 
 export function pushProfile(ready?: boolean): void {
   const { profile } = useNet.getState()

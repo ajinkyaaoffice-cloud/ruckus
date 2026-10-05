@@ -199,9 +199,6 @@ async def ws_endpoint(ws: WebSocket) -> None:
                 elif t == "emote":
                     if msg.get("emoji") in EMOTES:
                         await room.broadcast({"t": "emote", "pid": pid, "emoji": msg["emoji"]})
-                elif t == "music":
-                    if room.music_op(pid, msg):
-                        await room.broadcast({"t": "music", "music": room.music, "now": time.time()})
                 elif t == "leave":
                     await leave_current(pid)
                     await ws.send_json({"t": "left"})

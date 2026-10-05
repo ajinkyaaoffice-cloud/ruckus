@@ -4,7 +4,6 @@ from __future__ import annotations
 import asyncio
 import logging
 import random
-import re
 import string
 import time
 from dataclasses import dataclass, field
@@ -23,7 +22,6 @@ RECONNECT_GRACE = 60.0   # how long a dropped player keeps their seat (and a pau
 NET_INTERVAL = 1 / 30   # most game snapshots per second sent to clients
 SEND_TIMEOUT = 2.5
 RESUME_DELAY = 3.0       # countdown once everyone is back, so nobody is caught off guard
-TRACK_RE = re.compile(r"^[A-Za-z0-9_-]{11}$")   # a YouTube video id
 
 
 def clean_name(name: Any) -> str:
@@ -76,8 +74,6 @@ class Room:
         # players a running game is waiting on (pid -> when they dropped), and when play picks up again
         self.waiting: dict[str, float] = {}
         self.resume_at: float | None = None
-        # shared background music: everyone hears the same track at the same spot
-        self.music: dict[str, Any] = {"track": None, "playing": False, "pos": 0.0, "at": time.time(), "vol": 60, "by": None}
 
     # --- membership ---------------------------------------------------------
     def public(self) -> dict[str, Any]:
@@ -87,7 +83,6 @@ class Room:
             "game": ({"id": self.game.id, "participants": self.game.players, "over": self.game.over,
                       "options": self.game_options} if self.game else None),
             "history": self.history[-12:],
-            "music": self.music,
             "now": time.time(),
         }
 
@@ -182,44 +177,6 @@ class Room:
             self.resume_at = time.time() + RESUME_DELAY
             self.game.emit("back", pid=pid)
             self._ensure_loop()
-        return True
-
-    # --- music ----------------------------------------------------------------
-    def music_pos(self) -> float:
-        m = self.music
-        return m["pos"] + (time.time() - m["at"] if m["playing"] else 0.0)
-
-    def music_op(self, pid: str, msg: dict[str, Any]) -> bool:
-        m, op, now = self.music, msg.get("op"), time.time()
-        who = self.players[pid].name if pid in self.players else None
-        if op in ("select", "next"):
-            track = str(msg.get("track") or "")
-            if not TRACK_RE.match(track):
-                raise GameError("Unknown song")
-            # "next" comes from every player whose song just ended; only the first one counts
-            if op == "next" and msg.get("from") != m["track"]:
-                return False
-            m.update(track=track, playing=True, pos=0.0, at=now)
-        elif op == "play":
-            if not m["track"]:
-                return False
-            m.update(pos=self.music_pos(), playing=True, at=now)
-        elif op == "pause":
-            m.update(pos=self.music_pos(), playing=False, at=now)
-        elif op == "seek":
-            try:
-                pos = max(0.0, min(float(msg.get("pos")), 60 * 60.0))
-            except (TypeError, ValueError):
-                raise GameError("Bad position")
-            m.update(pos=pos, at=now)
-        elif op == "vol":
-            try:
-                m["vol"] = max(0, min(int(msg.get("vol")), 100))
-            except (TypeError, ValueError):
-                raise GameError("Bad volume")
-        else:
-            raise GameError("Unknown music action")
-        m["by"] = who
         return True
 
     # --- games --------------------------------------------------------------

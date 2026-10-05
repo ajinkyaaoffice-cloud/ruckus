@@ -1,4 +1,4 @@
-"""Room behaviour: pausing a game when a player drops, and the shared music state."""
+"""Room behaviour: pausing a game when a player drops."""
 import asyncio
 import random
 import time
@@ -99,25 +99,6 @@ def test_dropping_for_good_forfeits(wall):
         assert room.game.over and room.game.results.winners == ["alice"]
         room.loop_task.cancel()
     asyncio.run(run())
-
-
-def test_music_ops_and_next_dedupe():
-    room = make_room()
-    assert room.music_op("alice", {"op": "select", "track": "ekr2nIex040"})
-    m = room.music
-    assert m["playing"] and m["track"] == "ekr2nIex040" and m["by"] == "Alice"
-    room.music_op("alice", {"op": "seek", "pos": 42})
-    assert room.music_pos() == pytest.approx(42, abs=0.2)
-    room.music_op("bobby", {"op": "pause"})
-    assert not m["playing"]
-    room.music_op("bobby", {"op": "vol", "vol": 150})
-    assert m["vol"] == 100
-    # two players both report the song ended: only the first advances
-    assert room.music_op("alice", {"op": "next", "from": "ekr2nIex040", "track": "TUVcZfQe-Kw"})
-    assert not room.music_op("bobby", {"op": "next", "from": "ekr2nIex040", "track": "oygrmJFKYZY"})
-    assert m["track"] == "TUVcZfQe-Kw"
-    with pytest.raises(GameError):
-        room.music_op("alice", {"op": "select", "track": "<script>"})
 
 
 def test_opener_rotates_round_the_table():
