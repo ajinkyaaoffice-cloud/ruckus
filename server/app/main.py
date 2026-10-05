@@ -228,6 +228,16 @@ async def ws_endpoint(ws: WebSocket) -> None:
                 elif t == "unban":
                     room.unban_all(pid)
                     await room.sync()
+                elif t == "hold":
+                    room.hold(pid)
+                    await room.sync_game()
+                elif t == "unhold":
+                    room.unhold(pid)
+                    await room.sync_game()
+                elif t == "end":
+                    room.end_game(pid)
+                    await room.broadcast({"t": "ended", "by": room.players[pid].name})
+                    await room.sync()
                 elif t == "leave":
                     await leave_current(pid)
                     await ws.send_json({"t": "left"})

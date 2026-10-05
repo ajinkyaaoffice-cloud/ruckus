@@ -5,7 +5,7 @@ import Glyph, { type GlyphName } from './Glyph'
 import Mascot from './Mascot'
 import { SoundToggle } from './Chrome'
 import { useTransition } from './Transition'
-import { leaveRoom, useNet } from '../lib/net'
+import { endGame, leaveRoom, pauseGame, resumeGame, useNet } from '../lib/net'
 import { lockScroll, scrollToTarget, useUi, intro } from '../lib/ui'
 import { sfx } from '../lib/sound'
 import './Menu.css'
@@ -38,6 +38,8 @@ export default function Menu() {
   const { go } = useTransition()
   const loc = useLocation()
   const room = useNet((s) => s.room)
+  const game = useNet((s) => s.game)
+  const me = useNet((s) => s.profile.pid)
   const onLanding = loc.pathname === '/'
 
   useEffect(() => {
@@ -84,6 +86,18 @@ export default function Menu() {
   if (onLanding) {
     items.push({ label: 'Games', glyph: 'star', color: '#ffb424', run: section('.games'), sub: 'all eight' })
     items.push({ label: 'Legends', glyph: 'burst', color: '#a7ecff', run: section('.lb'), sub: 'leaderboard' })
+  }
+  // host-only controls for the game in progress
+  if (room && room.host === me && room.phase === 'playing' && game && !game.over) {
+    const held = !!game.pause?.held
+    items.push(held
+      ? { label: 'Resume', glyph: 'bolt', color: '#d9f66b', run: () => { setMenu(false); resumeGame() }, sub: 'unpause for everyone' }
+      : { label: 'Pause', glyph: 'squiggle', color: '#a7ecff', run: () => { setMenu(false); pauseGame() }, sub: 'freeze it for everyone' })
+    items.push({ label: 'End game', glyph: 'burst', color: '#ff5d73', sub: 'back to the lobby · nobody scores', run: () => {
+      if (!confirm('End this game for everyone? Nobody scores.')) return
+      setMenu(false)
+      endGame()
+    } })
   }
   if (room) {
     items.push({ label: `Room ${room.code}`, glyph: 'o', color: '#a7ecff', run: nav(`/room/${room.code}`, 'HUB'), sub: 'back to the hub' })

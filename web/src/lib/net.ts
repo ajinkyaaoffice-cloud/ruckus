@@ -18,7 +18,7 @@ export type HistoryItem = { game: string; winners: string[]; tie: boolean; summa
 
 
 /** Present on game state while a game is frozen waiting for dropped players. Times are server unix seconds. */
-export type PauseInfo = { waiting: { id: string; until: number }[]; resumeAt: number | null; now: number }
+export type PauseInfo = { held: string | null; waiting: { id: string; until: number }[]; resumeAt: number | null; now: number }
 
 /** Host-only room controls. */
 export type RoomSettings = {
@@ -179,6 +179,9 @@ export function connect(): void {
       case 'left':
         useNet.setState({ room: null, game: null })
         break
+      case 'ended':
+        toast.info(`${msg.by} ended the game`, { id: 'ended' })
+        break
       case 'kicked':
         useNet.setState({ room: null, game: null })
         toast.error('The host removed you from the room')
@@ -279,6 +282,9 @@ export const emote = (emoji: string) => send({ t: 'emote', emoji })
 export const configureRoom = (settings: Partial<RoomSettings>) => send({ t: 'settings', settings })
 export const kickPlayer = (pid: string) => send({ t: 'kick', pid })
 export const makeHost = (pid: string) => send({ t: 'host', pid })
+export const pauseGame = () => send({ t: 'hold' })
+export const resumeGame = () => send({ t: 'unhold' })
+export const endGame = () => send({ t: 'end' })
 export const resetScores = () => send({ t: 'reset_scores' })
 export const unbanAll = () => send({ t: 'unban' })
 

@@ -195,3 +195,40 @@ def test_no_pause_on_drop_when_switched_off():
         assert not room.dropped("bobby")
         room.loop_task.cancel()
     asyncio.run(run())
+
+
+def test_host_pause_holds_until_host_resumes(wall):
+    async def run():
+        room = make_room()
+        await room.start("alice", "tictactoe", {})
+        g = room.game
+        with pytest.raises(GameError):
+            room.hold("bobby")
+        room.hold("alice")
+        assert g.paused and room.pause_info()["held"] == "alice"
+        with pytest.raises(GameError, match="host paused"):
+            await room.act("alice", {"cell": 0})
+        # a drop and return mid-hold must not sneak the game back on
+        room.dropped("bobby")
+        room.returned("bobby")
+        assert room.resume_at is None and g.paused
+        with pytest.raises(GameError):
+            room.unhold("bobby")
+        room.unhold("alice")
+        assert room.held is None and room.resume_at is not None
+        room.loop_task.cancel()
+    asyncio.run(run())
+
+
+def test_host_ends_game_without_scoring():
+    async def run():
+        room = make_room()
+        await room.start("alice", "tictactoe", {})
+        with pytest.raises(GameError):
+            room.end_game("bobby")
+        room.end_game("alice")
+        assert room.game is None and room.phase == "lobby" and room.history == []
+        assert all(p.points == 0 and p.played == 0 for p in room.players.values())
+        with pytest.raises(GameError):
+            room.end_game("alice")
+    asyncio.run(run())

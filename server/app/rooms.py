@@ -83,6 +83,7 @@ class Room:
         # players a running game is waiting on (pid -> when they dropped), and when play picks up again
         self.waiting: dict[str, float] = {}
         self.resume_at: float | None = None
+        self.held: str | None = None                  # the host paused the game (pid of who did it)
         self.settings: dict[str, Any] = dict(DEFAULT_SETTINGS)
         self.banned: dict[str, str] = {}             # kicked by the host (pid -> name); kept out until let back
 
@@ -165,6 +166,7 @@ class Room:
         if not g or g.over or not g.paused:
             return None
         return {
+            "held": self.held,
             "waiting": [{"id": pid, "until": at + self.grace} for pid, at in self.waiting.items()],
             "resumeAt": self.resume_at,
             "now": time.time(),
@@ -193,7 +195,8 @@ class Room:
         if self.waiting.pop(pid, None) is None:
             return False
         if not self.waiting and self.game and not self.game.over:
-            self.resume_at = time.time() + RESUME_DELAY
+            if not self.held:
+                self.resume_at = time.time() + RESUME_DELAY
             self.game.emit("back", pid=pid)
             self._ensure_loop()
         return True
@@ -237,7 +240,7 @@ class Room:
         # switched off mid-pause: stop waiting and pick the game back up
         if was_pausing and not new["pauseOnDrop"] and self.waiting:
             self.waiting.clear()
-            if self.game and not self.game.over:
+            if self.game and not self.game.over and not self.held:
                 self.resume_at = time.time() + RESUME_DELAY
                 self._ensure_loop()
 
@@ -267,6 +270,46 @@ class Room:
     def unban_all(self, by: str) -> None:
         self.require_host(by)
         self.banned.clear()
+
+    def running(self) -> Game:
+        if not self.game or self.game.over:
+            raise GameError("No game running")
+        return self.game
+
+    def hold(self, by: str) -> None:
+        """Host pause: everything freezes for everyone until the host resumes."""
+        self.require_host(by)
+        g = self.running()
+        if self.held:
+            raise GameError("Already paused")
+        self.held = by
+        self.resume_at = None
+        g.pause()
+        g.emit("hold", pid=by)
+
+    def unhold(self, by: str) -> None:
+        self.require_host(by)
+        g = self.running()
+        if not self.held:
+            raise GameError("The game isn't paused")
+        self.held = None
+        g.emit("unhold", pid=by)
+        if not self.waiting:
+            self.resume_at = time.time() + RESUME_DELAY
+            self._ensure_loop()
+
+    def end_game(self, by: str) -> None:
+        """Host abandons the current game: nobody scores, everyone goes back to the lobby."""
+        self.require_host(by)
+        self.running()
+        if self.loop_task:
+            self.loop_task.cancel()
+            self.loop_task = None
+        self.game = None
+        self.phase = "lobby"
+        self.held = None
+        self.waiting.clear()
+        self.resume_at = None
 
     # --- games --------------------------------------------------------------
     def eligible(self) -> list[Player]:
@@ -303,6 +346,7 @@ class Room:
                     break
         self.first_by_game[game_id] = first
         self.game = cls(ids, {**self.game_options, "first": first}, random.Random())
+        self.held = None
         self.waiting.clear()
         self.resume_at = None
         self.phase = "playing"
@@ -324,7 +368,7 @@ class Room:
                 if g is not self.game:
                     break
                 if g.paused:
-                    if self.resume_at is not None and time.time() >= self.resume_at and not self.waiting:
+                    if self.resume_at is not None and time.time() >= self.resume_at and not self.waiting and not self.held:
                         self.resume_at = None
                         g.resume()
                         g.emit("resumed")
@@ -347,7 +391,7 @@ class Room:
         if not g or g.over:
             raise GameError("No game running")
         if g.paused:
-            raise GameError("Paused until everyone is back")
+            raise GameError("The host paused the game" if self.held else "Paused until everyone is back")
         g.handle(pid, action)
         if g.dirty:
             await self.sync_game()

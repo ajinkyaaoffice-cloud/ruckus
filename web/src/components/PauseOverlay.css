@@ -59,3 +59,6 @@
 }
 @keyframes po-pop { from { transform: scale(0.3) rotate(-14deg); } to { transform: scale(1) rotate(0); } }
 @media (prefers-reduced-motion: reduce) { .po-count { animation: none; } }
+.po-held { margin: 16px 0 4px; font-size: 17px; font-weight: 600; }
+.po-held b { color: var(--magenta); }
+.po-actions { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; margin-top: 16px; }

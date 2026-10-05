@@ -148,6 +148,96 @@ function DieFace({ n }: { n: number }) {
   )
 }
 
+/* ---------- move physics ---------- */
+
+type XY = { x: number; y: number }
+type Seg =
+  | { kind: 'crouch'; at: XY; dur: number }
+  | { kind: 'fly'; a: XY; b: XY; dur: number; v0: number }
+  | { kind: 'land'; at: XY; dur: number; last: boolean; step: number }
+
+const GRAVITY = 95 * S          // svg units / s²: a one-square hop takes ~0.2s
+const FEET = S * 0.28           // squash pivots on the base of the pawn
+
+/**
+ * Hops a token through `pts` (offsets from where React drew it) one square at a
+ * time under gravity: a crouch before take-off, stretch in the air, a squash on
+ * every landing and a damped wobble when it settles. The shadow stays on the
+ * ground and shrinks with height. Calls `onLand` once it has settled and
+ * returns a cancel function that snaps it to the end.
+ */
+function hop(el: SVGGElement, pts: XY[], fromYard: boolean, onLand: () => void): () => void {
+  const lift = el.querySelector<SVGGElement>('.ld-lift')
+  const shadow = el.querySelector<SVGEllipseElement>('.ld-shadow')
+  const quick = lowPower ? 0.8 : 1
+  const segs: Seg[] = [{ kind: 'crouch', at: pts[0], dur: 0.09 * quick }]
+  for (let i = 1; i < pts.length; i++) {
+    const a = pts[i - 1], b = pts[i]
+    const d = Math.hypot(b.x - a.x, b.y - a.y) / S
+    // longer jumps (out of the yard, onto the goal) go higher and hang longer
+    const h = S * (fromYard ? 1.5 : Math.min(1.3, 0.38 + d * 0.12))
+    const v0 = Math.sqrt(2 * GRAVITY * h)
+    segs.push({ kind: 'fly', a, b, dur: (2 * v0) / GRAVITY * quick, v0 })
+    const last = i === pts.length - 1
+    segs.push({ kind: 'land', at: b, dur: (last ? 0.5 : 0.075) * quick, last, step: i })
+  }
+  const total = segs.reduce((t, sg) => t + sg.dur, 0)
+  let start = 0, raf = 0, landed = 0, done = false
+
+  const pose = (p: XY, height: number, squash: number, lean: number) => {
+    gsap.set(el, { x: p.x, y: p.y })
+    // squash > 0 flattens, < 0 stretches; volume roughly kept
+    const sy = 1 - squash, sx = 1 + squash * 0.7
+    lift?.setAttribute('transform', `translate(0 ${-height}) translate(0 ${FEET}) rotate(${lean}) scale(${sx} ${sy}) translate(0 ${-FEET})`)
+    const k = 1 - 0.55 * Math.min(1, height / (S * 1.4))
+    shadow?.setAttribute('transform', `translate(0 ${S * 0.3}) scale(${k}) translate(0 ${-S * 0.3})`)
+    shadow?.setAttribute('opacity', String(0.3 * k))
+  }
+
+  const finish = () => {
+    if (done) return
+    done = true
+    cancelAnimationFrame(raf)
+    pose({ x: 0, y: 0 }, 0, 0, 0)
+    lift?.removeAttribute('transform')
+    shadow?.removeAttribute('transform')
+    shadow?.setAttribute('opacity', '0.3')
+    gsap.set(el, { x: 0, y: 0 })
+    onLand()
+  }
+
+  const frame = (now: number) => {
+    if (!start) start = now
+    let t = (now - start) / 1000
+    if (t >= total) return finish()
+    for (const sg of segs) {
+      if (t > sg.dur) { t -= sg.dur; continue }
+      const u = t / sg.dur
+      if (sg.kind === 'crouch') {
+        pose(sg.at, 0, 0.2 * Math.sin(u * Math.PI / 2), 0)
+      } else if (sg.kind === 'fly') {
+        const x = sg.a.x + (sg.b.x - sg.a.x) * u, y = sg.a.y + (sg.b.y - sg.a.y) * u
+        const height = sg.v0 * t - 0.5 * GRAVITY * t * t
+        const vy = sg.v0 - GRAVITY * t
+        const dir = Math.sign(sg.b.x - sg.a.x) || Math.sign(sg.b.y - sg.a.y) * 0.4
+        pose({ x, y }, Math.max(0, height), -0.16 * Math.abs(vy) / sg.v0, dir * 9 * Math.sin(u * Math.PI))
+      } else {
+        if (sg.step > landed) { landed = sg.step; sfx.step(sg.step) }
+        // impact squash: a short spring between hops, a damped wobble on the final landing
+        const sq = sg.last
+          ? 0.3 * Math.exp(-u * 5) * Math.cos(u * Math.PI * 3.2)
+          : 0.24 * Math.sin((1 - u) * Math.PI / 2) * (1 - u * 0.4)
+        pose(sg.at, 0, sq, 0)
+      }
+      break
+    }
+    raf = requestAnimationFrame(frame)
+  }
+  pose(pts[0], 0, 0, 0)
+  raf = requestAnimationFrame(frame)
+  return finish
+}
+
 /* ---------- game ---------- */
 
 type Callout = { text: string; sub?: string; color: string; key: number }
@@ -228,15 +318,8 @@ export default function Ludo({ state, me, room, players, spectator }: GameProps)
     pts[pts.length - 1] = [end.x, end.y]
     const off = (p: Pt) => ({ x: (p[0] - end.x) * S, y: (p[1] - end.y) * S })
     gsap.killTweensOf(el)
-    const step = lowPower ? 0.09 : 0.13
-    const tl = gsap.timeline()
-    tl.set(el, { ...off(pts[0]), scale: 1 })
-    for (let i = 1; i < pts.length; i++) {
-      const a = off(pts[i - 1]), b = off(pts[i])
-      tl.to(el, { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 - S * 0.45, scale: 1.18, duration: step / 2, ease: 'power1.out' })
-        .to(el, { x: b.x, y: b.y, scale: 1, duration: step / 2, ease: 'power1.in', onComplete: () => sfx.step(i) })
-    }
-    tl.fromTo(el, { scaleY: 0.8 }, { scaleY: 1, duration: 0.25, ease: 'elastic.out(1, 0.4)' })
+    const tl = gsap.timeline({ paused: true })
+    const hopper = hop(el, pts.map(off), last.from < 0, () => tl.play())
     for (const c of last.caught ?? []) {
       const v = root.current?.querySelector<SVGGElement>(`.ld-tok[data-k="${c.pid}:${c.token}"] .ld-tok-in`)
       const home = spots[`${c.pid}:${c.token}`]
@@ -244,11 +327,18 @@ export default function Ludo({ state, me, room, players, spectator }: GameProps)
       const hit = off(pts[pts.length - 1])
       const from = { x: hit.x + (end.x - home.x) * S, y: hit.y + (end.y - home.y) * S }
       gsap.killTweensOf(v)
-      gsap.set(v, from)
-      tl.to(v, { keyframes: [{ x: from.x / 2, y: from.y / 2 - S * 3, rotate: 360, duration: 0.35, ease: 'power2.out' }, { x: 0, y: 0, rotate: 720, duration: 0.35, ease: 'power2.in' }] }, '>-0.05')
-      tl.call(() => { sfx.hit(0.9); boom(end.x, end.y) }, undefined, '<')
+      gsap.set(v, { ...from, rotate: 0 })
+      // knocked out: a ballistic arc back to the yard, a spin, then a little bounce on landing
+      tl.call(() => { sfx.hit(0.9); boom(end.x, end.y) }, undefined, 0)
+        .to(v, { x: 0, duration: 0.7, ease: 'none' }, 0)
+        .to(v, { rotate: from.x > 0 ? -540 : 540, duration: 0.7, ease: 'power1.out' }, 0)
+        .to(v, { keyframes: [
+          { y: Math.min(from.y, 0) - S * 3, duration: 0.32, ease: 'power2.out' },
+          { y: 0, duration: 0.38, ease: 'bounce.out' },
+        ] }, 0)
+        .set(v, { rotate: 0 })
     }
-    return () => { tl.progress(1).kill() }
+    return () => { hopper(); tl.progress(1).kill() }
   }, [state.last?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const boom = (x: number, y: number) => {
@@ -387,15 +477,15 @@ export default function Ludo({ state, me, room, players, spectator }: GameProps)
                 <g key={`${pid}:${i}`} data-k={`${pid}:${i}`} className={`ld-tok ${can ? 'can' : ''} ${p === HOME ? 'done' : ''}`}
                   transform={`translate(${sp.x * S} ${sp.y * S}) scale(${sp.s * (p === HOME ? 0.6 : 1)})`} onClick={() => pid === me && move(i)}>
                   <g className="ld-tok-in">
-                    <g className="ld-pawn">
+                    <ellipse className="ld-shadow" cy={S * 0.3} rx={S * 0.32} ry={S * 0.11} fill="#1d3a6e" opacity="0.3" />
+                    <g className="ld-lift"><g className="ld-pawn">
                       {can && <circle className="ld-halo" r={S * 0.52} fill="none" stroke="#fff" strokeWidth="4" />}
-                      <ellipse cy={S * 0.3} rx={S * 0.32} ry={S * 0.11} fill="#1d3a6e" opacity="0.3" />
                       <path d={`M${-S * 0.27} ${S * 0.26} Q${-S * 0.22} ${-S * 0.02} ${-S * 0.08} ${-S * 0.06} L${S * 0.08} ${-S * 0.06} Q${S * 0.22} ${-S * 0.02} ${S * 0.27} ${S * 0.26} Z`}
                         fill={LUDO_HEX[c]} stroke="#1d3a6e" strokeWidth="2.6" strokeLinejoin="round" />
                       <circle cy={-S * 0.2} r={S * 0.17} fill={LUDO_HEX[c]} stroke="#1d3a6e" strokeWidth="2.6" />
                       <circle cx={-S * 0.06} cy={-S * 0.25} r={S * 0.05} fill="#fff" opacity="0.85" />
-                      <circle r={S * 0.62} fill="transparent" />
-                    </g>
+                    </g></g>
+                    <circle r={S * 0.62} fill="transparent" />
                   </g>
                 </g>
               )
