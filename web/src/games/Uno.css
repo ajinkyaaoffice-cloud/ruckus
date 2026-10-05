@@ -23,8 +23,40 @@
 .uno-opp.turn .uno-opp-name { background: var(--pc); }
 .uno-said { position: absolute; top: 4px; right: -14px; z-index: 4; font-style: normal; font-family: var(--font-display); background: #ff5d73; color: #fff; padding: 4px 10px 1px; border-radius: 99px; rotate: 8deg; box-shadow: 0 3px 0 var(--navy); animation: uno-wig 1s ease-in-out infinite alternate; }
 @keyframes uno-wig { to { rotate: -6deg; scale: 1.08; } }
-.uno-catch { position: absolute; top: 100%; left: 50%; translate: -50% 4px; background: #ff5d73; color: #fff; border: 0; border-radius: 99px; padding: 8px 16px 4px; font-size: 17px; box-shadow: 0 4px 0 var(--navy); animation: uno-catch 0.5s ease-in-out infinite alternate; white-space: nowrap; z-index: 5; }
+.uno-catch { position: absolute; top: 100%; left: 50%; translate: -50% 6px; background: #ff5d73; color: #fff; border: 3px solid #fff; border-radius: 99px; padding: 10px 20px 6px; font-size: 22px; box-shadow: 0 5px 0 var(--navy), 0 0 0 0 rgba(255, 93, 115, 0.6); animation: uno-catch 0.5s ease-in-out infinite alternate, uno-catch-ring 1s ease-out infinite; white-space: nowrap; z-index: 7; cursor: pointer; }
 .uno-catch small { font-family: var(--font-body); font-size: 11px; font-weight: 700; display: block; margin-top: -2px; }
+@keyframes uno-catch-ring { to { box-shadow: 0 5px 0 var(--navy), 0 0 0 18px rgba(255, 93, 115, 0); } }
+
+/* the big catch prompt: sits just above my hand so nobody misses it */
+.uno-catchbar { position: fixed; left: 50%; bottom: calc(var(--cw) * 2.2 + 90px); translate: -50% 0; z-index: 55; display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; width: max-content; max-width: calc(100vw - 32px); pointer-events: none; }
+.uno-catch-big { pointer-events: auto; display: flex; align-items: center; gap: 12px; padding: 8px 26px 8px 10px; border-radius: 999px; border: 4px solid #fff; background: #ff5d73; color: #fff; font-size: clamp(22px, 4vw, 34px); line-height: 1; cursor: pointer;
+  box-shadow: 0 7px 0 var(--navy), 0 0 0 0 rgba(255, 93, 115, 0.7); animation: uno-catch-in 0.5s cubic-bezier(.3,1.7,.5,1) both, uno-catch-throb 0.55s ease-in-out 0.5s infinite alternate, uno-catch-glow 1s ease-out 0.5s infinite; }
+.uno-catch-big > :first-child { flex: none; border-radius: 50%; background: #fff; border: 3px solid var(--pc, #fff); }
+.uno-catch-big span { display: flex; flex-direction: column; align-items: flex-start; text-align: left; }
+.uno-catch-big small { font-family: var(--font-body); font-weight: 800; font-size: 12px; opacity: 0.95; margin-top: 4px; }
+.uno-catch-big:active { translate: 0 4px; box-shadow: 0 3px 0 var(--navy); }
+@keyframes uno-catch-in { from { scale: 0; rotate: -12deg; } }
+@keyframes uno-catch-throb { from { rotate: -2deg; } to { rotate: 2deg; scale: 1.06; } }
+@keyframes uno-catch-glow { to { box-shadow: 0 7px 0 var(--navy), 0 0 0 26px rgba(255, 93, 115, 0); } }
+
+/* finished / quit opponents */
+.uno-opp-out .uno-opp-av { border-color: #ffb424; }
+.uno-opp-quit { opacity: 0.45; filter: grayscale(1); }
+.uno-opp-place { position: absolute; left: 50%; bottom: 6px; translate: -50% 0; padding: 5px 10px 2px; border-radius: 99px; background: #ffb424; color: var(--navy); font-size: 16px; border: 3px solid var(--navy); rotate: -6deg; box-shadow: 0 3px 0 var(--navy); }
+
+/* +4 challenge copy and the revealed hand */
+.uno-swatch { display: inline-block; padding: 1px 10px 0; border-radius: 99px; background: var(--sw); color: #fff; text-transform: capitalize; -webkit-text-stroke: 0; text-shadow: 0 1px 0 rgba(0,0,0,.35); }
+.uno-picker .uno-stakes { display: block; font-size: 13px; font-weight: 700; opacity: 0.75; color: var(--navy); margin: -8px 0 16px; }
+.uno-revealed { --cw: clamp(46px, 11vw, 64px); }
+.uno-revealed h3 { color: #43d17a; }
+.uno-revealed.clean h3 { color: #ff5d73; }
+.uno-revealed-cards { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 0 0 16px; }
+.uno-revealed-cards .uc { animation: uno-deal 0.4s var(--ease-back) both; }
+.uno-revealed-cards .uc:nth-child(2) { animation-delay: 0.05s; } .uno-revealed-cards .uc:nth-child(3) { animation-delay: 0.1s; }
+.uno-revealed-cards .uc:nth-child(4) { animation-delay: 0.15s; } .uno-revealed-cards .uc:nth-child(n+5) { animation-delay: 0.2s; }
+.uno-revealed-cards .uno-meh { opacity: 0.45; filter: grayscale(0.6); }
+.uno-revealed-cards .uno-bad { outline: 4px solid #43d17a; outline-offset: 3px; border-radius: 10px; translate: 0 -6px; }
+@keyframes uno-deal { from { scale: 0.3; rotate: -20deg; opacity: 0; } }
 @keyframes uno-catch { to { scale: 1.1; } }
 .uno-reveal { position: absolute; top: 100%; left: 50%; translate: -50% 6px; z-index: 6; display: flex; flex-wrap: wrap; gap: 3px; width: max-content; max-width: 200px; justify-content: center; }
 
@@ -106,6 +138,7 @@
 .uno-callout { position: fixed; left: 50%; top: 46%; z-index: 65; display: flex; flex-direction: column; align-items: center; pointer-events: none; translate: -50% -50%; animation: uno-shout 1.5s cubic-bezier(0.2, 0.9, 0.3, 1) both; }
 .uno-callout b { font-size: clamp(64px, 11vw, 150px); color: #fff; line-height: 0.9; text-transform: capitalize; -webkit-text-stroke: 3px var(--navy); text-shadow: 0 8px 0 var(--co); }
 .uno-callout span { margin-top: 10px; background: var(--navy); color: #fff; font-weight: 700; padding: 6px 16px; border-radius: 99px; font-size: 15px; }
+.uno-callout.big { animation-duration: 2.8s; }
 @keyframes uno-shout {
   0% { scale: 3; rotate: -14deg; opacity: 0; }
   14% { scale: 0.92; rotate: 3deg; opacity: 1; }
@@ -128,4 +161,7 @@
   .uno-me { margin-top: 18px; gap: 8px; }
   .uno-call { width: 66px; height: 66px; font-size: 18px; }
   .uno-pass { font-size: 16px; padding: 9px 16px 5px; }
+  .uno-catchbar { bottom: calc(var(--cw) * 1.6 + 96px); }
+  .uno-catch-big { padding: 6px 18px 6px 8px; }
 }
+html.low-power .uno-catch-big { animation: uno-catch-in 0.4s ease-out both; }

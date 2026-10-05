@@ -61,3 +61,10 @@ export function intro(vars: Record<string, any>): [Record<string, any>, Record<s
   if (transforms && !vars.scrollTrigger) to.clearProps = 'transform,translate,rotate,scale'
   return [from, to]
 }
+
+/** 1 → "1st", 2 → "2nd", 11 → "11th", 23 → "23rd". */
+export function ordinal(n: number): string {
+  const t = n % 100
+  const suf = t >= 11 && t <= 13 ? 'th' : ({ 1: 'st', 2: 'nd', 3: 'rd' } as Record<number, string>)[n % 10] ?? 'th'
+  return `${n}${suf}`
+}

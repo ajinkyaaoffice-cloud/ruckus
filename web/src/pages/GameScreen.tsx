@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState, type ComponentType } from 'react'
 import gsap from 'gsap'
-import { intro } from '../lib/ui'
+import { intro, ordinal } from '../lib/ui'
 import { BrushMarks, TopBar } from '../components/Chrome'
 import { EmoteBar, PlayerChip } from '../components/Players'
 import Results from '../components/Results'
@@ -30,6 +30,7 @@ const GAMES: Record<string, ComponentType<GameProps>> = {
   quickdraw: lazy(() => import('../games/QuickDraw')),
   showdown: lazy(() => import('../games/Showdown')),
   quickmaths: lazy(() => import('../games/QuickMaths')),
+  ludo: lazy(() => import('../games/Ludo')),
 }
 const loadRulebook = () => import('../components/Rulebook')
 const Rulebook = lazy(loadRulebook)
@@ -48,10 +49,14 @@ export default function GameScreen() {
   const gid = state?.game ?? room.game?.id
   const meta = gameMeta(gid)
   const Game = gid ? GAMES[gid] : undefined
-  const participants = (state?.players ?? room.game?.participants ?? [])
+  // players who already finished stay on the bar (and in the game's view) but just watch
+  const finished: string[] = state?.finished ?? []
+  const active: string[] = state?.players ?? room.game?.participants ?? []
+  const participants = [...finished.filter((id) => !active.includes(id)), ...active]
     .map((id) => room.players.find((p) => p.id === id))
     .filter(Boolean) as RoomPlayer[]
-  const spectator = !participants.some((p) => p.id === me)
+  const spectator = !active.includes(me)
+  const myPlace = finished.indexOf(me) + 1
   const turn: string | undefined = state && !state.over ? state.turn : undefined
   useEffect(() => { idle(() => { void loadRulebook() }) }, [])
 
@@ -112,10 +117,15 @@ export default function GameScreen() {
         {participants.map((p) => (
           <PlayerChip key={p.id} p={p} index={room.players.findIndex((x) => x.id === p.id)} compact active={turn === p.id}
             host={room.host === p.id}
-            expression={state?.over ? (state.results?.winners.includes(p.id) ? 'happy' : 'sad') : turn === p.id ? 'focus' : 'idle'} />
+            expression={state?.over ? (state.results?.winners.includes(p.id) ? 'happy' : 'sad') : finished.includes(p.id) ? 'happy' : turn === p.id ? 'focus' : 'idle'}
+            place={finished.includes(p.id) && !state?.over ? finished.indexOf(p.id) + 1 : undefined} />
         ))}
       </div>
-      {spectator && <div className="gs-spec display">Spectating · you're up next game</div>}
+      {spectator && !state?.over && (
+        <div className={`gs-spec display ${myPlace ? 'done' : ''}`}>
+          {myPlace ? `You finished ${ordinal(myPlace)}! · watching the rest` : 'Spectating · you\'re up next game'}
+        </div>
+      )}
 
       <main className="gs-stage">
         {state && Game && state.game === gid ? (

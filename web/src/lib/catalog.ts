@@ -13,8 +13,16 @@ export type GameMeta = {
 export const CATALOG: GameMeta[] = [
   {
     id: 'uno', name: 'UNO', min: 2, max: 5, tag: 'Cards', bg: '#ff9a62', ink: '#1d3a6e',
-    blurb: 'Full official rules: +4 challenges, UNO calls & catches, start-card twists, real scoring.',
-    options: [{ key: 'modern', label: 'Deck', choices: [{ value: false, label: 'Classic 108' }, { value: true, label: 'Modern 112' }] }],
+    blurb: 'Full rules: +4 challenges with hand reveals, UNO calls & catches, play on for every place.',
+    options: [
+      { key: 'modern', label: 'Deck', choices: [{ value: false, label: 'Classic 108' }, { value: true, label: 'Modern 112' }] },
+      { key: 'bluff', label: '+4 bluff', choices: [{ value: 'any', label: 'Any playable card' }, { value: 'color', label: 'Colour only (official)' }] },
+    ],
+  },
+  {
+    id: 'ludo', name: 'Ludo', min: 2, max: 4, tag: 'Board', bg: '#43d17a', ink: '#1d3a6e',
+    blurb: 'Roll a 6 to get out, race round the board, knock rivals home. Play on for every place.',
+    options: [{ key: 'quick', label: 'Race', choices: [{ value: false, label: 'Classic · 4 home' }, { value: true, label: 'Quick · 2 home' }] }],
   },
   { id: 'pong', name: 'Ping Pong', min: 2, max: 2, tag: 'Realtime', bg: '#a7ecff', ink: '#1d3a6e',
     blurb: 'Sixty-frame server-synced rallies. Angle shots off the paddle edge, flick for spin.',

@@ -1198,6 +1198,197 @@ const QmWrong = () => (
   </Scene>
 )
 
+
+/* ---------- Ludo ---------- */
+
+const LR = '#ff5d73', LG = '#43d17a', LY = '#ffc93c', LB = '#3d8bff'
+
+function LPawn({ cls, color }: { cls: string; color: string }) {
+  return (
+    <g className={cls} data-o>
+      <ellipse cy={9} rx={9} ry={3} fill="#1d3a6e" opacity={0.25} />
+      <path d="M-8 8 Q-7 -1 -2.5 -2 L2.5 -2 Q7 -1 8 8Z" fill={color} stroke="#1d3a6e" strokeWidth={1.8} strokeLinejoin="round" />
+      <circle cy={-6} r={5.4} fill={color} stroke="#1d3a6e" strokeWidth={1.8} />
+      <circle cx={-1.8} cy={-7.6} r={1.5} fill="#fff" opacity={0.85} />
+    </g>
+  )
+}
+
+const DIE_PIPS: Record<number, [number, number][]> = {
+  1: [[0, 0]], 2: [[-1, -1], [1, 1]], 3: [[-1, -1], [0, 0], [1, 1]], 4: [[-1, -1], [1, -1], [-1, 1], [1, 1]],
+  5: [[-1, -1], [1, -1], [0, 0], [-1, 1], [1, 1]], 6: [[-1, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [1, 1]],
+}
+/** A die with every face drawn; `face()` shows one of them. */
+function LDie({ faces }: { faces: number[] }) {
+  return (
+    <g className="die" data-o>
+      <rect x={-14} y={-14} width={28} height={28} rx={7} fill="#fff" stroke="#1d3a6e" strokeWidth={2.5} />
+      {faces.map((n) => (
+        <g key={n} className={`f${n}`}>
+          {DIE_PIPS[n].map(([x, y], i) => <circle key={i} cx={x * 7} cy={y * 7} r={2.8} fill={n === 1 ? LR : '#1d3a6e'} />)}
+        </g>
+      ))}
+    </g>
+  )
+}
+function face(tl: gsap.core.Timeline, n: number, faces: number[], pos?: gsap.Position) {
+  tl.to('.die', { rotation: '+=360', y: '-=10', duration: 0.3, ease: 'power2.out' }, pos)
+    .set(faces.map((f) => `.f${f}`).join(','), { opacity: 0 })
+    .set(`.f${n}`, { opacity: 1 })
+    .to('.die', { y: '+=10', duration: 0.25, ease: 'bounce.out' })
+}
+/** Hop a pawn square by square through xs at height y. */
+function hop(tl: gsap.core.Timeline, sel: string, xs: number[], y: number) {
+  for (const x of xs) tl.to(sel, { keyframes: [{ y: y - 12, duration: 0.09, ease: 'power1.out' }, { x, y, duration: 0.11, ease: 'power1.in' }] })
+}
+function LRow({ x0, y, n, fill = () => '#fff', star = [] as number[] }: { x0: number; y: number; n: number; fill?: (i: number) => string; star?: number[] }) {
+  return (
+    <g>
+      {Array.from({ length: n }, (_, i) => (
+        <g key={i}>
+          <rect x={x0 + i * 22 - 11} y={y - 11} width={22} height={22} fill={fill(i)} stroke="#1d3a6e" strokeWidth={1.5} />
+        </g>
+      ))}
+      {star.map((i) => <g key={`s${i}`} transform={`translate(${x0 + i * 22} ${y})`}><G name="star" color="#ffe08a" size={16} /></g>)}
+    </g>
+  )
+}
+const sqx = (x0: number, i: number) => x0 + i * 22
+
+const LudoStart = () => {
+  const F = [3, 6]
+  return (
+    <Scene build={(tl) => {
+      tl.set('.die', { x: 190, y: 40, rotation: 0 }).set('.f3', { opacity: 1 }).set('.f6', { opacity: 0 })
+        .set('.p', { x: 50, y: 64, scale: 1 }).set('.l1, .l2', { opacity: 0, scale: 0.4 })
+      face(tl, 3, F, 0.4)
+      tl.to('.l1', { opacity: 1, scale: 1, ease: 'back.out(3)' }).to('.p', { x: 46, duration: 0.07, yoyo: true, repeat: 3 }, '<')
+        .to('.l1', { opacity: 0, duration: 0.2 }, '+=0.7')
+      face(tl, 6, F)
+      hop(tl, '.p', [sqx(104, 0)], 118)
+      tl.to('.l2', { opacity: 1, scale: 1, ease: 'back.out(3)' })
+    }}>
+      <rect x={18} y={28} width={68} height={72} rx={12} fill={LR} stroke="#1d3a6e" strokeWidth={2.5} />
+      <rect x={30} y={40} width={44} height={48} rx={9} fill="#fff" stroke="#1d3a6e" strokeWidth={2} />
+      <LRow x0={104} y={118} n={6} fill={(i) => (i === 0 ? LR : '#fff')} />
+      <LDie faces={F} />
+      <LPawn cls="p" color={LR} />
+      <Pill cls="l1" x={190} y={76} text="need a 6 to get out" bg="#1d3a6e" />
+      <Pill cls="l2" x={180} y={76} text="out! and roll again" bg={LR} />
+    </Scene>
+  )
+}
+
+const LudoRace = () => {
+  const F = [4]
+  return (
+    <Scene build={(tl) => {
+      tl.set('.die', { x: 120, y: 38, rotation: 0 }).set('.f4', { opacity: 1 }).set('.p', { x: sqx(42, 0), y: 100, scale: 1 }).set('.l1', { opacity: 0, scale: 0.4 })
+      face(tl, 4, F, 0.4)
+      hop(tl, '.p', [1, 2, 3, 4].map((i) => sqx(42, i)), 100)
+      tl.to('.l1', { opacity: 1, scale: 1, ease: 'back.out(3)' })
+    }}>
+      <LRow x0={42} y={100} n={8} />
+      <LDie faces={F} />
+      <LPawn cls="p" color={LG} />
+      <Pill cls="l1" x={120} y={134} text="move exactly what you roll" bg={LG} />
+    </Scene>
+  )
+}
+
+const LudoCapture = () => {
+  const F = [3]
+  return (
+    <Scene build={(tl) => {
+      tl.set('.die', { x: 40, y: 40, rotation: 0 }).set('.f3', { opacity: 1 }).set('.p', { x: sqx(54, 1), y: 104 }).set('.v', { x: sqx(54, 4), y: 104, rotation: 0, scale: 1, opacity: 1 })
+        .set('.l1', { opacity: 0, scale: 0.4 }).set('.boom', { x: sqx(54, 4), y: 104, scale: 0, opacity: 1 })
+      face(tl, 3, F, 0.4)
+      hop(tl, '.p', [2, 3, 4].map((i) => sqx(54, i)), 104)
+      tl.to('.boom', { scale: 1.6, opacity: 0, duration: 0.45 }, '-=0.05')
+        .to('.v', { keyframes: [{ x: 196, y: 30, rotation: 360, duration: 0.35 }, { x: 206, y: 40, rotation: 720, duration: 0.3 }] }, '<')
+        .to('.l1', { opacity: 1, scale: 1, ease: 'back.out(3)' })
+    }}>
+      <rect x={178} y={16} width={52} height={50} rx={10} fill={LB} stroke="#1d3a6e" strokeWidth={2.5} />
+      <LRow x0={54} y={104} n={7} />
+      <circle className="boom" data-o r={16} fill="none" stroke="#ffc93c" strokeWidth={4} />
+      <LDie faces={F} />
+      <LPawn cls="v" color={LB} />
+      <LPawn cls="p" color={LR} />
+      <Pill cls="l1" x={120} y={138} text="sent home! you roll again" bg={LR} />
+    </Scene>
+  )
+}
+
+const LudoSafe = () => {
+  const F = [3]
+  return (
+    <Scene build={(tl) => {
+      tl.set('.die', { x: 40, y: 40, rotation: 0 }).set('.f3', { opacity: 1 }).set('.p', { x: sqx(54, 1), y: 100 }).set('.v', { x: sqx(54, 4), y: 100 })
+        .set('.l1', { opacity: 0, scale: 0.4 })
+      face(tl, 3, F, 0.4)
+      hop(tl, '.p', [2, 3].map((i) => sqx(54, i)), 100)
+      tl.to('.p', { keyframes: [{ y: 88, duration: 0.09 }, { x: sqx(54, 4) - 6, y: 100, duration: 0.11 }] })
+        .to('.v', { x: sqx(54, 4) + 6, duration: 0.2 }, '<')
+        .to('.l1', { opacity: 1, scale: 1, ease: 'back.out(3)' })
+    }}>
+      <LRow x0={54} y={100} n={7} star={[4]} />
+      <LDie faces={F} />
+      <LPawn cls="v" color={LB} />
+      <LPawn cls="p" color={LR} />
+      <Pill cls="l1" x={120} y={136} text="stars + start squares are safe" bg="#1d3a6e" />
+    </Scene>
+  )
+}
+
+const LudoHome = () => {
+  const F = [5, 2]
+  return (
+    <Scene build={(tl) => {
+      tl.set('.die', { x: 40, y: 40, rotation: 0 }).set('.f5', { opacity: 1 }).set('.f2', { opacity: 0 }).set('.p', { x: sqx(70, 3), y: 96, scale: 1 })
+        .set('.l1, .l2', { opacity: 0, scale: 0.4 }).set('.burst', { x: 196, y: 96, scale: 0, rotation: 0, opacity: 1 })
+      face(tl, 5, F, 0.4)
+      tl.to('.p', { x: sqx(70, 3) + 4, duration: 0.07, yoyo: true, repeat: 3 }).to('.l1', { opacity: 1, scale: 1, ease: 'back.out(3)' }, '<')
+        .to('.l1', { opacity: 0, duration: 0.2 }, '+=0.7')
+      face(tl, 2, F)
+      hop(tl, '.p', [sqx(70, 4), 196], 96)
+      tl.to('.burst', { scale: 1.5, rotation: 90, duration: 0.5, ease: 'expo.out' }, '-=0.05').to('.burst', { opacity: 0, duration: 0.3 })
+        .to('.l2', { opacity: 1, scale: 1, ease: 'back.out(3)' }, '<')
+    }}>
+      <LRow x0={70} y={96} n={5} fill={(i) => (i === 0 ? '#fff' : LY)} />
+      <polygon points="181,74 181,118 214,96" fill={LY} stroke="#1d3a6e" strokeWidth={2} strokeLinejoin="round" />
+      <g className="burst" data-o><G name="burst" color="#fff" size={60} /></g>
+      <LDie faces={F} />
+      <LPawn cls="p" color={LY} />
+      <Pill cls="l1" x={140} y={134} text="too far: needs the exact number" bg="#1d3a6e" />
+      <Pill cls="l2" x={140} y={134} text="home! bonus roll" bg={LY} fg="#1d3a6e" />
+    </Scene>
+  )
+}
+
+const LudoFinish = () => (
+  <Scene build={(tl) => {
+    tl.set('.m', { x: 60, y: 62, scale: 0, rotation: -60 }).set('.p1, .p2, .p3, .p4', { y: 62, x: (i: number) => 44 + i * 10, scale: 1, opacity: 1 })
+      .set('.q1', { x: 150, y: 70 }).set('.q2', { x: 190, y: 70 }).set('.l1', { opacity: 0, scale: 0.4 })
+      .to('.p1, .p2, .p3, .p4', { scale: 0.6, x: 60, y: 62, opacity: 0, duration: 0.4, stagger: 0.12 }, 0.4)
+      .to('.m', { scale: 1, rotation: 0, duration: 0.6, ease: 'back.out(2.5)' })
+      .to('.q1', { keyframes: [{ y: 58, duration: 0.12 }, { y: 70, x: 162, duration: 0.12 }, { y: 58, duration: 0.12 }, { y: 70, x: 174, duration: 0.12 }] }, '+=0.2')
+      .to('.q2', { keyframes: [{ y: 58, duration: 0.12 }, { y: 70, x: 202, duration: 0.12 }] })
+      .to('.l1', { opacity: 1, scale: 1, ease: 'back.out(3)' })
+  }}>
+    <polygon points="30,40 30,86 60,63" fill={LR} stroke="#1d3a6e" strokeWidth={2} strokeLinejoin="round" />
+    <polygon points="90,40 90,86 60,63" fill={LG} stroke="#1d3a6e" strokeWidth={2} strokeLinejoin="round" />
+    <LPawn cls="p1" color={LR} /><LPawn cls="p2" color={LR} /><LPawn cls="p3" color={LR} /><LPawn cls="p4" color={LR} />
+    <g className="m" data-o>
+      <circle r={20} fill="#ffc93c" stroke="#1d3a6e" strokeWidth={3} />
+      <text dy="0.36em" textAnchor="middle" className="rs-num" fontSize={15} fill="#fff">1st</text>
+    </g>
+    <LRow x0={150} y={80} n={4} />
+    <LPawn cls="q1" color={LB} />
+    <LPawn cls="q2" color={LY} />
+    <Pill cls="l1" x={120} y={130} text="first home wins · the rest race on" bg="#1d3a6e" />
+  </Scene>
+)
+
 /* ---------- the books ---------- */
 
 export type RulePage = { title: string; text: string; Scene: ComponentType }
@@ -1210,9 +1401,9 @@ export const RULES: Record<string, RuleBook> = {
       { title: 'Match the top card', text: 'On your turn, play one card that matches the top card by colour, number or picture.', Scene: UnoMatch },
       { title: 'Stuck? Draw one', text: 'Nothing fits? Take one card from the deck. If it fits, you can play it right away. If not, press Pass.', Scene: UnoDraw },
       { title: 'Action cards', text: 'Skip jumps over the next player. Reverse turns the order around. Draw Two makes the next player take 2 cards and miss their go.', Scene: UnoActions },
-      { title: 'Wild cards', text: 'A Wild can go on anything, and you pick the new colour. Wild +4 also makes the next player take 4 — but only play it if no card matches the colour. They can challenge you if they think you cheated!', Scene: UnoWild },
-      { title: 'Shout UNO!', text: 'When you get down to one card, hit the UNO! button. If someone catches you before you do, you take 2 cards.', Scene: UnoCall },
-      { title: 'Winning', text: 'Play your last card to win. You score points for every card left in the other players’ hands. No stacking: a +2 can’t be passed on with another +2.', Scene: UnoWin },
+      { title: 'Wild cards', text: 'A Wild can go on anything, and you pick the new colour. Wild +4 also makes the next player take 4, but you may only play it when no other card in your hand could go down (with the official rule: no card of the current colour). The next player can challenge: bluffers take the 4 themselves, a wrong challenge costs 6 — and the challenger gets to see the hand.', Scene: UnoWild },
+      { title: 'Shout UNO!', text: 'When you get down to one card, hit the UNO! button. Forget, and anyone can hit the big Catch! button before the next player moves — you take 2 cards.', Scene: UnoCall },
+      { title: 'Going out', text: 'Play your last card and you’re out — 1st place, plus points for every card left in the other hands. You watch while everyone else plays on for 2nd, 3rd and so on, until one player is left. No stacking: a +2 can’t be passed on with another +2.', Scene: UnoWin },
     ],
   },
   pong: {
@@ -1317,6 +1508,17 @@ export const RULES: Record<string, RuleBook> = {
     pages: [
       { title: 'Pick a hand', text: 'Everyone picks rock, paper or scissors in secret. You can change your mind until the timer runs out. No pick? You get a random one.', Scene: SdPick },
       { title: 'Score points', text: 'Rock beats scissors, scissors beats paper, paper beats rock. You get one point for every player you beat. Seven rounds, most points wins.', Scene: SdScore },
+    ],
+  },
+  ludo: {
+    goal: 'Get all four of your tokens round the board and home first.',
+    pages: [
+      { title: 'Roll a 6 to start', text: 'Tap the die on your turn. Your tokens wait in your corner until you roll a 6 — then one hops out onto your start square.', Scene: LudoStart },
+      { title: 'Race round', text: 'Move one token exactly the number you rolled, clockwise round the board. Pick which token by tapping it (if only one can move, it goes by itself).', Scene: LudoRace },
+      { title: 'Knock them home', text: 'Land right on someone else’s token and it goes back to their corner. You get another roll for it!', Scene: LudoCapture },
+      { title: 'Safe squares', text: 'Nobody can be knocked home on a star or on any start square — tokens just share it there. Your own tokens can always share a square.', Scene: LudoSafe },
+      { title: 'The home stretch', text: 'After one lap, your token turns up your coloured path to the middle. You need the exact number to land home — getting there earns another roll.', Scene: LudoHome },
+      { title: 'Sixes and finishing', text: 'A 6 always means roll again, but three 6s in a row and your turn is over. Get all four home (two in Quick mode) to finish. You watch while the others race on for the next places.', Scene: LudoFinish },
     ],
   },
   quickmaths: {

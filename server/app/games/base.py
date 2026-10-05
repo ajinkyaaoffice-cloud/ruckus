@@ -52,6 +52,8 @@ class Game:
         self.seq = 0
         self.instance = uuid.uuid4().hex[:10]
         self.events: list[dict[str, Any]] = []      # notable events since last broadcast (animation cues)
+        # players who already finished (in finishing order); they leave `players` and watch the rest
+        self.finished: list[str] = []
         self._timers: list[tuple[float, Callable[[], None]]] = []
 
     # pause bookkeeping (class defaults so subclasses can read the clock before super().__init__ ends)
@@ -134,6 +136,7 @@ class Game:
         v = self.view(pid)
         v["game"] = self.id
         v["players"] = self.players
+        v["finished"] = self.finished
         v["over"] = self.over
         v["seq"] = self.seq
         v["instance"] = self.instance

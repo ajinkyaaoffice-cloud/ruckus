@@ -14,9 +14,10 @@ from .cycles import Cycles
 from .quickdraw import QuickDraw
 from .showdown import Showdown
 from .quickmaths import QuickMaths
+from .ludo import Ludo
 
 REGISTRY: dict[str, type[Game]] = {g.id: g for g in (
     TicTacToe, Uno, Pong, ConnectFour, Dots, Memory, OddOneOut, Echo,
-    SeaBattle, Checkers, Reversi, Cycles, QuickDraw, Showdown, QuickMaths)}
+    SeaBattle, Checkers, Reversi, Cycles, QuickDraw, Showdown, QuickMaths, Ludo)}
 
 __all__ = ["Game", "GameError", "Results", "REGISTRY"]

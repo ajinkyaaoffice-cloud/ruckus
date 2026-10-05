@@ -118,3 +118,22 @@ def test_music_ops_and_next_dedupe():
     assert m["track"] == "TUVcZfQe-Kw"
     with pytest.raises(GameError):
         room.music_op("alice", {"op": "select", "track": "<script>"})
+
+
+def test_opener_rotates_round_the_table():
+    async def run():
+        room = make_room()
+        cara = Player("cara", "Cara", {}, ws=FakeWS(), status="ready")
+        room.add(cara)
+        for i, p in enumerate(("alice", "bobby", "cara")):
+            room.players[p].joined = 100.0 + i
+        openers = []
+        for _ in range(6):
+            await room.start("alice", "uno", {})
+            g = room.game
+            openers.append(g.players[(g.dealer + 1) % len(g.players)])
+            g.over = True
+            room.loop_task.cancel()
+        # one full lap from wherever it started, then the same lap again
+        assert sorted(openers[:3]) == ["alice", "bobby", "cara"] and openers[:3] == openers[3:]
+    asyncio.run(run())

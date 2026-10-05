@@ -4,6 +4,13 @@
 }
 .pchip.active { box-shadow: 0 0 0 4px var(--pc), 0 8px 0 rgba(29, 58, 110, 0.16); transform: translateY(-4px) rotate(-1.5deg); }
 .pchip.away { filter: grayscale(0.8); opacity: 0.7; }
+.pchip.pchip-done { opacity: 0.85; }
+.pchip-medal { position: absolute; bottom: -8px; right: -10px; z-index: 2; min-width: 30px; padding: 4px 6px 1px; border-radius: 999px; font-size: 12px; text-align: center;
+  background: #ffb424; color: var(--navy); border: 2.5px solid var(--navy); box-shadow: 0 2px 0 var(--navy); rotate: 10deg; animation: pchip-medal 0.6s var(--ease-out, ease-out) both; }
+.pchip-medal[data-place="2"] { background: #dfe6f3; }
+.pchip-medal[data-place="3"] { background: #ff9a62; }
+.pchip-medal[data-place="4"] { background: #a7ecff; }
+@keyframes pchip-medal { from { scale: 0; rotate: -40deg; } }
 .pchip-face { position: relative; width: 64px; height: 64px; flex: none; }
 .pchip.compact .pchip-face { width: 46px; height: 46px; }
 .pchip-crown { position: absolute; top: -12px; left: -6px; rotate: -18deg; animation: crown 2s ease-in-out infinite; }

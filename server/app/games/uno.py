@@ -7,13 +7,19 @@ Implemented rules:
 * No stacking: one card per turn, Draw Two / Wild Draw Four can't be answered.
 * Draw one if you can't (or won't) play; the drawn card may be played at once.
 * Wild Draw Four may be challenged: guilty -> offender draws 4, challenger plays
-  on; innocent -> challenger draws 6 and loses the turn.
+  on; innocent -> challenger draws 6 and loses the turn. The offender's hand is
+  shown to the challenger either way. "Guilty" means holding another card that
+  could have been played (house rule, default) or, with the official rule, a
+  card of the colour in play.
 * "UNO!" must be called when down to one card; another player can catch you
   before the next player acts, costing you 2 cards.
 * Start-card rules for every action / wild type (WD4 is returned and reshuffled).
 * Two-player rules: Reverse acts as Skip, Skip / Draw Two / WD4 give the turn back.
 * Draw pile is rebuilt from the discard pile when exhausted.
-* Round scoring: winner collects the points left in opponents' hands.
+* Playing on: whoever empties their hand finishes (1st, 2nd, ...) and watches;
+  the rest keep going until one player is left holding cards. Each finisher
+  collects the points still in the other hands at that moment.
+* The opening player rotates round the table from game to game.
 """
 from __future__ import annotations
 
@@ -50,6 +56,10 @@ def build_deck(modern: bool) -> list[dict[str, Any]]:
     return cards
 
 
+def ordinal(n: int) -> str:
+    return f"{n}{'tsnrhtdd'[(n // 10 % 10 != 1) * (n % 10 < 4) * n % 10::4]}"
+
+
 def card_points(card: dict[str, Any]) -> int:
     return card["value"] if card["kind"] == "number" else POINTS[card["kind"]]
 
@@ -62,7 +72,10 @@ class Uno(Game):
 
     def __init__(self, players, options=None, rng=None):
         super().__init__(players, options, rng)
-        self.rng.shuffle(self.players)
+        self.seats = list(self.players)      # everyone dealt in, in seat order (finishers stay seated)
+        self.left: list[str] = []            # quit mid-game
+        self.bluff = "color" if self.options.get("bluff") == "color" else "any"
+        self.reveal: dict[str, Any] | None = None   # the challenged hand, shown to the challenger
         self.modern = bool(self.options.get("modern", False))
         self.deck_size = len(build_deck(self.modern))
         self.draw_pile = build_deck(self.modern)
@@ -76,7 +89,11 @@ class Uno(Game):
         self.challenge: dict[str, Any] | None = None   # {"from", "victim", "guilty"}
         self.said_uno: set[str] = set()
         self.vulnerable: set[str] = set()
-        self.dealer = self.rng.randrange(len(self.players))
+        first = self.options.get("first")
+        if first in self.players:
+            self.dealer = (self.players.index(first) - 1) % len(self.players)
+        else:
+            self.dealer = self.rng.randrange(len(self.players))
         self.turn = 0
         self.scores: dict[str, int] = {}
         for _ in range(7):
@@ -180,6 +197,8 @@ class Uno(Game):
         return color
 
     def handle(self, pid: str, action: dict[str, Any]) -> None:
+        if pid in self.finished:
+            raise GameError("You're already out — enjoy the show")
         self.require_player(pid)
         if self.over:
             raise GameError("Round is over")
@@ -191,6 +210,7 @@ class Uno(Game):
         if self.players[self.turn] != pid:
             raise GameError("Not your turn")
         self._close_uno_window(pid)
+        self.reveal = None
         if t == "start_color":
             if self.phase != "start_color":
                 raise GameError("Not now")
@@ -240,7 +260,7 @@ class Uno(Game):
             self._advance()
 
     def _swap(self, pid: str, target: Any) -> None:
-        if target not in self.hands or target == pid:
+        if target not in self.players or target == pid:
             raise GameError("Choose who to swap with")
         self.hands[pid], self.hands[target] = self.hands[target], self.hands[pid]
         for p in (pid, target):
@@ -262,9 +282,10 @@ class Uno(Game):
         color = card["color"]
         if kind in WILDS:
             color = self._check_color(action.get("color"))
-        if kind == "swap" and not last and (action.get("target") not in self.hands or action.get("target") == pid):
+        if kind == "swap" and not last and (action.get("target") not in self.players or action.get("target") == pid):
             raise GameError("Choose who to swap with")
-        guilty = kind == "wild4" and any(c["color"] == self.color for c in hand if c is not card)
+        prev_color = self.color
+        bad = [c["id"] for c in hand if c is not card and self._bluffs_with(c)] if kind == "wild4" else []
 
         hand.remove(card)
         self.discard.append(card)
@@ -277,12 +298,7 @@ class Uno(Game):
 
         n = len(self.players)
         if last:
-            # Draw penalties still land before the round is tallied.
-            if kind == "draw2":
-                self._give(self._next_pid(), 2)
-            elif kind == "wild4":
-                self._give(self._next_pid(), 4)
-            return self._end_round(pid)
+            return self._go_out(pid, card)
 
         if kind == "number" or kind == "wild":
             self._advance()
@@ -301,7 +317,7 @@ class Uno(Game):
             self._advance(1)
         elif kind == "wild4":
             victim = self._next_pid()
-            self.challenge = {"from": pid, "victim": victim, "guilty": guilty}
+            self.challenge = {"from": pid, "victim": victim, "guilty": bool(bad), "bad": bad, "color": prev_color}
             self._advance()
             self.phase = "challenge"
         elif kind == "swap":
@@ -314,67 +330,134 @@ class Uno(Game):
             self.emit("custom", pid=pid)
             self._advance()
 
+    def _bluffs_with(self, c: dict[str, Any]) -> bool:
+        """Would holding this card make a Wild Draw Four illegal?"""
+        if c["kind"] in WILDS:
+            return False
+        if self.bluff == "color":
+            return c["color"] == self.color
+        return self.playable(c)
+
     def _resolve_challenge(self, pid: str, challenged: bool) -> None:
         if self.phase != "challenge" or not self.challenge:
             raise GameError("Nothing to respond to")
         ch = self.challenge
         self.challenge = None
+        if challenged:
+            # The challenged player shows their hand to the challenger only.
+            self.reveal = {"to": pid, "of": ch["from"], "cards": [dict(c) for c in self.hands[ch["from"]]],
+                           "bad": ch["bad"], "color": ch["color"], "guilty": ch["guilty"], "id": self.seq + 1}
         if not challenged:
             self._give(pid, 4)
             self.emit("forced_draw", pid=pid, count=4)
             self._advance()
         elif ch["guilty"]:
             self._give(ch["from"], 4)
-            self.emit("challenge", pid=pid, offender=ch["from"], guilty=True)
+            self.emit("challenge", pid=pid, offender=ch["from"], guilty=True, bad=len(ch["bad"]), color=ch["color"])
             self.phase = "play"
         else:
             self._give(pid, 6)
-            self.emit("challenge", pid=pid, offender=ch["from"], guilty=False)
+            self.emit("challenge", pid=pid, offender=ch["from"], guilty=False, bad=0, color=ch["color"])
             self._advance()
 
-    def _end_round(self, winner: str) -> None:
-        pts = {p: sum(card_points(c) for c in self.hands[p]) for p in self.players}
-        total = sum(v for p, v in pts.items() if p != winner)
-        self.scores = {p: (total if p == winner else 0) for p in self.players}
-        others = sorted((p for p in self.players if p != winner), key=lambda p: pts[p])
-        ranking = [[winner]]
-        for p in others:
-            if pts[p] == pts[ranking[-1][0]] and ranking[-1][0] != winner:
+    # --- going out ----------------------------------------------------------
+    def _go_out(self, pid: str, card: dict[str, Any]) -> None:
+        """Last card down: it still does its job for the players left, then pid sits back and watches."""
+        kind = card["kind"]
+        if kind == "skip" or (kind == "reverse" and len(self.players) == 2):
+            self._advance(1)
+        elif kind == "reverse":
+            self.direction *= -1
+            self._advance()
+        elif kind in ("draw2", "wild4"):
+            victim = self._next_pid()
+            count = 2 if kind == "draw2" else 4
+            self._give(victim, count)
+            self.emit("forced_draw", pid=victim, count=count, card=card)
+            self._advance(1)
+        elif kind == "custom":
+            for p in self.players:
+                if p != pid:
+                    self._give(p, 2)
+            self.emit("custom", pid=pid)
+            self._advance()
+        else:                                   # numbers, Wild, and Swap (an empty hand swaps nothing)
+            self._advance()
+        # penalties from the last card land first, then the finisher collects what's left in the other hands
+        pts = sum(card_points(c) for p in self.players if p != pid for c in self.hands[p])
+        self.finished.append(pid)
+        self.scores[pid] = pts
+        self.emit("out", pid=pid, place=len(self.finished), points=pts)
+        self._retire(pid)
+        if len(self.players) < 2:
+            self._finish_game()
+
+    def _retire(self, pid: str) -> None:
+        """Take pid out of the turn order without disturbing whose go it is."""
+        cur = self.players[self.turn]
+        idx = self.players.index(pid)
+        self.players.remove(pid)
+        self.said_uno.discard(pid)
+        self.vulnerable.discard(pid)
+        if not self.players:
+            return
+        if cur == pid:
+            self.turn = idx % len(self.players) if self.direction == 1 else (idx - 1) % len(self.players)
+            if self.phase != "start_color":
+                self.phase = "play"
+            self.drawn_id = None
+        else:
+            self.turn = self.players.index(cur)
+
+    def _finish_game(self) -> None:
+        pts = {p: sum(card_points(c) for c in self.hands.get(p, [])) for p in self.seats}
+        ranking: list[list[str]] = [[p] for p in self.finished]
+        rest = sorted(self.players, key=lambda p: pts[p])
+        for p in rest:
+            if ranking and len(ranking) > len(self.finished) and pts[ranking[-1][0]] == pts[p]:
                 ranking[-1].append(p)
             else:
                 ranking.append([p])
-        details = {p: (f"+{total} pts" if p == winner else f"{len(self.hands[p])} cards · {pts[p]} pts left")
-                   for p in self.players}
+        if self.left:
+            ranking.append(list(self.left))
+        details: dict[str, str] = {}
+        for i, p in enumerate(self.finished):
+            details[p] = f"{ordinal(i + 1)} out · +{self.scores.get(p, 0)} pts"
+        for p in self.players:
+            n = len(self.hands[p])
+            details[p] = f"{n} card{'s' if n != 1 else ''} · {pts[p]} pts left"
+        for p in self.left:
+            details[p] = "left the table"
+        if len(self.seats) - len(self.left) <= 2 and self.finished:
+            summary = f"UNO out! {self.scores.get(self.finished[0], 0)} points collected"
+        elif self.finished:
+            summary = "Everyone's out but one"
+        else:
+            summary = "Last one at the table"
         self.over = True
-        self.results = Results(ranking, f"UNO out! {total} points collected", details)
+        self.phase = "play"
+        self.challenge = None
+        self.results = Results(ranking, summary, details)
         self.clear_timers()
         self.dirty = True
 
     def forfeit(self, pid: str) -> None:
         if self.over or pid not in self.players:
             return
-        if len(self.players) <= 2:
-            return super().forfeit(pid)
-        cur = self.players[self.turn]
-        idx = self.players.index(pid)
-        self.draw_pile[:0] = self.hands.pop(pid)
-        self.players.remove(pid)
-        self.said_uno.discard(pid)
-        self.vulnerable.discard(pid)
+        self.draw_pile[:0] = self.hands[pid]
+        self.hands[pid] = []
         if self.challenge and pid in (self.challenge["from"], self.challenge["victim"]):
             self.challenge = None
             self.phase = "play"
-        if cur == pid:
-            self.turn = idx % len(self.players) if self.direction == 1 else (idx - 1) % len(self.players)
-            self.phase = "play" if self.phase != "start_color" else self.phase
-            self.drawn_id = None
-        else:
-            self.turn = self.players.index(cur)
+        self.left.append(pid)
+        self._retire(pid)
         self.emit("left", pid=pid)
+        if len(self.players) < 2:
+            self._finish_game()
 
     # --- view ---------------------------------------------------------------
     def view(self, pid: str) -> dict[str, Any]:
-        me = self.hands.get(pid)
+        me = self.hands.get(pid) if pid in self.players or self.over else None
         my_turn = bool(me is not None and self.players[self.turn] == pid)
         playable: list[int] = []
         if me is not None and my_turn and not self.over:
@@ -392,8 +475,13 @@ class Uno(Game):
             "phase": self.phase,
             "drawnId": self.drawn_id if my_turn else None,
             "playable": playable,
-            "challenge": ({"from": self.challenge["from"], "victim": self.challenge["victim"]}
+            "challenge": ({"from": self.challenge["from"], "victim": self.challenge["victim"],
+                           "color": self.challenge["color"], "rule": self.bluff}
                           if self.challenge else None),
+            "reveal": self.reveal if self.reveal and self.reveal["to"] == pid else None,
+            "seats": self.seats,
+            "left": self.left,
+            "places": {p: i + 1 for i, p in enumerate(self.finished)},
             "saidUno": sorted(self.said_uno),
             "vulnerable": sorted(self.vulnerable),
             "drawCount": len(self.draw_pile),

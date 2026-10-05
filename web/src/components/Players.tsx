@@ -7,19 +7,22 @@ import type { Expression } from '../lib/avatar'
 import { emote, PLAYER_HEX, useNet, type RoomPlayer } from '../lib/net'
 import { sfx } from '../lib/sound'
 import { lowPower } from '../lib/perf'
+import { ordinal } from '../lib/ui'
 import './Players.css'
 
 
-export function PlayerChip({ p, index, host, active, expression, compact, extra }: {
+export function PlayerChip({ p, index, host, active, expression, compact, extra, place }: {
   p: RoomPlayer; index: number; host?: boolean; active?: boolean; expression?: Expression; compact?: boolean; extra?: React.ReactNode
+  place?: number      // finished this game already: show their medal, dim the chip
 }) {
   const me = useNet((s) => s.profile.pid) === p.id
   return (
-    <div className={`pchip ${active ? 'active' : ''} ${compact ? 'compact' : ''} ${p.connected ? '' : 'away'}`} data-player={p.id}
+    <div className={`pchip ${active ? 'active' : ''} ${compact ? 'compact' : ''} ${p.connected ? '' : 'away'} ${place ? 'pchip-done' : ''}`} data-player={p.id}
       style={{ ['--pc' as string]: PLAYER_HEX[index % PLAYER_HEX.length] }}>
       <div className="pchip-face">
         <Avatar config={p.avatar} size="100%" track={compact ? 'idle' : 'mouse'} expression={expression ?? (active ? 'focus' : 'idle')} badge />
         {host && <span className="pchip-crown" title="Host"><Glyph name="star" color="#ffb424" size={26} /></span>}
+        {place && <span className="pchip-medal display" data-place={Math.min(place, 4)} title={`Finished ${ordinal(place)}`}>{ordinal(place)}</span>}
       </div>
       <div className="pchip-meta">
         <span className="pchip-name">{p.name}{me && <em> (you)</em>}</span>

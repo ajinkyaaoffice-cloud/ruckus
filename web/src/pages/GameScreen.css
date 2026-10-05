@@ -3,6 +3,8 @@
 .gs-top-players { position: relative; z-index: 3; display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-bottom: 12px; }
 .gs-top-players .pchip { padding-right: 16px; }
 .gs-spec { position: relative; z-index: 3; background: var(--navy); color: #fff; padding: 8px 16px 4px; border-radius: 999px; font-size: 14px; margin-bottom: 10px; }
+.gs-spec.done { background: #ffb424; color: var(--navy); box-shadow: 0 3px 0 var(--navy); animation: gs-spec-pop 0.6s cubic-bezier(.3,1.6,.5,1) both; }
+@keyframes gs-spec-pop { from { scale: 0.3; rotate: -8deg; } }
 .gs-stage { position: relative; z-index: 2; flex: 1; width: 100%; display: flex; justify-content: center; align-items: center; }
 .gs-dock { position: fixed; right: var(--gutter-r); bottom: calc(var(--safe-b) + var(--tb-pad)); z-index: 30; }
 .gs-intro { position: fixed; inset: 0; z-index: 400; display: grid; place-items: center; pointer-events: none; }

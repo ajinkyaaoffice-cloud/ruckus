@@ -32,7 +32,7 @@ def run(g, clock, secs, dt=1 / 30):
 
 
 def test_catalog_has_fifteen_games():
-    assert len(REGISTRY) == 15
+    assert len(REGISTRY) == 16
 
 
 # --- sea battle -------------------------------------------------------------

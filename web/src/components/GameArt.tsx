@@ -166,6 +166,22 @@ export default function GameArt({ id, className }: { id: string; className?: str
           <text x="68" y="165" textAnchor="middle" fontFamily="Luckiest Guy" fontSize="20" fill={W} className="art-bounce">56</text>
         </svg>
       )
+    case 'ludo':
+      return (
+        <svg {...common}>
+          <rect x="30" y="30" width="140" height="140" rx="18" fill={W} />
+          <rect x="30" y="30" width="56" height="56" rx="14" fill={M} />
+          <rect x="114" y="30" width="56" height="56" rx="14" fill={L} />
+          <rect x="114" y="114" width="56" height="56" rx="14" fill={A} />
+          <rect x="30" y="114" width="56" height="56" rx="14" fill={C} />
+          <path d="M86 86 H114 L100 100Z" fill={L} /><path d="M114 86 V114 L100 100Z" fill={A} />
+          <path d="M86 114 H114 L100 100Z" fill={C} /><path d="M86 86 V114 L100 100Z" fill={M} />
+          <path d="M44 100 H86 M114 100 H156 M100 44 V86 M100 114 V156" stroke={N} strokeWidth="5" strokeDasharray="2 12" strokeLinecap="round" />
+          <g className="art-float-a"><circle cx="58" cy="52" r="9" fill={N} /><path d="M48 70 Q50 58 58 58 Q66 58 68 70Z" fill={N} /></g>
+          <g className="art-wiggle"><rect x="128" y="128" width="30" height="30" rx="8" fill={W} stroke={N} strokeWidth="4" />
+            <circle cx="137" cy="137" r="3.5" fill={N} /><circle cx="149" cy="149" r="3.5" fill={N} /><circle cx="143" cy="143" r="3.5" fill={N} /></g>
+        </svg>
+      )
     default:
       return <svg {...common}><circle cx="100" cy="100" r="60" fill={M} /></svg>
   }

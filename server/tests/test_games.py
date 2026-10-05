@@ -397,3 +397,68 @@ def test_uno_random_games_with_many_players(n, modern, seed):
         assert len(g.draw_pile) + len(g.discard) + sum(len(h) for h in g.hands.values()) == total
     assert g.over
     assert g.results.ranking[0] and len(sum(g.results.ranking, [])) == n
+
+
+# --- UNO: play on after someone goes out, +4 reveal, opener rotation -------
+def test_uno_finisher_watches_and_rest_play_on():
+    P4 = ["alice", "bob", "cara", "dan"]
+    g = uno_fixture(P4, card(1, "red", "number", 7),
+                    [[card(2, "red", "skip")], [card(3, "blue", "number", 1), card(13, "blue", "number", 2)],
+                     [card(4, "red", "number", 2), card(14, "red", "number", 3)], [card(5, "green", "number", 2)]])
+    g.said_uno.add("alice")
+    g.handle("alice", {"type": "play", "card": 2})      # goes out on a skip: bob is still skipped
+    assert not g.over and g.finished == ["alice"] and "alice" not in g.players
+    assert g.players[g.turn] == "cara"
+    with pytest.raises(GameError):
+        g.handle("alice", {"type": "draw"})
+    g.handle("cara", {"type": "play", "card": 4})
+    g.handle("dan", {"type": "play", "card": 5})          # green 2 on red 2, dan out second
+    assert g.finished == ["alice", "dan"] and g.players == ["bob", "cara"]
+    assert g.players[g.turn] == "bob"
+    g.handle("bob", {"type": "draw"})                     # green 5 drawn and playable
+    g.handle("bob", {"type": "pass"})
+    g.handle("cara", {"type": "draw"})
+    g.handle("cara", {"type": "pass"})
+    assert not g.over
+    g.hands["bob"] = [card(60, "green", "number", 9)]
+    g.handle("bob", {"type": "play", "card": 60})
+    assert g.over and g.results.ranking == [["alice"], ["dan"], ["bob"], ["cara"]]
+
+
+def test_uno_two_left_one_goes_out_ends():
+    g = uno_fixture(P3, card(1, "red", "number", 7),
+                    [[card(2, "red", "number", 1)], [card(3, "blue", "number", 1)], [card(4, "red", "number", 3)]])
+    g.handle("alice", {"type": "play", "card": 2})
+    assert not g.over and g.players == ["bob", "cara"] and g.players[g.turn] == "bob"
+    g.forfeit("bob")
+    assert g.over and g.results.ranking[0] == ["alice"] and g.results.ranking[-1] == ["bob"]
+
+
+def test_wild4_house_rule_counts_number_match_and_reveals():
+    g = uno_fixture(P3, card(1, "red", "number", 7),
+                    [[card(2, "wild", "wild4"), card(5, "blue", "number", 7), card(6, "yellow", "number", 3)],
+                     [card(3, "green", "number", 1)], [card(4, "green", "number", 2)]])
+    g.handle("alice", {"type": "play", "card": 2, "color": "blue"})
+    assert g.view("bob")["challenge"]["color"] == "red"
+    g.handle("bob", {"type": "challenge"})
+    assert len(g.hands["alice"]) == 6                      # blue 7 matched the number: bluff
+    rv = g.view("bob")["reveal"]
+    assert rv["guilty"] and rv["bad"] == [5] and len(rv["cards"]) == 2
+    assert g.view("cara")["reveal"] is None
+
+
+def test_wild4_official_rule_is_colour_only():
+    g = uno_fixture(P3, card(1, "red", "number", 7),
+                    [[card(2, "wild", "wild4"), card(5, "blue", "number", 7), card(6, "yellow", "number", 3)],
+                     [card(3, "green", "number", 1)], [card(4, "green", "number", 2)]])
+    g.bluff = "color"
+    g.handle("alice", {"type": "play", "card": 2, "color": "blue"})
+    g.handle("bob", {"type": "challenge"})
+    assert len(g.hands["bob"]) == 7 and g.players[g.turn] == "cara"
+
+
+def test_uno_opener_follows_option():
+    for first in P3:
+        g = Uno(list(P3), {"first": first}, rng=random.Random(9))
+        assert g.players == P3
+        assert g.dealer == (P3.index(first) - 1) % 3

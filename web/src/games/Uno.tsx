@@ -5,6 +5,7 @@ import { act, onGameEvents, playerHex } from '../lib/net'
 import { sfx } from '../lib/sound'
 import Avatar from '../components/Avatar'
 import { TurnBanner } from './shared'
+import { ordinal } from '../lib/ui'
 import './Uno.css'
 
 type Color = 'red' | 'yellow' | 'green' | 'blue' | 'wild'
@@ -101,12 +102,16 @@ export function UnoBack({ className = '', style }: { className?: string; style?:
 /* ---------- game ---------- */
 
 type Pending = { card: Card; color?: string; needTarget: boolean; needColor: boolean }
-type Callout = { text: string; sub?: string; color: string; key: number }
+type Callout = { text: string; sub?: string; color: string; key: number; big?: boolean }
+type Reveal = { of: string; cards: Card[]; bad: number[]; color: string; guilty: boolean; id: number }
 
 export default function Uno({ state, me, room, players, spectator }: GameProps) {
   const root = useRef<HTMLDivElement>(null)
   const hand: Card[] = state.hand ?? []
-  const order: string[] = state.players
+  // everyone dealt in keeps their seat; finishers just stop taking turns
+  const order: string[] = state.seats ?? state.players
+  const places: Record<string, number> = state.places ?? {}
+  const gone: string[] = state.left ?? []
   const top: Card = state.top
   const myTurn = state.turn === me && !spectator && !state.over
   const playable = new Set<number>(state.playable ?? [])
@@ -132,11 +137,23 @@ export default function Uno({ state, me, room, players, spectator }: GameProps) 
   const knownHand = useRef<Set<number>>(new Set(hand.map((c) => c.id)))
   const calloutTimer = useRef<number | undefined>(undefined)
 
-  const shout = (text: string, color = '#1d3a6e', sub?: string) => {
-    setCallout({ text, color, sub, key: Date.now() + Math.random() })
+  const shout = (text: string, color = '#1d3a6e', sub?: string, hold = 1500) => {
+    setCallout({ text, color, sub, key: Date.now() + Math.random(), big: hold > 1500 })
     clearTimeout(calloutTimer.current)
-    calloutTimer.current = window.setTimeout(() => setCallout(null), 1500)
+    calloutTimer.current = window.setTimeout(() => setCallout(null), hold)
   }
+
+  // after a +4 challenge the challenger gets a peek at the accused hand
+  const [reveal, setReveal] = useState<Reveal | null>(null)
+  const revealSeen = useRef<number | null>(state.reveal?.id ?? null)
+  useEffect(() => {
+    const r: Reveal | null = state.reveal
+    if (!r || r.id === revealSeen.current) return
+    revealSeen.current = r.id
+    setReveal(r)
+    const t = window.setTimeout(() => setReveal(null), 5200)
+    return () => window.clearTimeout(t)
+  }, [state.reveal?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const rectOf = (sel: string) => root.current?.querySelector(sel)?.getBoundingClientRect() ?? null
 
@@ -210,7 +227,7 @@ export default function Uno({ state, me, room, players, spectator }: GameProps) 
           break
         case 'challenge':
           shout(e.guilty ? 'Guilty!' : 'Innocent!', e.guilty ? '#43d17a' : '#ff5d73',
-            e.guilty ? `${name(e.offender)} bluffed · +4` : `${name(e.pid)} ${e.pid === me ? 'draw' : 'draws'} 6`)
+            e.guilty ? `${name(e.offender)} bluffed · +4` : `${name(e.offender)} was clean · ${name(e.pid)} ${e.pid === me ? 'draw' : 'draws'} 6`, 2200)
           flyBacks(e.guilty ? e.offender : e.pid, e.guilty ? 4 : 6)
           if ((e.guilty && e.pid === me) || (!e.guilty && e.offender === me)) sfx.point(); else sfx.bad()
           break
@@ -224,6 +241,11 @@ export default function Uno({ state, me, room, players, spectator }: GameProps) 
           break
         case 'left':
           shout('Left', '#1d3a6e', `${name(e.pid)} quit the table`)
+          break
+        case 'out':
+          if (e.pid === me) { sfx.win(); shout(`${ordinal(e.place)}!`, '#ffb424', `You're out · +${e.points} pts · watch the rest`, 3000) }
+          else { sfx.uno(); shout(`${name(e.pid)} is out!`, '#ffb424', `${ordinal(e.place)} place · the rest play on`, 2600) }
+          gsap.fromTo(root.current!.querySelector(`.uno-opp[data-pid="${e.pid}"]`), { scale: 1.4, rotate: -10 }, { scale: 1, rotate: 0, duration: 0.9, ease: 'elastic.out(1, 0.35)' })
           break
       }
     }
@@ -284,6 +306,12 @@ export default function Uno({ state, me, room, players, spectator }: GameProps) 
     if (myTurn && phase !== 'challenge') sfx.pop()
   }, [myTurn, phase])
 
+  const catchOut = (pid: string) => { sfx.slam(); act({ type: 'catch', target: pid }) }
+  const catchable = spectator || state.over ? [] : vulnerable.filter((p) => p !== me)
+  // the big catch prompt pulses in with a buzz whenever someone new forgets
+  const catchKey = catchable.join(',')
+  useEffect(() => { if (catchKey) sfx.hit(0.5) }, [catchKey])
+
   const send = (card: Card, color?: string, target?: string) => {
     const el = root.current?.querySelector(`.uno-hand .uc[data-id="${card.id}"]`)
     lastPlayRect.current = el?.getBoundingClientRect() ?? null
@@ -331,7 +359,7 @@ export default function Uno({ state, me, room, players, spectator }: GameProps) 
   const canDraw = myTurn && phase === 'play'
   const canPass = myTurn && phase === 'drawn'
   const canUno = !spectator && !state.over && hand.length > 0 && hand.length <= 2 && !saidUno.includes(me)
-  const challengeMe = phase === 'challenge' && state.challenge?.victim === me && !spectator
+  const challengeMe = phase === 'challenge' && state.challenge?.victim === me && !spectator && !reveal
   const startColorMe = phase === 'start_color' && myTurn
   const showColor = (pending?.needColor ?? false) || (startColorMe && !pending)
   const showTarget = !!pending && !pending.needColor && pending.needTarget
@@ -355,19 +383,22 @@ export default function Uno({ state, me, room, players, spectator }: GameProps) 
           const p = room.players.find((x) => x.id === pid)
           const n = counts[pid] ?? 0
           const turn = state.turn === pid && !state.over
+          const place = places[pid]
+          const quit = gone.includes(pid)
           const mid = (others.length - 1) / 2
           const off = mid ? (i - mid) / mid : 0
           return (
-            <div key={pid} data-pid={pid} data-player={pid} className={`uno-opp ${turn ? 'turn' : ''}`}
+            <div key={pid} data-pid={pid} data-player={pid} className={`uno-opp ${turn ? 'turn' : ''} ${place ? 'uno-opp-out' : ''} ${quit ? 'uno-opp-quit' : ''}`}
               style={{ ['--pc' as string]: playerHex(room, pid), ['--lift' as string]: `${(1 - off * off) * -1}`, ['--tilt' as string]: `${off * 8}deg` }}>
               <div className="uno-opp-fan">
                 {Array.from({ length: Math.min(n, 7) }, (_, k) => k).map((k, _, all) => (
                   <UnoBack key={k} style={{ transform: `rotate(${(k - (all.length - 1) / 2) * 9}deg)` }} />
                 ))}
+                {place && <span className="uno-opp-place display">{ordinal(place)}</span>}
               </div>
               <div className="uno-opp-av">
-                <Avatar config={p?.avatar} size={others.length >= 3 ? 46 : 58} track="none" expression={n <= 1 ? 'happy' : turn ? 'focus' : 'idle'} />
-                <span className="uno-opp-n">{n}</span>
+                <Avatar config={p?.avatar} size={others.length >= 3 ? 46 : 58} track="none" expression={place || n <= 1 ? 'happy' : turn ? 'focus' : 'idle'} />
+                {!place && !quit && <span className="uno-opp-n">{n}</span>}
               </div>
               <b className="uno-opp-name">{p?.name ?? '…'}</b>
               {saidUno.includes(pid) && n <= 2 && <em className="uno-said">UNO!</em>}
@@ -377,7 +408,7 @@ export default function Uno({ state, me, room, players, spectator }: GameProps) 
                 </div>
               )}
               {vulnerable.includes(pid) && !spectator && (
-                <button className="uno-catch display" data-cursor="Catch!" onClick={() => { sfx.click(); act({ type: 'catch', target: pid }) }}>Catch! <small>forgot UNO</small></button>
+                <button className="uno-catch display" data-cursor="Catch!" onClick={() => catchOut(pid)}>Catch! <small>forgot UNO</small></button>
               )}
             </div>
           )
@@ -482,7 +513,13 @@ export default function Uno({ state, me, room, players, spectator }: GameProps) 
           {challengeMe && (
             <div className="uno-picker">
               <h3 className="display">{name(state.challenge.from)} hit you with +4</h3>
-              <p>Think they had a <b style={{ color: HEX[pile[pile.length - 2]?.color ?? 'red'] }}>matching colour</b>? Challenge: if they bluffed, they draw 4 and you go. If not, you draw 6.</p>
+              <p>
+                The colour was <b className="uno-swatch" style={{ ['--sw' as string]: HEX[state.challenge.color] ?? '#1d3a6e' }}>{state.challenge.color}</b>.{' '}
+                {state.challenge.rule === 'color'
+                  ? <>Think they were holding a <b>{state.challenge.color}</b> card?</>
+                  : <>Think they had <b>any other card they could play</b> (same colour, number or symbol)?</>}
+              </p>
+              <p className="uno-stakes">Challenge: if they bluffed, <b>they</b> draw 4 and you play. If not, <b>you</b> draw 6 and lose your go. You'll see their hand either way.</p>
               <div className="uno-choice">
                 <button className="uno-btn display" onClick={() => { sfx.click(); act({ type: 'accept' }) }}>Take the 4</button>
                 <button className="uno-btn hot display" onClick={() => { sfx.slam(); act({ type: 'challenge' }) }}>Challenge!</button>
@@ -492,8 +529,34 @@ export default function Uno({ state, me, room, players, spectator }: GameProps) 
         </div>
       )}
 
+      {catchable.length > 0 && (
+        <div className="uno-catchbar">
+          {catchable.map((pid) => (
+            <button key={pid} className="uno-catch-big display" data-cursor="Catch!" onClick={() => catchOut(pid)}
+              style={{ ['--pc' as string]: playerHex(room, pid) }}>
+              <Avatar config={room.players.find((x) => x.id === pid)?.avatar} size={44} track="none" expression="shock" />
+              <span>Catch {name(pid)}!<small>forgot to call UNO · +2 for them</small></span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {reveal && (
+        <div className="uno-modal" onClick={() => setReveal(null)}>
+          <div className={`uno-picker uno-revealed ${reveal.guilty ? 'guilty' : 'clean'}`}>
+            <h3 className="display">{reveal.guilty ? 'Caught bluffing!' : 'No bluff'}</h3>
+            <p>{name(reveal.of)}{reveal.of === me ? ' were' : '’s'} hand when the +4 landed on <b className="uno-swatch" style={{ ['--sw' as string]: HEX[reveal.color] ?? '#1d3a6e' }}>{reveal.color}</b>:</p>
+            <div className="uno-revealed-cards">
+              {reveal.cards.map((c) => <UnoCard key={c.id} card={c} className={reveal.bad.includes(c.id) ? 'uno-bad' : 'uno-meh'} />)}
+              {!reveal.cards.length && <em>no cards</em>}
+            </div>
+            <span className="uno-stakes">{reveal.guilty ? `${reveal.bad.length} card${reveal.bad.length === 1 ? '' : 's'} could have been played instead` : 'nothing else in that hand could have been played'} · tap to close</span>
+          </div>
+        </div>
+      )}
+
       {callout && (
-        <div key={callout.key} className="uno-callout" style={{ ['--co' as string]: callout.color }}>
+        <div key={callout.key} className={`uno-callout ${callout.big ? 'big' : ''}`} style={{ ['--co' as string]: callout.color }}>
           <b className="display">{callout.text}</b>
           {callout.sub && <span>{callout.sub}</span>}
         </div>

@@ -176,6 +176,12 @@ export const sfx = {
   lose: () => [440, 392, 329.6, 261.6].forEach((f, i) => pluck(f, { vol: 0.09, decay: 0.6, delay: i * 0.13 })),
   uno: () => { [784, 1046.5, 1318.5].forEach((f, i) => pluck(f, { vol: 0.12, decay: 0.4, delay: i * 0.05 })); blip(400, 1400, { vol: 0.06, dur: 0.18 }) },
   open: () => { air(300, 1800, { vol: 0.06, dur: 0.35 }); [523.3, 784].forEach((f, i) => pluck(f, { vol: 0.06, decay: 0.3, delay: 0.05 + i * 0.06 })) },
+  // a die rattling across the board, then settling
+  dice: () => {
+    for (let i = 0; i < 6; i++) { thump(0.05 + i * 0.008, i * 0.07); pluck(1400 + Math.random() * 900, { vol: 0.025, decay: 0.05, delay: i * 0.07, wet: 0.1 }) }
+    pluck(660, { vol: 0.08, decay: 0.2, delay: 0.46 })
+  },
+  step: (i = 0) => pluck(587.3 + (i % 6) * 70, { vol: 0.06, decay: 0.08, wet: 0.15 }),
   close: () => { air(1800, 300, { vol: 0.05, dur: 0.3 }); pluck(392, { vol: 0.05, decay: 0.25, delay: 0.05 }) },
 }
 

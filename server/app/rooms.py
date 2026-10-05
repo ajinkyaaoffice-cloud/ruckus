@@ -70,6 +70,7 @@ class Room:
         self.game: Game | None = None
         self.game_options: dict[str, Any] = {}
         self.history: list[dict[str, Any]] = []
+        self.first_by_game: dict[str, str] = {}       # who opened the last game of each kind
         self.loop_task: asyncio.Task[None] | None = None
         self.created = time.time()
         # players a running game is waiting on (pid -> when they dropped), and when play picks up again
@@ -240,7 +241,22 @@ class Room:
         pool.sort(key=lambda p: (p.played, p.joined))
         chosen = pool[: cls.max_players]
         self.game_options = {k: v for k, v in (options or {}).items() if isinstance(v, (bool, int, str))}
-        self.game = cls([p.id for p in chosen], self.game_options, random.Random())
+        # Seats follow join order, and whoever opens passes round the table game after game.
+        chosen.sort(key=lambda p: p.joined)
+        ids = [p.id for p in chosen]
+        last = self.first_by_game.get(game_id)
+        seats = sorted(self.players.values(), key=lambda p: p.joined)
+        first = ids[random.randrange(len(ids))]
+        if last is not None:
+            order = [p.id for p in seats]
+            start = order.index(last) if last in order else -1
+            for k in range(1, len(order) + 1):
+                cand = order[(start + k) % len(order)]
+                if cand in ids:
+                    first = cand
+                    break
+        self.first_by_game[game_id] = first
+        self.game = cls(ids, {**self.game_options, "first": first}, random.Random())
         self.waiting.clear()
         self.resume_at = None
         self.phase = "playing"
