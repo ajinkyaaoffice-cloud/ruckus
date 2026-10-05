@@ -4,6 +4,7 @@ import { intro, ordinal } from '../lib/ui'
 import { BrushMarks, TopBar } from '../components/Chrome'
 import { EmoteBar, PlayerChip } from '../components/Players'
 import Results from '../components/Results'
+import WinnerReel, { type HeroRects } from '../components/WinnerReel'
 import { useTransition } from '../components/Transition'
 import { gameMeta } from '../lib/catalog'
 import { leaveRoom, onGameEvents, useNet, type GameState, type Room, type RoomPlayer } from '../lib/net'
@@ -46,6 +47,10 @@ export default function GameScreen() {
   const [rules, setRules] = useState(false)
   // let the winning move land on the board before the podium covers it
   const [showResults, setShowResults] = useState(false)
+  // then the winner reel plays over it and hands its heroes to the podium
+  const [reel, setReel] = useState(false)
+  const [hero, setHero] = useState<HeroRects | undefined>()
+  const reelOn = room.settings?.reel !== false
   const gid = state?.game ?? room.game?.id
   const meta = gameMeta(gid)
   const Game = gid ? GAMES[gid] : undefined
@@ -68,14 +73,16 @@ export default function GameScreen() {
   }, [])
 
   useEffect(() => {
-    if (!state?.over) { setShowResults(false); return }
-    const t = window.setTimeout(() => setShowResults(true), 1300)
+    setShowResults(false); setReel(false); setHero(undefined)
+    if (!state?.over) return
+    const t = window.setTimeout(() => (reelOn && state.results ? setReel(true) : setShowResults(true)), reelOn ? 900 : 1300)
     return () => window.clearTimeout(t)
   }, [state?.over, state?.instance]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (state?.over && state.results) {
-      if (state.results.winners.includes(me)) sfx.win()
+      // with the reel on, it plays the win sting at the reveal
+      if (state.results.winners.includes(me)) { if (!reelOn) sfx.win() }
       else if (!spectator) sfx.lose()
     }
   }, [state?.over]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -142,7 +149,11 @@ export default function GameScreen() {
       {state?.pause && !state.over && <PauseOverlay pause={state.pause} room={room} me={me} />}
 
       {rules && meta && <Suspense fallback={null}><Rulebook g={meta} onClose={() => setRules(false)} /></Suspense>}
-      {showResults && state?.over && state.results && <Results state={state} room={room} me={me} />}
+      {showResults && state?.over && state.results && <Results key={`rs-${state.instance}`} state={state} room={room} me={me} hero={hero} />}
+      {reel && state?.over && state.results && (
+        <WinnerReel key={`wr-${state.instance}`} state={state} room={room} me={me}
+          onHandoff={(r) => { setHero(r); setShowResults(true) }} onDone={() => setReel(false)} />
+      )}
     </div>
   )
 }

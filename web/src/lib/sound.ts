@@ -181,6 +181,17 @@ export const sfx = {
     for (let i = 0; i < 6; i++) { thump(0.05 + i * 0.008, i * 0.07); pluck(1400 + Math.random() * 900, { vol: 0.025, decay: 0.05, delay: i * 0.07, wet: 0.1 }) }
     pluck(660, { vol: 0.08, decay: 0.2, delay: 0.46 })
   },
+  /** Tension before a reveal: an air sweep climbing under a rising run of plucks. */
+  riser: (dur = 1) => {
+    air(300, 5200, { vol: 0.08, dur, q: 2.2, wet: 0.6 })
+    PENTA.slice(2, 12).forEach((f, i) => pluck(f, { vol: 0.03 + i * 0.006, decay: 0.12, delay: (i / 10) * dur * 0.9, wet: 0.3 }))
+  },
+  /** The big hit at a reveal: a low thump under a bright chord. */
+  boom: () => {
+    thump(0.32)
+    air(4200, 400, { vol: 0.09, dur: 0.6, wet: 0.7 })
+    ;[392, 523.3, 659.3, 1046.5].forEach((f) => pluck(f, { vol: 0.08, decay: 1.1, wet: 0.9 }))
+  },
   step: (i = 0) => pluck(587.3 + (i % 6) * 70, { vol: 0.06, decay: 0.08, wet: 0.15 }),
   close: () => { air(1800, 300, { vol: 0.05, dur: 0.3 }); pluck(392, { vol: 0.05, decay: 0.25, delay: 0.05 }) },
 }

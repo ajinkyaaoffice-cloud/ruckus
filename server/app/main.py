@@ -234,6 +234,10 @@ async def ws_endpoint(ws: WebSocket) -> None:
                 elif t == "unhold":
                     room.unhold(pid)
                     await room.sync_game()
+                elif t == "skip_reel":
+                    room.require_host(pid)
+                    if room.game and room.game.over:
+                        await room.broadcast({"t": "skip_reel"})
                 elif t == "end":
                     room.end_game(pid)
                     await room.broadcast({"t": "ended", "by": room.players[pid].name})

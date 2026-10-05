@@ -124,7 +124,7 @@ def test_only_host_changes_settings_and_values_are_checked():
     room = make_room()
     with pytest.raises(GameError):
         room.configure("bobby", {"locked": True})
-    room.configure("alice", {"locked": True, "maxPlayers": 3, "grace": 120, "emotes": False})
+    room.configure("alice", {"locked": True, "maxPlayers": 3, "grace": 120, "emotes": False, "reel": False})
     assert room.settings["locked"] and room.settings["maxPlayers"] == 3 and room.grace == 120.0
     assert room.public()["settings"]["emotes"] is False
     for bad in ({"maxPlayers": 9}, {"maxPlayers": True}, {"grace": 7}, {"locked": "yes"}, {"nope": 1}):

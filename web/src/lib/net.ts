@@ -28,6 +28,7 @@ export type RoomSettings = {
   pauseOnDrop: boolean
   grace: number
   emotes: boolean
+  reel: boolean
 }
 
 export type Room = {
@@ -79,6 +80,12 @@ export const useNet = create<NetState>((set, get) => ({
 
 type Listener = (events: GameEvent[], state: GameState) => void
 const listeners = new Set<Listener>()
+const reelSkips = new Set<() => void>()
+/** The host skipped the winner reel for everyone. */
+export function onReelSkip(fn: () => void): () => void {
+  reelSkips.add(fn)
+  return () => reelSkips.delete(fn)
+}
 export function onGameEvents(fn: Listener): () => void {
   listeners.add(fn)
   return () => listeners.delete(fn)
@@ -178,6 +185,9 @@ export function connect(): void {
         break
       case 'left':
         useNet.setState({ room: null, game: null })
+        break
+      case 'skip_reel':
+        reelSkips.forEach((f) => f())
         break
       case 'ended':
         toast.info(`${msg.by} ended the game`, { id: 'ended' })
@@ -285,6 +295,7 @@ export const makeHost = (pid: string) => send({ t: 'host', pid })
 export const pauseGame = () => send({ t: 'hold' })
 export const resumeGame = () => send({ t: 'unhold' })
 export const endGame = () => send({ t: 'end' })
+export const skipReel = () => send({ t: 'skip_reel' })
 export const resetScores = () => send({ t: 'reset_scores' })
 export const unbanAll = () => send({ t: 'unban' })
 

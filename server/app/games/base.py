@@ -48,6 +48,7 @@ class Game:
         self.rng = rng or random.Random()
         self.over = False
         self.results: Results | None = None
+        self.awards: dict[str, dict[str, int]] | None = None   # session points each player got, set by the room
         self.dirty = True
         self.seq = 0
         self.instance = uuid.uuid4().hex[:10]
@@ -141,6 +142,7 @@ class Game:
         v["seq"] = self.seq
         v["instance"] = self.instance
         v["results"] = self.results.to_dict() if self.results else None
+        v["awards"] = self.awards
         return v
 
     def rank_by(self, score: dict[str, int]) -> list[list[str]]:

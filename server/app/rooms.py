@@ -27,6 +27,7 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     "pauseOnDrop": True,    # freeze the game while someone reconnects
     "grace": int(RECONNECT_GRACE),
     "emotes": True,
+    "reel": True,           # play the winner motion graphic before the podium
 }
 NET_INTERVAL = 1 / 30   # most game snapshots per second sent to clients
 SEND_TIMEOUT = 2.5
@@ -221,7 +222,7 @@ class Room:
             raise GameError("Bad settings")
         new = dict(self.settings)
         for k, v in patch.items():
-            if k in ("locked", "anyonePicks", "pauseOnDrop", "emotes"):
+            if k in ("locked", "anyonePicks", "pauseOnDrop", "emotes", "reel"):
                 if not isinstance(v, bool):
                     raise GameError("Bad settings")
                 new[k] = v
@@ -425,6 +426,7 @@ class Room:
                 p.points += a["points"]
                 p.wins += a["win"]
                 p.played += 1
+        g.awards = awards
         self.history.append({"game": g.id, "winners": res.winners, "tie": everyone_tied,
                              "summary": res.summary, "at": time.time()})
         await self.sync_game()

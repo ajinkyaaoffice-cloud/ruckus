@@ -24,8 +24,8 @@ export default function RoomSettings({ onClose }: { onClose: () => void }) {
 
   useLayoutEffect(() => {
     const ctx = gsap.context(() => {
-      gsap.fromTo('.rs-sheet', ...intro({ scale: 0.5, rotate: -8, y: 120, duration: 0.6, ease: 'back.out(1.7)' }))
-      gsap.fromTo('.rs-group', ...intro({ y: 30, duration: 0.45, ease: 'back.out(2)', stagger: 0.05, delay: 0.15 }))
+      gsap.fromTo('.rset-sheet', ...intro({ scale: 0.5, rotate: -8, y: 120, duration: 0.6, ease: 'back.out(1.7)' }))
+      gsap.fromTo('.rset-group', ...intro({ y: 30, duration: 0.45, ease: 'back.out(2)', stagger: 0.05, delay: 0.15 }))
     }, root)
     return () => ctx.revert()
   }, [])
@@ -49,21 +49,21 @@ export default function RoomSettings({ onClose }: { onClose: () => void }) {
 
   return (
     <div ref={root} className="ss-modal" onClick={onClose}>
-      <div className="rs-sheet" role="dialog" aria-modal="true" aria-label="Room settings" onClick={(e) => { e.stopPropagation(); if (armed) setArmed(null) }}>
-        <header className="rs-head">
+      <div className="rset-sheet" role="dialog" aria-modal="true" aria-label="Room settings" onClick={(e) => { e.stopPropagation(); if (armed) setArmed(null) }}>
+        <header className="rset-head">
           <h2 className="display">Room settings</h2>
-          <span className="rs-badge">Host only</span>
-          <button className="rs-x" onClick={onClose} aria-label="Close">
+          <span className="rset-badge">Host only</span>
+          <button className="rset-x" onClick={onClose} aria-label="Close">
             <svg viewBox="0 0 24 24" aria-hidden><path d="M6 6l12 12M18 6L6 18" /></svg>
           </button>
         </header>
 
-        <div className="rs-body">
-          <section className="rs-group">
+        <div className="rset-body">
+          <section className="rset-group">
             <h3 className="display">Who can join</h3>
             <Toggle label="Lock the room" hint="New people can’t join. Anyone already in can still reconnect." on={s.locked} onChange={(v) => set({ locked: v })} />
             <Row label="Room size" hint={`${room.players.length} in now`}>
-              <div className="rs-stepper">
+              <div className="rset-stepper">
                 <button onClick={() => set({ maxPlayers: s.maxPlayers - 1 })} disabled={s.maxPlayers <= 2} aria-label="Fewer seats">−</button>
                 <span className="display">{s.maxPlayers}</span>
                 <button onClick={() => set({ maxPlayers: s.maxPlayers + 1 })} disabled={s.maxPlayers >= MAX_PLAYERS} aria-label="More seats">+</button>
@@ -71,49 +71,50 @@ export default function RoomSettings({ onClose }: { onClose: () => void }) {
             </Row>
             {room.banned.length > 0 && (
               <Row label="Kicked players" hint={room.banned.map((b) => b.name).join(', ')}>
-                <button className="rs-btn" onClick={() => { sfx.click(); unbanAll() }}>Let them back</button>
+                <button className="rset-btn" onClick={() => { sfx.click(); unbanAll() }}>Let them back</button>
               </Row>
             )}
           </section>
 
-          <section className="rs-group">
+          <section className="rset-group">
             <h3 className="display">Games</h3>
             <Toggle label="Anyone can pick games" hint="Off: only you start games and rematches." on={s.anyonePicks} onChange={(v) => set({ anyonePicks: v })} />
             <Toggle label="Pause when someone drops" hint="Off: the game carries on and their turns time out." on={s.pauseOnDrop} onChange={(v) => set({ pauseOnDrop: v })} />
             <Row label="Wait for reconnects" hint="How long a dropped player keeps their seat.">
-              <div className="ss-choices rs-choices">
+              <div className="ss-choices rset-choices">
                 {GRACE.map((g) => (
                   <button key={g.value} className={`ss-choice ${s.grace === g.value ? 'on' : ''}`} onClick={() => set({ grace: g.value })}>{g.label}</button>
                 ))}
               </div>
             </Row>
+            <Toggle label="Winner celebration" hint="The animated reveal before the podium. Off: straight to results." on={s.reel ?? true} onChange={(v) => set({ reel: v })} />
             <Toggle label="Emotes" hint="Reactions and emote showers for everyone." on={s.emotes} onChange={(v) => set({ emotes: v })} />
           </section>
 
-          <section className="rs-group">
+          <section className="rset-group">
             <h3 className="display">Players</h3>
-            {others.length === 0 && <p className="rs-hint">Nobody else here yet.</p>}
+            {others.length === 0 && <p className="rset-hint">Nobody else here yet.</p>}
             {others.map((p) => (
-              <div key={p.id} className="rs-player">
+              <div key={p.id} className="rset-player">
                 <Avatar config={p.avatar} size={40} track="none" badge />
-                <span className="rs-pname">
+                <span className="rset-pname">
                   <b>{p.name}</b>
                   <small>{p.connected ? (p.status === 'ready' ? 'Ready' : 'Dressing up') : 'Reconnecting…'}</small>
                 </span>
-                <button className="rs-btn" onClick={(e) => { e.stopPropagation(); confirm(`host:${p.id}`, () => makeHost(p.id)) }}>
+                <button className="rset-btn" onClick={(e) => { e.stopPropagation(); confirm(`host:${p.id}`, () => makeHost(p.id)) }}>
                   {armed === `host:${p.id}` ? 'Sure?' : 'Make host'}
                 </button>
-                <button className="rs-btn danger" onClick={(e) => { e.stopPropagation(); confirm(`kick:${p.id}`, () => kickPlayer(p.id)) }}>
+                <button className="rset-btn danger" onClick={(e) => { e.stopPropagation(); confirm(`kick:${p.id}`, () => kickPlayer(p.id)) }}>
                   {armed === `kick:${p.id}` ? 'Kick!' : 'Kick'}
                 </button>
               </div>
             ))}
           </section>
 
-          <section className="rs-group">
+          <section className="rset-group">
             <h3 className="display">Scoreboard</h3>
             <Row label="Reset scores" hint="Clears points, wins and the played list for everyone.">
-              <button className="rs-btn danger" onClick={(e) => { e.stopPropagation(); confirm('reset', resetScores) }}>
+              <button className="rset-btn danger" onClick={(e) => { e.stopPropagation(); confirm('reset', resetScores) }}>
                 {armed === 'reset' ? 'Really reset?' : 'Reset'}
               </button>
             </Row>
@@ -126,8 +127,8 @@ export default function RoomSettings({ onClose }: { onClose: () => void }) {
 
 function Row({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
-    <div className="rs-row">
-      <span className="rs-label">
+    <div className="rset-row">
+      <span className="rset-label">
         <b>{label}</b>
         {hint && <small>{hint}</small>}
       </span>
@@ -139,7 +140,7 @@ function Row({ label, hint, children }: { label: string; hint?: string; children
 function Toggle({ label, hint, on, onChange }: { label: string; hint?: string; on: boolean; onChange: (v: boolean) => void }) {
   return (
     <Row label={label} hint={hint}>
-      <button role="switch" aria-checked={on} aria-label={label} className={`rs-switch ${on ? 'on' : ''}`} onClick={() => onChange(!on)}>
+      <button role="switch" aria-checked={on} aria-label={label} className={`rset-switch ${on ? 'on' : ''}`} onClick={() => onChange(!on)}>
         <i />
       </button>
     </Row>
