@@ -207,8 +207,9 @@ def test_uno_called_is_safe_and_window_closes():
                     [[card(2, "red", "number", 1), card(9, "blue", "number", 4)],
                      [card(3, "red", "number", 3), card(8, "red", "number", 5)],
                      [card(4, "green", "number", 2)]])
-    g.handle("alice", {"type": "uno"})
     g.handle("alice", {"type": "play", "card": 2})
+    assert "alice" in g.vulnerable
+    g.handle("alice", {"type": "uno"})   # calling on one card closes the window
     assert "alice" not in g.vulnerable
     # forgetful bob: window closes once cara acts
     g.handle("bob", {"type": "play", "card": 3})
@@ -381,7 +382,7 @@ def test_uno_random_games_with_many_players(n, modern, seed):
         pid = g.players[g.turn]
         v = g.view(pid)
         others = [p for p in g.players if p != pid]
-        if len(v["hand"]) <= 2 and rng.random() < 0.7:
+        if len(v["hand"]) == 1 and rng.random() < 0.7:
             g.handle(pid, {"type": "uno"})
         if v["phase"] == "start_color":
             g.handle(pid, {"type": "start_color", "color": rng.choice(["red", "blue"]), "target": rng.choice(others)})

@@ -325,8 +325,8 @@ class Uno(Game):
 
     def _call_uno(self, pid: str) -> None:
         n = len(self.hands[pid])
-        if n > 2:
-            raise GameError("You can only call UNO with two cards or fewer")
+        if n != 1:
+            raise GameError("You can only call UNO with one card left")
         self.said_uno.add(pid)
         self.vulnerable.discard(pid)
         self.emit("uno", pid=pid)

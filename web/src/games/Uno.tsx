@@ -474,7 +474,7 @@ export default function Uno({ state, me, room, players, spectator }: GameProps) 
 
   const canDraw = myTurn && phase === 'play'
   const canPass = myTurn && phase === 'drawn'
-  const canUno = !spectator && !state.over && hand.length > 0 && hand.length <= 2 && !saidUno.includes(me)
+  const canUno = !spectator && !state.over && hand.length === 1 && !saidUno.includes(me)
   const challengeMe = phase === 'challenge' && state.challenge?.victim === me && !spectator && !reveal
   const ch = CHALLENGE[(state.challenge?.kind ?? 'wild4') as Kind]
   const named: string = state.challenge?.named ?? ''
@@ -522,7 +522,7 @@ export default function Uno({ state, me, room, players, spectator }: GameProps) 
                 {!place && !quit && <span className="uno-opp-n">{n}</span>}
               </div>
               <b className="uno-opp-name">{p?.name ?? '…'}</b>
-              {saidUno.includes(pid) && n <= 2 && <em className="uno-said">UNO!</em>}
+              {saidUno.includes(pid) && n === 1 && <em className="uno-said">UNO!</em>}
               {state.over && state.hands?.[pid] && (
                 <div className="uno-reveal">
                   {(state.hands[pid] as Card[]).map((c) => <UnoCard key={c.id} card={c} className="tiny" />)}
