@@ -13,7 +13,9 @@ import './Transition.css'
  * and wipe themselves off the other side.
  */
 type GoOptions = { label?: string; colors?: [string, string, string]; reverse?: boolean; replace?: boolean }
-type Ctx = { go: (to: string, opts?: GoOptions) => Promise<void>; busy: () => boolean }
+/** A destination, or work to run while the screen is covered that resolves to one (null: stay put). */
+type Dest = string | (() => Promise<string | null>)
+type Ctx = { go: (to: Dest, opts?: GoOptions) => Promise<void>; busy: () => boolean }
 
 const TransitionCtx = createContext<Ctx>({ go: async () => {}, busy: () => false })
 export const useTransition = () => useContext(TransitionCtx)
@@ -31,11 +33,13 @@ export function TransitionProvider({ children }: { children: ReactNode }) {
   const glyphs = useRef<HTMLDivElement>(null)
   const busyRef = useRef(false)
   // a request made while a wipe is still playing runs right after it, instead of being lost
-  const queued = useRef<{ to: string; opts: GoOptions } | null>(null)
+  const queued = useRef<{ to: Dest; opts: GoOptions } | null>(null)
 
-  const go = useCallback(async (to: string, opts: GoOptions = {}): Promise<void> => {
-    if (busyRef.current) { queued.current = { to, opts }; return }
+  const go = useCallback(async (dest: Dest, opts: GoOptions = {}): Promise<void> => {
+    if (busyRef.current) { queued.current = { to: dest, opts }; return }
     busyRef.current = true
+    // start the work now so it overlaps the sweep instead of holding it up
+    const work = typeof dest === 'string' ? Promise.resolve(dest) : dest().catch(() => null)
     const el = svg.current!
     const w = window.innerWidth, h = window.innerHeight
     el.setAttribute('viewBox', `0 0 ${w} ${h}`)
@@ -75,9 +79,12 @@ export function TransitionProvider({ children }: { children: ReactNode }) {
         }, 0.5)
     })
 
-    if (opts.replace) navigate(to, { replace: true })
-    else navigate(to)
-    window.scrollTo(0, 0)
+    const to = await work
+    if (to) {
+      if (opts.replace) navigate(to, { replace: true })
+      else navigate(to)
+      window.scrollTo(0, 0)
+    }
     await new Promise((r) => setTimeout(r, opts.label ? 380 : 160))
 
     await new Promise<void>((resolve) => {

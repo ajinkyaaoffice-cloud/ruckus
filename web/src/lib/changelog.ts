@@ -7,6 +7,16 @@ export type Release = { id: string; title: string; items: string[] }
 
 export const CHANGELOG: Release[] = [
   {
+    id: '2026-10-06-scan',
+    title: 'Quicker joining',
+    items: [
+      'Scanning a room QR takes you straight to dress-up, no extra taps',
+      'Smoother scanner: it opens like a shutter and locks on when it finds a code',
+      'UNO: you now get a two-second head start to call UNO! before anyone can catch you',
+      'The UNO! button only lights up on your last card',
+    ],
+  },
+  {
     id: '2026-10-06-flip',
     title: 'UNO Flip',
     items: [

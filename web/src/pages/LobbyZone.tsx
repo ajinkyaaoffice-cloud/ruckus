@@ -82,6 +82,23 @@ export default function LobbyZone() {
     }
   }
 
+  /** A scanned code skips the form: the wipe covers the screen at once and the join runs underneath it. */
+  const joinScanned = (c: string) => {
+    if (busy) return
+    setBusy(true)
+    void go(async () => {
+      const info = await checkRoom(c)
+      if (!info.exists || info.full) {
+        toast.error(info.exists ? 'That room is full' : `No room called ${c}`)
+        return null
+      }
+      await joinRoom(c)
+      return `/room/${c}/avatar`
+    }, { label: 'DRESS UP!', colors: ['#a7ecff', '#e64fe0', '#1d3a6e'] }).then(() => {
+      if (!window.location.pathname.endsWith('/avatar')) setBusy(false)
+    })
+  }
+
   const typeAt = (i: number, v: string) => {
     const ch = v.toUpperCase().slice(-1)
     if (ch && !ALPHA.test(ch)) return
@@ -172,9 +189,10 @@ export default function LobbyZone() {
         <QrScan
           onClose={() => setScan(false)}
           onCode={(c) => {
-            setScan(false)
             setCode(c.split(''))
-            void join(c)
+            joinScanned(c)
+            // keep the sheet up until the wipe has covered it
+            setTimeout(() => setScan(false), 700)
           }}
         />
       )}

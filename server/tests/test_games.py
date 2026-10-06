@@ -9,6 +9,7 @@ from app.games.echo import Echo
 from app.games.memory import Memory
 from app.games.oddone import OddOneOut
 from app.games.tictactoe import TicTacToe
+from app.games import uno
 from app.games.uno import Uno, build_deck
 
 P2 = ["alice", "bob"]
@@ -198,8 +199,28 @@ def test_uno_catch_penalty_and_window():
                      [card(4, "green", "number", 2)]])
     g.handle("alice", {"type": "play", "card": 2})
     assert "alice" in g.vulnerable
+    # a short grace period to call it first: nobody can catch yet
+    assert g.view("cara")["vulnerable"] == []
+    with pytest.raises(GameError):
+        g.handle("cara", {"type": "catch", "target": "alice"})
+    g.slipped_at["alice"] -= uno.UNO_GRACE
+    assert g.view("cara")["vulnerable"] == ["alice"]
     g.handle("cara", {"type": "catch", "target": "alice"})
     assert len(g.hands["alice"]) == 3 and not g.vulnerable
+
+
+def test_uno_grace_lets_you_call_and_keeps_window_open():
+    g = uno_fixture(P3, card(1, "red", "number", 7),
+                    [[card(2, "red", "number", 1), card(9, "blue", "number", 4)],
+                     [card(3, "red", "number", 3), card(8, "red", "number", 5)],
+                     [card(4, "green", "number", 2)]])
+    g.handle("alice", {"type": "play", "card": 2})
+    # bob plays straight away, but that can't shut the window before anyone could catch
+    g.handle("bob", {"type": "play", "card": 3})
+    assert "alice" in g.vulnerable
+    g.slipped_at["alice"] -= uno.UNO_GRACE
+    g.handle("cara", {"type": "catch", "target": "alice"})
+    assert len(g.hands["alice"]) == 3
 
 
 def test_uno_called_is_safe_and_window_closes():
@@ -214,6 +235,7 @@ def test_uno_called_is_safe_and_window_closes():
     # forgetful bob: window closes once cara acts
     g.handle("bob", {"type": "play", "card": 3})
     assert "bob" in g.vulnerable
+    g.slipped_at["bob"] -= uno.UNO_GRACE + uno.UNO_CATCH
     g.handle("cara", {"type": "draw"})
     with pytest.raises(GameError):
         g.handle("alice", {"type": "catch", "target": "bob"})
@@ -394,8 +416,10 @@ def test_uno_random_games_with_many_players(n, modern, seed):
             g.handle(pid, {"type": "pass"})
         else:
             g.handle(pid, {"type": "draw"})
+        for p in g.slipped_at:
+            g.slipped_at[p] -= 1.0     # each move takes about a second
         for p in list(g.vulnerable):
-            if rng.random() < 0.3:
+            if g._catchable(p) and rng.random() < 0.3:
                 g.handle(rng.choice([q for q in g.players if q != p]), {"type": "catch", "target": p})
         # cards are conserved
         assert len(g.draw_pile) + len(g.discard) + sum(len(h) for h in g.hands.values()) == total

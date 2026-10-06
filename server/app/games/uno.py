@@ -57,6 +57,8 @@ FLIP_WILDS = ("wild", "wild2", "wildcolor")
 FLIP_POINTS = {"draw1": 10, "draw5": 20, "reverse": 20, "skip": 20, "flip": 20, "skipall": 30,
                "wild": 40, "wild2": 50, "wildcolor": 60}
 CHALLENGEABLE = ("wild4", "wild2", "wildcolor")
+UNO_GRACE = 2.0   # seconds a player on one card has to call UNO before anyone may catch them
+UNO_CATCH = 3.0   # once catching opens, it stays open at least this long
 
 
 def build_deck(modern: bool) -> list[dict[str, Any]]:
@@ -150,6 +152,7 @@ class Uno(Game):
         self.challenge: dict[str, Any] | None = None   # {"from", "victim", "guilty"}
         self.said_uno: set[str] = set()
         self.vulnerable: set[str] = set()
+        self.slipped_at: dict[str, float] = {}  # when each vulnerable player went down to one card
         self.flip_pick = False               # the start_color phase belongs to whoever just flipped
         first = self.options.get("first")
         if first in self.players:
@@ -269,9 +272,18 @@ class Uno(Game):
         self.phase = "play"
         self.drawn_id = None
 
+    def _touch(self) -> None:
+        self.dirty = True
+
+    def _catchable(self, pid: str) -> bool:
+        return pid in self.vulnerable and self.now() - self.slipped_at.get(pid, 0.0) >= UNO_GRACE
+
     def _close_uno_window(self, actor: str) -> None:
-        # The next player taking their turn ends everyone else's catch window.
-        self.vulnerable = {p for p in self.vulnerable if p == actor}
+        # The next player taking their turn ends everyone else's catch window, but
+        # never before the others have had UNO_CATCH seconds of actual catching.
+        t = self.now()
+        self.vulnerable = {p for p in self.vulnerable
+                           if p == actor or t - self.slipped_at.get(p, 0.0) < UNO_GRACE + UNO_CATCH}
 
     @property
     def palette(self) -> tuple[str, ...]:
@@ -334,6 +346,8 @@ class Uno(Game):
     def _catch(self, pid: str, target: Any) -> None:
         if target == pid or target not in self.vulnerable:
             raise GameError("Nobody to catch")
+        if not self._catchable(target):
+            raise GameError("Give them a second to call it")
         self.vulnerable.discard(target)
         self._give(target, 2)
         self.emit("caught", pid=target, by=pid)
@@ -385,6 +399,8 @@ class Uno(Game):
 
         if len(hand) == 1 and pid not in self.said_uno:
             self.vulnerable.add(pid)
+            self.slipped_at[pid] = self.now()
+            self.later(UNO_GRACE, self._touch)   # rebroadcast so the Catch! buttons appear
 
         n = len(self.players)
         if last:
@@ -616,7 +632,7 @@ class Uno(Game):
             "left": self.left,
             "places": {p: i + 1 for i, p in enumerate(self.finished)},
             "saidUno": sorted(self.said_uno),
-            "vulnerable": sorted(self.vulnerable),
+            "vulnerable": sorted(p for p in self.vulnerable if self._catchable(p)),
             "drawCount": len(self.draw_pile),
             "modern": self.modern,
             "flip": self.flip,
