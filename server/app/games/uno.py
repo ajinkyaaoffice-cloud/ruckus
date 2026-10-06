@@ -7,8 +7,8 @@ Implemented rules:
 * No stacking: one card per turn, Draw Two / Wild Draw Four can't be answered.
 * Draw one if you can't (or won't) play; the drawn card may be played at once.
 * Wild Draw Four may be challenged: guilty -> offender draws 4, challenger plays
-  on; innocent -> challenger draws 6 and loses the turn. The offender's hand is
-  shown to the challenger either way. "Guilty" means holding another card that
+  on; innocent -> challenger draws 6 and loses the turn, and is shown the
+  offender's hand as proof. A caught bluffer's hand stays private. "Guilty" means holding another card that
   could have been played (house rule, default) or, with the official rule, a
   card of the colour in play.
 * "UNO!" must be called when down to one card; another player can catch you
@@ -343,8 +343,8 @@ class Uno(Game):
             raise GameError("Nothing to respond to")
         ch = self.challenge
         self.challenge = None
-        if challenged:
-            # The challenged player shows their hand to the challenger only.
+        if challenged and not ch["guilty"]:
+            # A clean hand is shown to the challenger only, as proof; a caught bluff stays hidden.
             self.reveal = {"to": pid, "of": ch["from"], "cards": [dict(c) for c in self.hands[ch["from"]]],
                            "bad": ch["bad"], "color": ch["color"], "guilty": ch["guilty"], "id": self.seq + 1}
         if not challenged:

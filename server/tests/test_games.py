@@ -159,6 +159,9 @@ def test_wild4_challenge_innocent_costs_six():
     g.handle("alice", {"type": "play", "card": 2, "color": "blue"})
     g.handle("bob", {"type": "challenge"})
     assert len(g.hands["bob"]) == 7 and g.players[g.turn] == "cara"
+    rv = g.view("bob")["reveal"]                            # innocent: the challenger sees the proof
+    assert not rv["guilty"] and len(rv["cards"]) == 2
+    assert g.view("cara")["reveal"] is None
 
 
 def test_wild4_accept():
@@ -442,8 +445,7 @@ def test_wild4_house_rule_counts_number_match_and_reveals():
     assert g.view("bob")["challenge"]["color"] == "red"
     g.handle("bob", {"type": "challenge"})
     assert len(g.hands["alice"]) == 6                      # blue 7 matched the number: bluff
-    rv = g.view("bob")["reveal"]
-    assert rv["guilty"] and rv["bad"] == [5] and len(rv["cards"]) == 2
+    assert g.view("bob")["reveal"] is None                  # a caught bluff isn't shown
     assert g.view("cara")["reveal"] is None
 
 
