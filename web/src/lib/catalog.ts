@@ -13,10 +13,10 @@ export type GameMeta = {
 export const CATALOG: GameMeta[] = [
   {
     id: 'uno', name: 'UNO', min: 2, max: 5, tag: 'Cards', bg: '#ff9a62', ink: '#1d3a6e',
-    blurb: 'Full rules: +4 challenges with hand reveals, UNO calls & catches, play on for every place.',
+    blurb: 'Full rules: +4 challenges, UNO calls & catches, play on for every place. Classic, Modern or the two-sided Flip deck.',
     options: [
-      { key: 'modern', label: 'Deck', choices: [{ value: false, label: 'Classic 108' }, { value: true, label: 'Modern 112' }] },
-      { key: 'bluff', label: '+4 bluff', choices: [{ value: 'any', label: 'Any playable card' }, { value: 'color', label: 'Colour only (official)' }] },
+      { key: 'modern', label: 'Deck', choices: [{ value: false, label: 'Classic 108' }, { value: true, label: 'Modern 112' }, { value: 'flip', label: 'Flip 112' }] },
+      { key: 'bluff', label: 'Wild draw bluff', choices: [{ value: 'any', label: 'Any playable card' }, { value: 'color', label: 'Colour only (official)' }] },
     ],
   },
   {

@@ -54,3 +54,25 @@ html.low-power .sp-mark { filter: none; }
   animation: sp-bob 1.4s ease-in-out infinite alternate;
 }
 @keyframes sp-bob { from { transform: translateY(0); } to { transform: translateY(-4px); } }
+
+/* what's new: a cream card of bullet points under the build line */
+.sp-has-news .sp-logo { gap: 10px; max-height: calc(100svh - var(--safe-t, 0px) - var(--safe-b, 0px) - 32px); }
+.sp-has-news .sp-mark { width: min(70%, 380px); flex: none; }
+.sp-has-news .sp-go { margin-top: 6px; flex: none; }
+.sp-news { width: 100%; min-height: 0; overflow-y: auto; overscroll-behavior: contain; text-align: left; background: #fff8ec; color: var(--navy); border-radius: 24px; padding: 14px 18px 12px; box-shadow: 0 6px 0 var(--magenta); }
+.sp-rel + .sp-rel { margin-top: 12px; padding-top: 10px; border-top: 2px dashed rgba(29, 58, 110, 0.15); }
+.sp-rel h3 { margin: 0 0 6px; font-size: 20px; color: var(--magenta); }
+.sp-rel ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.sp-rel li { position: relative; padding-left: 20px; font-size: 14px; font-weight: 600; line-height: 1.4; }
+.sp-rel li::before { content: ''; position: absolute; left: 2px; top: 0.45em; width: 9px; height: 9px; border-radius: 3px; background: var(--lime); box-shadow: 0 0 0 2px var(--navy); rotate: 45deg; }
+.sp-rel + .sp-rel li { font-size: 13px; opacity: 0.8; }
+@media (max-width: 600px) { .sp-news { padding: 12px 14px 10px; border-radius: 20px; } .sp-rel li { font-size: 13px; } .sp-has-news .sp-glyph { opacity: 0.35; } }
+.sp-older { margin-top: 12px; padding-top: 10px; border-top: 2px dashed rgba(29, 58, 110, 0.15); }
+.sp-older summary { cursor: pointer; font-weight: 800; font-size: 13px; color: var(--navy); opacity: 0.7; list-style: none; display: flex; align-items: center; gap: 6px; }
+.sp-older summary::-webkit-details-marker { display: none; }
+.sp-older summary::before { content: '▸'; transition: rotate 0.2s; }
+.sp-older[open] summary::before { rotate: 90deg; }
+.sp-older .sp-rel { margin-top: 10px; }
+.sp-older .sp-rel li { font-size: 13px; opacity: 0.8; }
+.sp-keys { color: #fff; opacity: 0.45; font-size: 12px; font-weight: 600; }
+@media (hover: none) { .sp-keys { display: none; } }

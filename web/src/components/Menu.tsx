@@ -8,6 +8,7 @@ import { useTransition } from './Transition'
 import { endGame, leaveRoom, pauseGame, resumeGame, useNet } from '../lib/net'
 import { lockScroll, scrollToTarget, useUi, intro } from '../lib/ui'
 import { sfx } from '../lib/sound'
+import { showWhatsNew } from './Splash'
 import './Menu.css'
 
 /** Wavy-lines button that morphs into an X while the menu is open. */
@@ -104,6 +105,7 @@ export default function Menu() {
     items.push({ label: 'My look', glyph: 'x', color: '#f6b8f7', run: nav(`/room/${room.code}/avatar`, 'DRESS UP!'), sub: 'customise' })
     items.push({ label: 'Leave', glyph: 'moon', color: '#ff9a62', run: () => { leaveRoom(); nav('/play', 'BYE!', true)() }, sub: 'exit the room' })
   }
+  items.push({ label: 'What’s new', glyph: 'star', color: '#d9f66b', run: () => { setMenu(false); setTimeout(showWhatsNew, 250) }, sub: 'latest updates' })
 
   const hover = (e: React.MouseEvent<HTMLElement>) => {
     sfx.hover()

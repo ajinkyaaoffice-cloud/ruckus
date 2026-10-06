@@ -165,3 +165,39 @@
   .uno-catch-big { padding: 6px 18px 6px 8px; }
 }
 html.low-power .uno-catch-big { animation: uno-catch-in 0.4s ease-out both; }
+
+/* ---------- UNO Flip ---------- */
+/* the dark side: night felt with a neon rim */
+.uno-dark .uno-table { background: radial-gradient(ellipse 70% 80% at 50% 55%, color-mix(in srgb, var(--active) 40%, #241b45) 0%, #120d26 74%);
+  box-shadow: 0 0 0 8px #2b2150, 0 0 0 11px #8b5cf6, 0 16px 0 11px rgba(18, 13, 38, 0.4); }
+.uno-dark .uno-ring { color: color-mix(in srgb, var(--active) 80%, #fff); }
+.uc-dark .uc-corner { stroke: rgba(0, 0, 0, 0.6); }
+.uno-side { font-style: normal; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; padding: 2px 8px; border-radius: 99px; margin-left: 2px; }
+.uno-side.light { background: #fff1c2; color: var(--navy); }
+.uno-side.dark { background: #1b1f3f; color: #d9c8ff; }
+.uno-pile { cursor: help; }
+
+/* what the last power card does: a card and a line of rules, parked beside the table */
+.uno-tip { position: fixed; z-index: 58; left: max(var(--gutter-l, 16px), 16px); top: 50%; translate: 0 -50%; display: flex; align-items: center; gap: 12px; width: min(300px, calc(100vw - 32px)); padding: 12px 14px 12px 12px;
+  border: 0; border-radius: 22px; background: #fff; color: var(--navy); text-align: left; box-shadow: 0 6px 0 var(--navy), 0 0 0 3px var(--navy); cursor: pointer; --cw: 52px;
+  animation: uno-tip-in 0.5s var(--ease-back) both, uno-tip-out 0.35s ease-in 3.85s forwards; }
+.uno-tip > .uc { filter: drop-shadow(0 3px 0 rgba(27, 31, 63, 0.25)); rotate: -6deg; }
+.uno-tip span { display: flex; flex-direction: column; gap: 3px; font-size: 13px; font-weight: 600; line-height: 1.35; }
+.uno-tip b { font-size: 19px; line-height: 1; color: var(--magenta); }
+@keyframes uno-tip-in { from { opacity: 0; translate: -40px -50%; rotate: -4deg; } }
+@keyframes uno-tip-out { to { opacity: 0; translate: -30px -50%; } }
+@media (max-width: 1100px) {
+  /* no room beside the table: sit just under the opponents instead */
+  .uno-tip { left: 50%; top: calc(var(--safe-t, 0px) + 70px); translate: -50% 0; animation-name: uno-tip-drop, uno-tip-up; }
+  @keyframes uno-tip-drop { from { opacity: 0; translate: -50% -24px; } }
+  @keyframes uno-tip-up { to { opacity: 0; translate: -50% -16px; } }
+}
+@media (max-width: 640px) { .uno-tip { --cw: 40px; padding: 9px 12px 9px 10px; gap: 10px; } .uno-tip b { font-size: 16px; } .uno-tip span { font-size: 12px; } }
+html.low-power .uno-tip { animation: uno-tip-out 0.3s ease-in 3.9s forwards; }
+
+/* direction of play: chevrons riding the rim, plus a labelled chip */
+.uno-arrows { opacity: 0.85; }
+.uno-dir { display: inline-flex; align-items: center; gap: 3px; font-style: normal; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.03em; padding: 2px 8px 2px 4px; border-radius: 99px; background: var(--navy); color: #fff; margin-left: 2px; }
+.uno-dir svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.uno-dir.ccw svg { scale: -1 1; }
+@media (max-width: 640px) { .uno-colorchip { max-width: 94%; font-size: 12px; } .uno-colorchip .uno-side { display: none; } }

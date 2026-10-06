@@ -464,3 +464,135 @@ def test_uno_opener_follows_option():
         g = Uno(list(P3), {"first": first}, rng=random.Random(9))
         assert g.players == P3
         assert g.dealer == (P3.index(first) - 1) % 3
+
+
+# --- UNO Flip ---------------------------------------------------------------
+from app.games.uno import build_flip_deck  # noqa: E402
+
+
+def fcard(cid, light, dark):
+    """A two-sided card: light face active, dark face underneath."""
+    return {"id": cid, **dict(zip(("color", "kind", "value"), light)), "other": dict(zip(("color", "kind", "value"), dark))}
+
+
+def flip_fixture(players, top, hands, pile=None, turn=0):
+    g = Uno(list(players), {"modern": "flip"}, rng=random.Random(1))
+    g.players = list(players)
+    g.hands = {p: list(h) for p, h in zip(players, hands)}
+    g.discard = [top]
+    g.color = top["color"]
+    g.turn, g.direction, g.phase, g.dark = turn, 1, "play", False
+    g.said_uno.clear()
+    g.vulnerable.clear()
+    g.challenge = None
+    g.draw_pile = pile if pile is not None else [fcard(900 + i, ("green", "number", 5), ("teal", "number", 5)) for i in range(40)]
+    return g
+
+
+def test_flip_deck_has_112_cards_with_both_sides():
+    deck = build_flip_deck(random.Random(3))
+    assert len(deck) == 112
+    light = [(c["color"], c["kind"]) for c in deck]
+    dark = [(c["other"]["color"], c["other"]["kind"]) for c in deck]
+    assert light.count(("wild", "wild2")) == 4 and light.count(("red", "flip")) == 2 and light.count(("blue", "draw1")) == 2
+    assert dark.count(("wild", "wildcolor")) == 4 and dark.count(("pink", "skipall")) == 2 and dark.count(("teal", "draw5")) == 2
+    assert not any(c["kind"] == "number" and c["value"] == 0 for c in deck)
+
+
+def test_flip_game_starts_light_and_hides_own_backs():
+    g = Uno(list(P3), {"modern": "flip"}, rng=random.Random(5))
+    assert g.flip
+    v = g.view("alice")
+    assert all("other" not in c for c in v["hand"]) and "other" not in v["top"]
+    assert set(v["backs"]) == {"bob", "cara"} and len(v["backs"]["bob"]) == len(g.hands["bob"])
+    assert v["backs"]["bob"][0] == g.hands["bob"][0]["other"]
+
+
+def test_flip_card_turns_everything_over():
+    bottom = fcard(1, ("red", "number", 3), ("purple", "number", 8))
+    flipper = fcard(2, ("red", "flip", None), ("orange", "skipall", None))
+    keep = fcard(3, ("blue", "number", 1), ("pink", "draw5", None))
+    g = flip_fixture(P3, bottom, [[flipper, keep], [fcard(4, ("green", "number", 2), ("teal", "number", 6))], [fcard(5, ("yellow", "number", 4), ("orange", "number", 9))]])
+    g.handle("alice", {"type": "play", "card": 2})
+    assert g.dark and g.color == "purple" and g.top["value"] == 8   # old bottom card is the new top
+    assert g.hands["alice"][0]["kind"] == "draw5" and g.hands["alice"][0]["other"]["color"] == "blue"
+    assert g.players[g.turn] == "bob" and g.palette == ("pink", "teal", "purple", "orange")
+    with pytest.raises(GameError):
+        g.handle("bob", {"type": "play", "card": 4})                  # teal 6 doesn't match purple 8
+
+
+def test_flip_turning_up_a_wild_lets_the_flipper_name_colour():
+    bottom = fcard(1, ("red", "number", 3), ("wild", "wild", None))
+    g = flip_fixture(P3, bottom, [[fcard(2, ("red", "flip", None), ("pink", "number", 1)), fcard(3, ("blue", "number", 1), ("teal", "number", 2))], [], []])
+    g.hands["bob"] = [fcard(6, ("green", "number", 2), ("teal", "number", 6))]
+    g.hands["cara"] = [fcard(7, ("green", "number", 2), ("teal", "number", 6))]
+    g.handle("alice", {"type": "play", "card": 2})
+    assert g.phase == "start_color" and g.players[g.turn] == "alice"
+    with pytest.raises(GameError):
+        g.handle("alice", {"type": "start_color", "color": "red"})     # light colours aren't in play
+    g.handle("alice", {"type": "start_color", "color": "teal"})
+    assert g.color == "teal" and g.players[g.turn] == "bob" and g.phase == "play"
+
+
+def test_draw_one_draw_five_and_skip_everyone():
+    g = flip_fixture(P3, fcard(1, ("red", "number", 3), ("pink", "number", 3)),
+                     [[fcard(2, ("red", "draw1", None), ("pink", "number", 1)), fcard(9, ("red", "number", 9), ("pink", "number", 9))], [], []])
+    g.hands["bob"] = [fcard(6, ("green", "number", 2), ("teal", "number", 6))]
+    g.hands["cara"] = [fcard(7, ("green", "number", 2), ("teal", "number", 6))]
+    g.handle("alice", {"type": "play", "card": 2})
+    assert len(g.hands["bob"]) == 2 and g.players[g.turn] == "cara"
+
+    g = flip_fixture(P3, fcard(1, ("red", "number", 3), ("pink", "number", 3)), [[], [], []])
+    g.dark = True
+    for c in [g.discard[0]]:
+        c.update(c.pop("other")); c["other"] = {"color": "red", "kind": "number", "value": 3}
+    g.color = "pink"
+    g.hands = {"alice": [{"id": 2, "color": "pink", "kind": "draw5", "value": None, "other": {}}, {"id": 3, "color": "pink", "kind": "skipall", "value": None, "other": {}}, {"id": 4, "color": "teal", "kind": "number", "value": 1, "other": {}}],
+               "bob": [], "cara": []}
+    g.handle("alice", {"type": "play", "card": 3})                    # skip everyone: alice again
+    assert g.players[g.turn] == "alice"
+    g.handle("alice", {"type": "play", "card": 2})
+    assert len(g.hands["bob"]) == 5 and g.players[g.turn] == "cara"
+
+
+def test_wild_draw_two_challenge_both_ways():
+    top = fcard(1, ("red", "number", 3), ("pink", "number", 3))
+    hand = [fcard(2, ("wild", "wild2", None), ("pink", "number", 1)), fcard(3, ("red", "number", 7), ("teal", "number", 2)), fcard(4, ("blue", "number", 1), ("teal", "number", 1))]
+    g = flip_fixture(P3, top, [hand, [], []])
+    g.handle("alice", {"type": "play", "card": 2, "color": "blue"})
+    assert g.phase == "challenge" and g.view("bob")["challenge"]["kind"] == "wild2"
+    g.handle("bob", {"type": "challenge"})                            # alice held a red card: guilty
+    assert len(g.hands["alice"]) == 4 and g.players[g.turn] == "bob" and g.view("bob")["reveal"] is None
+
+    hand = [fcard(2, ("wild", "wild2", None), ("pink", "number", 1)), fcard(4, ("blue", "number", 1), ("teal", "number", 1))]
+    g = flip_fixture(P3, top, [hand, [], []])
+    g.bluff = "color"
+    g.handle("alice", {"type": "play", "card": 2, "color": "blue"})
+    g.handle("bob", {"type": "challenge"})                            # clean: bob draws 4 and loses the go
+    assert len(g.hands["bob"]) == 4 and g.players[g.turn] == "cara" and g.view("bob")["reveal"]["kind"] == "wild2"
+
+
+def test_wild_draw_colour_draws_until_the_colour():
+    def dark(cid, color, kind="number", value=1):
+        return {"id": cid, "color": color, "kind": kind, "value": value, "other": {"color": "red", "kind": "number", "value": 1}}
+    g = flip_fixture(P3, dark(1, "pink"), [[dark(2, "wild", "wildcolor", None), dark(3, "teal")], [], []],
+                     pile=[dark(50, "purple"), dark(51, "orange"), dark(52, "teal"), dark(53, "pink")])
+    g.dark, g.color = True, "pink"
+    g.handle("alice", {"type": "play", "card": 2, "color": "orange"})
+    g.handle("bob", {"type": "accept"})
+    assert [c["id"] for c in g.hands["bob"]] == [53, 52, 51] and g.players[g.turn] == "cara"
+
+    g = flip_fixture(P3, dark(1, "pink"), [[dark(2, "wild", "wildcolor", None), dark(3, "teal", value=5)], [], []],
+                     pile=[dark(50, "purple"), dark(51, "teal"), dark(52, "orange"), dark(53, "pink"), dark(54, "pink")])
+    g.dark, g.color = True, "pink"
+    g.handle("alice", {"type": "play", "card": 2, "color": "orange"})
+    g.handle("bob", {"type": "challenge"})                            # no pink in alice's hand: innocent, +2 more
+    assert [c["id"] for c in g.hands["bob"]] == [54, 53, 52, 51, 50]
+
+
+def test_flip_scores_by_side_in_play():
+    g = flip_fixture(P2, fcard(1, ("red", "number", 3), ("pink", "number", 3)),
+                     [[fcard(2, ("red", "number", 4), ("pink", "number", 4))],
+                      [fcard(3, ("wild", "wild2", None), ("teal", "skipall", None)), fcard(4, ("red", "draw1", None), ("pink", "number", 7))]])
+    g.handle("alice", {"type": "play", "card": 2})
+    assert g.over and g.scores["alice"] == 60

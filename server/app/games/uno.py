@@ -20,6 +20,26 @@ Implemented rules:
   the rest keep going until one player is left holding cards. Each finisher
   collects the points still in the other hands at that moment.
 * The opening player rotates round the table from game to game.
+
+UNO Flip (option modern="flip"), per unorules.com/uno-flip-rules:
+* 112 double-sided cards. Light side: red/yellow/green/blue 1-9, Draw One,
+  Skip, Reverse, Flip, plus Wild and Wild Draw Two. Dark side: pink/teal/
+  purple/orange 1-9, Draw Five, Skip Everyone, Reverse, Flip, plus Wild and
+  Wild Draw Colour. Every card pairs a light face with a dark face at random.
+* Play starts on the light side. A Flip card turns every card over (hands, draw
+  pile and discard pile, whose order reverses), so the old bottom discard is the
+  new top and play continues on the other side. Opponents see the inactive
+  side of your hand; nobody sees the inactive side of their own.
+* If the card turned up by a Flip is a Wild, the flipper names the colour.
+* Draw One / Draw Five: next player draws and is skipped. Skip Everyone: all
+  others are skipped, so you go again.
+* Wild Draw Two and Wild Draw Colour are legal only without a card of the colour
+  in play (or, with the house rule, any other playable card) and may be
+  challenged: Draw Two guilty -> offender draws 2, innocent -> challenger draws 4;
+  Draw Colour: the victim draws until they hit the named colour; guilty ->
+  offender does instead, innocent -> challenger does, plus 2 more.
+* A Flip turned up as the first card flips the table before the first turn.
+  Wild Draw Two can't open a round. Cards score by the side in play at the end.
 """
 from __future__ import annotations
 
@@ -30,6 +50,13 @@ from .base import Game, GameError, Results
 COLORS = ("red", "yellow", "green", "blue")
 WILDS = ("wild", "wild4", "swap", "custom")
 POINTS = {"skip": 20, "reverse": 20, "draw2": 20, "wild": 50, "wild4": 50, "swap": 40, "custom": 40}
+
+# UNO Flip
+DARK = ("pink", "teal", "purple", "orange")
+FLIP_WILDS = ("wild", "wild2", "wildcolor")
+FLIP_POINTS = {"draw1": 10, "draw5": 20, "reverse": 20, "skip": 20, "flip": 20, "skipall": 30,
+               "wild": 40, "wild2": 50, "wildcolor": 60}
+CHALLENGEABLE = ("wild4", "wild2", "wildcolor")
 
 
 def build_deck(modern: bool) -> list[dict[str, Any]]:
@@ -56,12 +83,43 @@ def build_deck(modern: bool) -> list[dict[str, Any]]:
     return cards
 
 
+def build_flip_deck(rng) -> list[dict[str, Any]]:
+    """112 cards, each a light face (active) with a dark face underneath in "other"."""
+    def side(colors: tuple[str, ...], actions: tuple[str, ...], wilds: tuple[str, ...]) -> list[dict[str, Any]]:
+        faces: list[dict[str, Any]] = []
+        for c in colors:
+            for v in range(1, 10):
+                faces += [{"color": c, "kind": "number", "value": v}] * 2
+            for kind in actions:
+                faces += [{"color": c, "kind": kind, "value": None}] * 2
+        for kind in wilds:
+            faces += [{"color": "wild", "kind": kind, "value": None}] * 4
+        return [dict(f) for f in faces]
+
+    light = side(COLORS, ("draw1", "skip", "reverse", "flip"), ("wild", "wild2"))
+    dark = side(DARK, ("draw5", "skipall", "reverse", "flip"), ("wild", "wildcolor"))
+    rng.shuffle(dark)
+    return [{"id": i, **lf, "other": df} for i, (lf, df) in enumerate(zip(light, dark))]
+
+
 def ordinal(n: int) -> str:
     return f"{n}{'tsnrhtdd'[(n // 10 % 10 != 1) * (n % 10 < 4) * n % 10::4]}"
 
 
 def card_points(card: dict[str, Any]) -> int:
-    return card["value"] if card["kind"] == "number" else POINTS[card["kind"]]
+    if card["kind"] == "number":
+        return card["value"]
+    return FLIP_POINTS[card["kind"]] if "other" in card else POINTS[card["kind"]]
+
+
+def face(card: dict[str, Any]) -> dict[str, Any]:
+    """The side its holder can see; the other face stays private."""
+    return {k: v for k, v in card.items() if k != "other"}
+
+
+def back(card: dict[str, Any]) -> dict[str, Any]:
+    """What everyone else sees of a Flip card: its inactive face (no id, so it can't be tracked)."""
+    return dict(card["other"])
 
 
 class Uno(Game):
@@ -76,19 +134,23 @@ class Uno(Game):
         self.left: list[str] = []            # quit mid-game
         self.bluff = "color" if self.options.get("bluff") == "color" else "any"
         self.reveal: dict[str, Any] | None = None   # the challenged hand, shown to the challenger
-        self.modern = bool(self.options.get("modern", False))
-        self.deck_size = len(build_deck(self.modern))
-        self.draw_pile = build_deck(self.modern)
+        self.flip = self.options.get("modern") == "flip"
+        self.modern = self.options.get("modern") is True
+        self.dark = False                    # Flip: which side is in play
+        self.wilds = FLIP_WILDS if self.flip else WILDS
+        self.draw_pile = build_flip_deck(self.rng) if self.flip else build_deck(self.modern)
+        self.deck_size = len(self.draw_pile)
         self.rng.shuffle(self.draw_pile)
         self.discard: list[dict[str, Any]] = []
         self.hands: dict[str, list[dict[str, Any]]] = {p: [] for p in self.players}
         self.direction = 1
         self.color = ""
-        self.phase = "play"                  # play | drawn | challenge | start_color
+        self.phase = "play"                  # play | drawn | challenge | start_color (also after a Flip turns up a Wild)
         self.drawn_id: int | None = None
         self.challenge: dict[str, Any] | None = None   # {"from", "victim", "guilty"}
         self.said_uno: set[str] = set()
         self.vulnerable: set[str] = set()
+        self.flip_pick = False               # the start_color phase belongs to whoever just flipped
         first = self.options.get("first")
         if first in self.players:
             self.dealer = (self.players.index(first) - 1) % len(self.players)
@@ -142,7 +204,7 @@ class Uno(Game):
         while True:
             card = self._pop()
             assert card is not None
-            if card["kind"] == "wild4":
+            if card["kind"] in ("wild4", "wild2"):
                 self.draw_pile.insert(0, card)
                 self.rng.shuffle(self.draw_pile)
                 continue
@@ -157,17 +219,37 @@ class Uno(Game):
         elif kind == "reverse":
             self.direction = -1
             self.turn = self.dealer
-        elif kind == "draw2":
-            self._give(self.players[first], 2)
+        elif kind in ("draw2", "draw1"):
+            self._give(self.players[first], 2 if kind == "draw2" else 1)
             self.turn = self._idx(1, first)
-        elif kind in WILDS:
+        elif kind == "flip":
+            self.emit("start", card=card)
+            self._flip(None)
+            if self.top["kind"] in self.wilds:
+                self.phase = "start_color"
+            return
+        elif kind in self.wilds:
             self.color = ""
             self.phase = "start_color"
         self.emit("start", card=card)
 
+    def _flip(self, pid: str | None) -> None:
+        """Turn the whole table over. The discard pile flips as a stack, so its old bottom card is the new top."""
+        for pile in (self.draw_pile, self.discard, *self.hands.values()):
+            for c in pile:
+                active = {k: c[k] for k in ("color", "kind", "value")}
+                c.update(c["other"])
+                c["other"] = active
+        self.discard.reverse()
+        self.draw_pile.reverse()
+        self.dark = not self.dark
+        top = self.top
+        self.color = "" if top["kind"] in self.wilds else top["color"]
+        self.emit("flip", pid=pid, side="dark" if self.dark else "light", top=face(top))
+
     # --- rules --------------------------------------------------------------
     def playable(self, card: dict[str, Any]) -> bool:
-        if card["kind"] in WILDS:
+        if card["kind"] in self.wilds:
             return True
         if card["color"] == self.color:
             return True
@@ -191,8 +273,12 @@ class Uno(Game):
         # The next player taking their turn ends everyone else's catch window.
         self.vulnerable = {p for p in self.vulnerable if p == actor}
 
+    @property
+    def palette(self) -> tuple[str, ...]:
+        return DARK if self.dark else COLORS
+
     def _check_color(self, color: Any) -> str:
-        if color not in COLORS:
+        if color not in self.palette:
             raise GameError("Pick a colour")
         return color
 
@@ -219,6 +305,10 @@ class Uno(Game):
                 self._swap(pid, action.get("target"))
             self.phase = "play"
             self.emit("color", pid=pid, color=self.color)
+            if self.flip_pick:
+                # a Flip turned up a Wild: the flipper named the colour, now the next player goes
+                self.flip_pick = False
+                self._advance()
         elif t == "play":
             self._play(pid, action)
         elif t == "draw":
@@ -280,18 +370,18 @@ class Uno(Game):
         kind = card["kind"]
         last = len(hand) == 1
         color = card["color"]
-        if kind in WILDS:
+        if kind in self.wilds:
             color = self._check_color(action.get("color"))
         if kind == "swap" and not last and (action.get("target") not in self.players or action.get("target") == pid):
             raise GameError("Choose who to swap with")
         prev_color = self.color
-        bad = [c["id"] for c in hand if c is not card and self._bluffs_with(c)] if kind == "wild4" else []
+        bad = [c["id"] for c in hand if c is not card and self._bluffs_with(c)] if kind in CHALLENGEABLE else []
 
         hand.remove(card)
         self.discard.append(card)
         self.color = color
         self.drawn_id = None
-        self.emit("play", pid=pid, card=card, color=color)
+        self.emit("play", pid=pid, card=face(card), color=color)
 
         if len(hand) == 1 and pid not in self.said_uno:
             self.vulnerable.add(pid)
@@ -310,14 +400,25 @@ class Uno(Game):
             else:
                 self.direction *= -1
                 self._advance()
-        elif kind == "draw2":
+        elif kind in ("draw2", "draw1", "draw5"):
             victim = self._next_pid()
-            self._give(victim, 2)
-            self.emit("forced_draw", pid=victim, count=2, card=card)
+            count = {"draw2": 2, "draw1": 1, "draw5": 5}[kind]
+            self._give(victim, count)
+            self.emit("forced_draw", pid=victim, count=count, card=face(card))
             self._advance(1)
-        elif kind == "wild4":
+        elif kind == "skipall":
+            self._advance(n - 1)
+        elif kind == "flip":
+            self._flip(pid)
+            if self.top["kind"] in self.wilds:
+                self.phase = "start_color"
+                self.flip_pick = True
+            else:
+                self._advance()
+        elif kind in CHALLENGEABLE:
             victim = self._next_pid()
-            self.challenge = {"from": pid, "victim": victim, "guilty": bool(bad), "bad": bad, "color": prev_color}
+            self.challenge = {"from": pid, "victim": victim, "guilty": bool(bad), "bad": bad, "color": prev_color,
+                              "kind": kind, "named": color}
             self._advance()
             self.phase = "challenge"
         elif kind == "swap":
@@ -330,9 +431,26 @@ class Uno(Game):
             self.emit("custom", pid=pid)
             self._advance()
 
+    def _draw_until(self, pid: str, color: str, extra: int = 0) -> int:
+        """Wild Draw Colour: keep drawing until the named colour turns up (then `extra` more)."""
+        got = 0
+        while True:
+            if not self._give(pid, 1):
+                break
+            got += 1
+            if self.hands[pid][-1]["color"] == color:
+                break
+        return got + self._give(pid, extra)
+
+    def _penalty(self, pid: str, kind: str, named: str, extra: int = 0) -> int:
+        """Hand pid the draw a challengeable wild carries; returns how many cards it was."""
+        if kind == "wildcolor":
+            return self._draw_until(pid, named, extra)
+        return self._give(pid, {"wild4": 4, "wild2": 2}[kind] + extra)
+
     def _bluffs_with(self, c: dict[str, Any]) -> bool:
-        """Would holding this card make a Wild Draw Four illegal?"""
-        if c["kind"] in WILDS:
+        """Would holding this card make a Wild Draw Four / Two / Colour illegal?"""
+        if c["kind"] in self.wilds:
             return False
         if self.bluff == "color":
             return c["color"] == self.color
@@ -345,19 +463,23 @@ class Uno(Game):
         self.challenge = None
         if challenged and not ch["guilty"]:
             # A clean hand is shown to the challenger only, as proof; a caught bluff stays hidden.
-            self.reveal = {"to": pid, "of": ch["from"], "cards": [dict(c) for c in self.hands[ch["from"]]],
-                           "bad": ch["bad"], "color": ch["color"], "guilty": ch["guilty"], "id": self.seq + 1}
+            self.reveal = {"to": pid, "of": ch["from"], "cards": [face(c) for c in self.hands[ch["from"]]],
+                           "bad": ch["bad"], "color": ch["color"], "guilty": ch["guilty"], "id": self.seq + 1,
+                           "kind": ch.get("kind", "wild4")}
+        kind, named = ch.get("kind", "wild4"), ch.get("named", "")
         if not challenged:
-            self._give(pid, 4)
-            self.emit("forced_draw", pid=pid, count=4)
+            got = self._penalty(pid, kind, named)
+            self.emit("forced_draw", pid=pid, count=got, card={"kind": kind, "color": "wild", "value": None})
             self._advance()
         elif ch["guilty"]:
-            self._give(ch["from"], 4)
-            self.emit("challenge", pid=pid, offender=ch["from"], guilty=True, bad=len(ch["bad"]), color=ch["color"])
+            got = self._penalty(ch["from"], kind, named)
+            self.emit("challenge", pid=pid, offender=ch["from"], guilty=True, bad=len(ch["bad"]), color=ch["color"],
+                      count=got, card=kind)
             self.phase = "play"
         else:
-            self._give(pid, 6)
-            self.emit("challenge", pid=pid, offender=ch["from"], guilty=False, bad=0, color=ch["color"])
+            got = self._penalty(pid, kind, named, extra=2)
+            self.emit("challenge", pid=pid, offender=ch["from"], guilty=False, bad=0, color=ch["color"],
+                      count=got, card=kind)
             self._advance()
 
     # --- going out ----------------------------------------------------------
@@ -369,19 +491,26 @@ class Uno(Game):
         elif kind == "reverse":
             self.direction *= -1
             self._advance()
-        elif kind in ("draw2", "wild4"):
+        elif kind in ("draw2", "draw1", "draw5", "wild4", "wild2", "wildcolor"):
             victim = self._next_pid()
-            count = 2 if kind == "draw2" else 4
-            self._give(victim, count)
-            self.emit("forced_draw", pid=victim, count=count, card=card)
+            if kind == "wildcolor":
+                count = self._draw_until(victim, self.color)
+            else:
+                count = self._give(victim, {"draw2": 2, "draw1": 1, "draw5": 5, "wild4": 4, "wild2": 2}[kind])
+            self.emit("forced_draw", pid=victim, count=count, card=face(card))
             self._advance(1)
+        elif kind == "flip":
+            self._flip(pid)
+            self._advance()
+            if self.top["kind"] in self.wilds:
+                self.phase = "start_color"      # the finisher's gone, so the next player names it
         elif kind == "custom":
             for p in self.players:
                 if p != pid:
                     self._give(p, 2)
             self.emit("custom", pid=pid)
             self._advance()
-        else:                                   # numbers, Wild, and Swap (an empty hand swaps nothing)
+        else:                                   # numbers, Wild, Skip Everyone, and Swap (an empty hand swaps nothing)
             self._advance()
         # penalties from the last card land first, then the finisher collects what's left in the other hands
         pts = sum(card_points(c) for p in self.players if p != pid for c in self.hands[p])
@@ -403,6 +532,7 @@ class Uno(Game):
             return
         if cur == pid:
             self.turn = idx % len(self.players) if self.direction == 1 else (idx - 1) % len(self.players)
+            self.flip_pick = False
             if self.phase != "start_color":
                 self.phase = "play"
             self.drawn_id = None
@@ -465,10 +595,12 @@ class Uno(Game):
                 playable = [c["id"] for c in me if self.playable(c)]
             elif self.phase == "drawn":
                 playable = [self.drawn_id] if self.drawn_id is not None else []
+        hidden = self.flip
+        pile_back = back(self.draw_pile[-1]) if hidden and self.draw_pile else None
         return {
-            "hand": me or [],
+            "hand": [face(c) for c in me] if me else [],
             "counts": {p: len(h) for p, h in self.hands.items()},
-            "top": self.top,
+            "top": face(self.top),
             "color": self.color,
             "direction": self.direction,
             "turn": self.players[self.turn],
@@ -476,7 +608,8 @@ class Uno(Game):
             "drawnId": self.drawn_id if my_turn else None,
             "playable": playable,
             "challenge": ({"from": self.challenge["from"], "victim": self.challenge["victim"],
-                           "color": self.challenge["color"], "rule": self.bluff}
+                           "color": self.challenge["color"], "rule": self.bluff,
+                           "kind": self.challenge.get("kind", "wild4"), "named": self.challenge.get("named")}
                           if self.challenge else None),
             "reveal": self.reveal if self.reveal and self.reveal["to"] == pid else None,
             "seats": self.seats,
@@ -486,6 +619,13 @@ class Uno(Game):
             "vulnerable": sorted(self.vulnerable),
             "drawCount": len(self.draw_pile),
             "modern": self.modern,
-            "hands": self.hands if self.over else None,
+            "flip": self.flip,
+            "side": "dark" if self.dark else "light",
+            "flipPick": self.flip_pick,
+            "palette": list(self.palette),
+            # Flip: you see the far side of everyone else's cards, and of the top of the draw pile
+            "backs": ({p: [back(c) for c in h] for p, h in self.hands.items() if p != pid} if hidden and not self.over else None),
+            "pileBack": pile_back,
+            "hands": {p: [face(c) for c in h] for p, h in self.hands.items()} if self.over else None,
             "scores": self.scores,
         }

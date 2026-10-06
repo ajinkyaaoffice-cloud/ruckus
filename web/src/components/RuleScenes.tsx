@@ -11,7 +11,10 @@ import { reducedMotion } from '../lib/perf'
 
 const ME = '#e64fe0'
 const YOU = '#45b8ff'
-const CH: Record<string, string> = { red: '#ff5d73', yellow: '#ffc93c', green: '#43d17a', blue: '#3d8bff', wild: '#1b1f3f' }
+const CH: Record<string, string> = {
+  red: '#ff5d73', yellow: '#ffc93c', green: '#43d17a', blue: '#3d8bff', wild: '#1b1f3f',
+  pink: '#ff5fb8', teal: '#14b8a6', purple: '#8b5cf6', orange: '#ff8a1f',
+}
 
 type Build = (tl: gsap.core.Timeline, svg: SVGSVGElement) => void
 
@@ -65,23 +68,25 @@ function G({ name, color, size = 20, cls }: { name: GlyphName; color: string; si
   )
 }
 
-function MiniCard({ cls, c, t, back }: { cls: string; c?: string; t?: string; back?: boolean }) {
+/** `dark`: an UNO Flip dark-side face — black frame and oval, glyph in the card's colour. */
+function MiniCard({ cls, c, t, back, dark }: { cls: string; c?: string; t?: string; back?: boolean; dark?: boolean }) {
   const col = back ? '#1b1f3f' : CH[c ?? 'red']
+  const wheel = dark ? [CH.pink, CH.teal, CH.orange, CH.purple] : [CH.red, CH.blue, CH.yellow, CH.green]
   return (
     <g className={cls} data-o>
-      <rect x={-17} y={-25} width={34} height={50} rx={5} fill="#fff" stroke="rgba(27,31,63,.3)" />
+      <rect x={-17} y={-25} width={34} height={50} rx={5} fill={dark ? '#1b1f3f' : '#fff'} stroke="rgba(27,31,63,.3)" />
       <rect className="in" x={-14} y={-22} width={28} height={44} rx={3.5} fill={col} />
-      <ellipse rx={10.5} ry={17} transform="rotate(28)" fill={back ? '#ff5d73' : '#fff'} />
+      <ellipse rx={10.5} ry={17} transform="rotate(28)" fill={back ? '#ff5d73' : dark ? '#1b1f3f' : '#fff'} />
       {back && <text dy="0.36em" textAnchor="middle" transform="rotate(-18)" className="rs-uno">UNO</text>}
-      {!back && c === 'wild' && !t && (
-        <g transform="rotate(28)">
-          <path d="M0 0 L0 -15 A10 15 0 0 1 9 0 Z" fill={CH.red} />
-          <path d="M0 0 L9 0 A10 15 0 0 1 0 15 Z" fill={CH.blue} />
-          <path d="M0 0 L0 15 A10 15 0 0 1 -9 0 Z" fill={CH.yellow} />
-          <path d="M0 0 L-9 0 A10 15 0 0 1 0 -15 Z" fill={CH.green} />
+      {!back && c === 'wild' && (!t || dark) && (
+        <g transform="rotate(28)" opacity={t ? 0.55 : 1}>
+          <path d="M0 0 L0 -15 A10 15 0 0 1 9 0 Z" fill={wheel[0]} />
+          <path d="M0 0 L9 0 A10 15 0 0 1 0 15 Z" fill={wheel[1]} />
+          <path d="M0 0 L0 15 A10 15 0 0 1 -9 0 Z" fill={wheel[2]} />
+          <path d="M0 0 L-9 0 A10 15 0 0 1 0 -15 Z" fill={wheel[3]} />
         </g>
       )}
-      {!back && t && <text dy="0.36em" textAnchor="middle" className="rs-num" fontSize={t.length > 1 ? 13 : 18} fill={col}>{t}</text>}
+      {!back && t && <text dy="0.36em" textAnchor="middle" className="rs-num" fontSize={t.length > 1 ? 13 : 18} fill={c === 'wild' && dark ? '#fff' : col}>{t}</text>}
     </g>
   )
 }
@@ -253,6 +258,117 @@ const UnoWin = () => (
       <rect x={-50} y={102} width={100} height={30} rx={15} fill="#ffc93c" />
       <text y={117} dy="0.36em" textAnchor="middle" className="rs-num" fontSize={15} fill="#1b1f3f">+<tspan>0</tspan> pts</text>
     </g>
+  </Scene>
+)
+
+/* ---------- UNO Flip ---------- */
+
+/** One card that can show either face; `.lt` / `.dk` swap mid-turn. */
+function TwoFace({ cls, l, d }: { cls: string; l: [string, string?]; d: [string, string?] }) {
+  return (
+    <g className={cls} data-o>
+      <g className="lt"><MiniCard cls="f" c={l[0]} t={l[1]} /></g>
+      <g className="dk"><MiniCard cls="f" c={d[0]} t={d[1]} dark /></g>
+    </g>
+  )
+}
+
+const UnoFlipTurn = () => (
+  <Scene build={(tl) => {
+    const all = '.pile, .h1, .h2, .h3, .fl'
+    tl.set(...hand('.pile', 120, 46, -4)).set(...hand('.h1', 72, 122, -10)).set(...hand('.h2', 120, 118)).set(...hand('.h3', 168, 122, 10))
+      .set(...hand('.fl', 214, 64, 12)).set(`${all} .lt`, { opacity: 1 }).set(`${all} .dk`, { opacity: 0 })
+      .set('.night', { opacity: 0 }).set('.l1, .l2', { opacity: 0, scale: 0.4 })
+      .to('.fl', { x: 122, y: 44, rotation: 6, duration: 0.6, ease: 'back.out(1.3)' }, 0.4)
+      .to('.l1', { opacity: 1, scale: 1, ease: 'back.out(3)' })
+      .to(all, { scaleX: 0, duration: 0.2, ease: 'power1.in', stagger: 0.06 }, '+=0.5')
+      // the pile turns over as a stack: the Flip goes to the bottom, the old bottom card is on top
+      .set(`${all} .lt`, { opacity: 0 }).set(`${all} .dk`, { opacity: 1 }).set('.fl', { opacity: 0 })
+      .to('.night', { opacity: 1, duration: 0.4 }, '<')
+      .to(all, { scaleX: 1, duration: 0.3, ease: 'back.out(2)', stagger: 0.06 })
+      .to('.l1', { opacity: 0, duration: 0.2 }, '<')
+      .to('.l2', { opacity: 1, scale: 1, ease: 'back.out(3)' })
+  }}>
+    <rect className="night" x={-20} y={-20} width={280} height={190} fill="#1b1f3f" />
+    <TwoFace cls="pile" l={['green', '4']} d={['purple', '8']} />
+    <TwoFace cls="h1" l={['red', '2']} d={['teal', '+5']} />
+    <TwoFace cls="h2" l={['blue', '7']} d={['orange', '3']} />
+    <TwoFace cls="h3" l={['wild']} d={['pink', '6']} />
+    <TwoFace cls="fl" l={['yellow', '↻']} d={['pink', '1']} />
+    <Pill cls="l1" x={120} y={84} text="flip!" bg={CH.yellow} fg="#1b1f3f" />
+    <Pill cls="l2" x={120} y={84} text="everything turns over" bg={CH.purple} />
+  </Scene>
+)
+
+const UnoFlipLight = () => (
+  <Scene build={(tl) => {
+    tl.set('.k1, .k2, .k3', { scale: 0, rotation: -30, y: 56 }).set('.k1', { x: 50 }).set('.k2', { x: 120 }).set('.k3', { x: 190 })
+      .set('.p1, .p2, .p3', { opacity: 0, scale: 0.4 })
+    ;(['1', '2', '3'] as const).forEach((n, i) => {
+      tl.to(`.k${n}`, { scale: 1, rotation: 0, duration: 0.5, ease: 'back.out(2.4)' }, i === 0 ? 0.3 : '+=0.35')
+        .to(`.p${n}`, { opacity: 1, scale: 1, ease: 'back.out(3)' }, '-=0.2')
+    })
+    tl.to('.k1', { y: 48, duration: 0.15, yoyo: true, repeat: 3 }, '+=0.3')
+      .to('.k2', { scaleX: -1, duration: 0.4, yoyo: true, repeat: 1, ease: 'power2.inOut' }, '<0.2')
+      .to('.k3', { rotation: 12, duration: 0.1, yoyo: true, repeat: 5 }, '<0.2')
+  }}>
+    <MiniCard cls="k1" c="red" t="+1" />
+    <MiniCard cls="k2" c="yellow" t="↻" />
+    <MiniCard cls="k3" c="wild" t="+2" />
+    <Pill cls="p1" x={50} y={112} text="draw 1, miss go" />
+    <Pill cls="p2" x={120} y={112} text="flip the table" />
+    <Pill cls="p3" x={190} y={112} text="wild draw 2" bg={CH.red} />
+  </Scene>
+)
+
+const UnoFlipDark = () => (
+  <Scene build={(tl) => {
+    tl.set('.k1, .k2, .k3', { scale: 0, rotation: -30, y: 56 }).set('.k1', { x: 50 }).set('.k2', { x: 120 }).set('.k3', { x: 190 })
+      .set('.p1, .p2, .p3', { opacity: 0, scale: 0.4 }).set('.ring', { opacity: 0, scale: 0.5 })
+    ;(['1', '2', '3'] as const).forEach((n, i) => {
+      tl.to(`.k${n}`, { scale: 1, rotation: 0, duration: 0.5, ease: 'back.out(2.4)' }, i === 0 ? 0.3 : '+=0.35')
+        .to(`.p${n}`, { opacity: 1, scale: 1, ease: 'back.out(3)' }, '-=0.2')
+    })
+    tl.to('.k1', { y: 48, duration: 0.12, yoyo: true, repeat: 5 }, '+=0.3')
+      .to('.ring', { opacity: 1, scale: 1.4, duration: 0.5, ease: 'expo.out' }, '<0.2')
+      .to('.ring', { opacity: 0, duration: 0.3 })
+      .to('.k3', { rotation: 360, duration: 0.6, ease: 'power2.inOut' }, '<')
+  }}>
+    <rect x={-20} y={-20} width={280} height={190} fill="#1b1f3f" />
+    <circle className="ring" cx={0} cy={0} r={30} fill="none" stroke={CH.teal} strokeWidth={3} transform="translate(120 56)" data-o />
+    <MiniCard cls="k1" c="pink" t="+5" dark />
+    <MiniCard cls="k2" c="teal" t="⊘" dark />
+    <MiniCard cls="k3" c="wild" t="+?" dark />
+    <Pill cls="p1" x={50} y={112} text="draw 5, miss go" bg={CH.pink} />
+    <Pill cls="p2" x={120} y={112} text="skip everyone" bg={CH.teal} />
+    <Pill cls="p3" x={190} y={112} text="draw till colour" bg={CH.purple} />
+  </Scene>
+)
+
+const UnoDrawColour = () => (
+  <Scene build={(tl) => {
+    tl.set(...hand('.w', 64, 56, -6)).set('.w .in', { fill: CH.wild }).set('.chip', { x: 64, y: 104, opacity: 0, scale: 0.4 })
+      .set('.d0, .d1, .d2, .d3', { x: 120, y: 56, opacity: 0, scale: 0.6, rotation: 0 }).set('.l1', { opacity: 0, scale: 0.4 })
+      .to('.w', { scale: 1.12, duration: 0.15, yoyo: true, repeat: 1 }, 0.3)
+      .to('.w .in', { fill: CH.orange, duration: 0.3 }, '<')
+      .to('.chip', { opacity: 1, scale: 1, ease: 'back.out(3)' })
+    ;[0, 1, 2, 3].forEach((i) => {
+      tl.to(`.d${i}`, { opacity: 1, scale: 0.85, x: 128 + i * 26, y: 100, rotation: -8 + i * 6, duration: 0.4, ease: 'back.out(1.8)' }, '+=0.25')
+    })
+    tl.to('.d3', { y: 92, scale: 1, duration: 0.25, ease: 'back.out(3)' })
+      .to('.l1', { opacity: 1, scale: 1, ease: 'back.out(3)' }, '<')
+  }}>
+    <rect x={-20} y={-20} width={280} height={190} fill="#1b1f3f" />
+    <MiniCard cls="w" c="wild" t="+?" dark />
+    <g className="chip" data-o>
+      <rect x={-30} y={-9} width={60} height={18} rx={9} fill={CH.orange} />
+      <text dy="0.36em" textAnchor="middle" className="rs-pill" fill="#fff">orange!</text>
+    </g>
+    <MiniCard cls="d0" c="purple" t="3" dark />
+    <MiniCard cls="d1" c="teal" t="9" dark />
+    <MiniCard cls="d2" c="pink" t="+5" dark />
+    <MiniCard cls="d3" c="orange" t="2" dark />
+    <Pill cls="l1" x={160} y={30} text="drawing stops on orange" bg={CH.orange} />
   </Scene>
 )
 
@@ -1401,9 +1517,13 @@ export const RULES: Record<string, RuleBook> = {
       { title: 'Match the top card', text: 'On your turn, play one card that matches the top card by colour, number or picture.', Scene: UnoMatch },
       { title: 'Stuck? Draw one', text: 'Nothing fits? Take one card from the deck. If it fits, you can play it right away. If not, press Pass.', Scene: UnoDraw },
       { title: 'Action cards', text: 'Skip jumps over the next player. Reverse turns the order around. Draw Two makes the next player take 2 cards and miss their go.', Scene: UnoActions },
-      { title: 'Wild cards', text: 'A Wild can go on anything, and you pick the new colour. Wild +4 also makes the next player take 4, but you may only play it when no other card in your hand could go down (with the official rule: no card of the current colour). The next player can challenge: bluffers take the 4 themselves, a wrong challenge costs 6 — and the challenger gets to see the hand.', Scene: UnoWild },
+      { title: 'Wild cards', text: 'A Wild can go on anything, and you pick the new colour. Wild +4 also makes the next player take 4, but you may only play it when no other card in your hand could go down (with the official rule: no card of the current colour). The next player can challenge: a bluffer takes the 4 themselves; a wrong challenge costs 6, and you’re shown their hand as proof.', Scene: UnoWild },
       { title: 'Shout UNO!', text: 'When you get down to one card, hit the UNO! button. Forget, and anyone can hit the big Catch! button before the next player moves — you take 2 cards.', Scene: UnoCall },
       { title: 'Going out', text: 'Play your last card and you’re out — 1st place, plus points for every card left in the other hands. You watch while everyone else plays on for 2nd, 3rd and so on, until one player is left. No stacking: a +2 can’t be passed on with another +2.', Scene: UnoWin },
+      { title: 'UNO Flip: two sides', text: 'Pick the Flip deck and every card has a light side and a dark side. Play starts on the light side. A Flip card turns the whole table over (your hand, the deck and the pile) and everyone carries on with the dark side until someone flips it back. You can’t see the other side of your own cards, but you can see it on everyone else’s.', Scene: UnoFlipTurn },
+      { title: 'Light side cards', text: 'Red, yellow, green and blue. Draw One: the next player takes 1 and misses their go. Skip, Reverse and Flip go on the same colour or the same symbol. Wild Draw Two: the next player takes 2, but only play it with no card of the colour in play. It can be challenged: a bluffer takes 2, and a wrong challenge takes 4.', Scene: UnoFlipLight },
+      { title: 'Dark side cards', text: 'Pink, teal, purple and orange. Draw Five: the next player takes 5 and misses their go. Skip Everyone skips the whole table, so you go again. Reverse and Flip work just like on the light side.', Scene: UnoFlipDark },
+      { title: 'Wild Draw Colour', text: 'Name a colour: the next player draws until they get a card of that colour, and misses their go. Like +4, it can be challenged: a bluffer draws until the colour instead, and a wrong challenge draws until the colour plus 2 more. Cards score by the side in play: Skip Everyone 30, Wild 40, Wild Draw Two 50, Wild Draw Colour 60.', Scene: UnoDrawColour },
     ],
   },
   pong: {
