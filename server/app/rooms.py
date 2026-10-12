@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import random
+import re
 import string
 import time
 from dataclasses import dataclass, field
@@ -123,7 +124,8 @@ class Room:
 
     def add(self, p: Player) -> None:
         self.players[p.id] = p
-        if self.host is None or self.host not in self.players:
+        # an offline host would leave everyone staring at "Host is picking"
+        if self.host is None or self.host not in self.players or self.players[self.host].ws is None:
             self.host = p.id
 
     def remove(self, pid: str) -> None:
@@ -420,7 +422,15 @@ class Room:
     def eligible(self) -> list[Player]:
         return [p for p in self.players.values() if p.status == "ready" and p.ws is not None]
 
+    def _claim_host(self, by: str) -> None:
+        """Whoever's here takes over from a host whose line is dead."""
+        h = self.players.get(self.host or "")
+        p = self.players.get(by)
+        if (h is None or h.ws is None) and p and p.ws is not None:
+            self.host = by
+
     async def start(self, by: str, game_id: str, options: dict[str, Any]) -> None:
+        self._claim_host(by)
         if by != self.host and not self.settings["anyonePicks"]:
             raise GameError("Only the host picks the game")
         cls = REGISTRY.get(game_id)
@@ -551,6 +561,15 @@ class Room:
         await self.sync()
 
 
+def crew_code(name: Any) -> str:
+    """Normalise a crew name to its room code. Crews are 5-12 characters, so
+    they never collide with the four-letter codes handed out for one-off rooms."""
+    code = re.sub(r"[^A-Z0-9]", "", str(name or "").upper())
+    if not 5 <= len(code) <= 12:
+        raise GameError("Crew names need 5 to 12 letters or numbers")
+    return code
+
+
 class RoomManager:
     def __init__(self, store: Store) -> None:
         self.store = store
@@ -562,13 +581,18 @@ class RoomManager:
             if code not in self.rooms:
                 return code
 
-    def create(self) -> Room:
-        room = Room(self.new_code(), self)
+    def create(self, code: str | None = None) -> Room:
+        room = Room(code or self.new_code(), self)
         self.rooms[room.code] = room
         return room
 
     def get(self, code: Any) -> Room | None:
         return self.rooms.get(str(code or "").upper().strip())
+
+    def crew(self, name: Any) -> Room:
+        """A crew's room lives at a fixed name: whoever gets there first opens it."""
+        code = crew_code(name)
+        return self.rooms.get(code) or self.create(code)
 
     def find_player(self, pid: str) -> Room | None:
         for r in self.rooms.values():

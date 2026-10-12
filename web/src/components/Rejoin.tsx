@@ -16,7 +16,7 @@ export default function Rejoin() {
   useEffect(() => {
     if (!code) return
     useNet.setState({ rejoin: null })
-    if (pathname.startsWith('/room/') || pathname.startsWith('/join/')) return
+    if (pathname.startsWith('/room/') || pathname.startsWith('/join/') || pathname.startsWith('/c/')) return
     toast.success(`Welcome back! Taking you to room ${code}`, { id: 'rejoin' })
     void go(`/room/${code}`, { label: 'WELCOME BACK!', replace: true })
   }, [code]) // eslint-disable-line react-hooks/exhaustive-deps

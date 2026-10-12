@@ -45,3 +45,12 @@
 html.low-power .lz-half { transition: none; contain: paint; }
 html.low-power .lz-box { transition: box-shadow 0.2s; }
 html.low-power .lz-box:focus { transform: none; }
+
+/* crews: a standing room for a regular group */
+.lz-crew { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.lz-crew-go b { font-size: 1.1em; letter-spacing: 0.02em; }
+.lz-crew-alt { border: 0; background: none; padding: 4px 0; color: var(--navy); font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; text-align: left; }
+.lz-crew-alt u { text-underline-offset: 3px; }
+.lz-crew-form { display: flex; gap: 8px; }
+.lz-crew-in { width: min(220px, 52vw); padding: 10px 14px 6px; border-radius: 16px; border: 3px solid var(--navy); background: #fff; color: var(--navy); font-size: 20px; letter-spacing: 0.04em; outline: none; box-shadow: 0 4px 0 var(--navy); }
+.lz-crew-in::placeholder { color: color-mix(in srgb, var(--navy) 35%, transparent); }

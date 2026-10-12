@@ -8,7 +8,7 @@ import './Qr.css'
 
 /** Pull a room code out of anything a QR might hold: a /join/CODE link, ?code=CODE, or the bare code. */
 export function extractCode(text: string): string | null {
-  const m = text.match(/\/join\/([A-Za-z]{4})\b/) || text.match(/[?&]code=([A-Za-z]{4})\b/) || text.trim().match(/^([A-Za-z]{4})$/)
+  const m = text.match(/\/c\/([A-Za-z0-9]{5,12})\b/) || text.match(/\/join\/([A-Za-z]{4})\b/) || text.match(/[?&]code=([A-Za-z]{4})\b/) || text.trim().match(/^([A-Za-z]{4})$/)
   return m ? m[1].toUpperCase() : null
 }
 

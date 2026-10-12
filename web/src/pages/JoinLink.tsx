@@ -1,12 +1,12 @@
 import { useEffect } from 'react'
 import { useParams } from 'react-router-dom'
-import { checkRoom, joinRoom, useNet } from '../lib/net'
+import { checkRoom, entryLabel, entryPath, joinRoom, useNet } from '../lib/net'
 import { useTransition } from '../components/Transition'
 import Glyph from '../components/Glyph'
 import './RoomGuard.css'
 import { toast } from '../lib/toast'
 
-/** Landing spot for QR / shared links: /join/ABCD → join, then off to dress up. */
+/** Landing spot for QR / shared links: /join/ABCD → join, then the hub (or dress-up the first time). */
 export default function JoinLink() {
   const code = (useParams().code ?? '').toUpperCase()
   const status = useNet((s) => s.status)
@@ -25,7 +25,7 @@ export default function JoinLink() {
       }
       try {
         await joinRoom(code)
-        if (!cancelled) go(`/room/${code}/avatar`, { label: 'DRESS UP!', replace: true })
+        if (!cancelled) go(entryPath(code), { label: entryLabel(), replace: true })
       } catch {
         if (!cancelled) go('/play', { label: 'OOPS', replace: true })
       }

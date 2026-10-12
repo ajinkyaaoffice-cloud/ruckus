@@ -234,6 +234,31 @@ def test_host_ends_game_without_scoring():
     asyncio.run(run())
 
 
+def test_crew_rooms_open_on_first_arrival_and_reuse_the_name():
+    from app.rooms import crew_code
+    mgr = RoomManager(NullStore())
+    a = mgr.crew("The Gang!")
+    assert a.code == "THEGANG" and mgr.crew("the gang") is a
+    for bad in ("abc", "", None, "x" * 13):
+        with pytest.raises(GameError):
+            crew_code(bad)
+    assert len(mgr.new_code()) == 4            # one-off codes can never land on a crew
+
+
+def test_an_offline_host_hands_over_to_whoever_is_here():
+    async def run():
+        room = make_room()
+        room.players["alice"].ws = None              # the host's phone died in the lobby
+        cara = Player("cara", "Cara", {}, ws=FakeWS(), status="ready")
+        room.add(cara)
+        assert room.host == "cara"
+        room.host = "alice"
+        await room.start("bobby", "tictactoe", {})   # bobby is here, so he can get things going
+        assert room.host == "bobby" and room.phase == "playing"
+        room.loop_task.cancel()
+    asyncio.run(run())
+
+
 def test_reactions_are_capped_per_ten_seconds():
     p = Player("a", "A", {})
     assert all(p.can_emote(100.0 + i) for i in range(5))

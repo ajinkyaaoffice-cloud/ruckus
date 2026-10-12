@@ -11,6 +11,7 @@ import { EmoteBar, PlayerChip } from '../components/Players'
 import { useTransition } from '../components/Transition'
 import { CATALOG, gameMeta, type GameMeta } from '../lib/catalog'
 import { leaveRoom, startGame, useNet } from '../lib/net'
+import { isCrew, lastGame, saveCrew, saveLastGame } from '../lib/crew'
 import { sfx } from '../lib/sound'
 import './Hub.css'
 import { toast } from '../lib/toast'
@@ -33,11 +34,25 @@ export default function Hub() {
   const [rules, setRules] = useState<GameMeta | null>(null)
   const [settings, setSettings] = useState(false)
   const isHost = room.host === pid
-  const canPick = isHost || room.settings.anyonePicks
+  // with the host's line dead, whoever's here can get the next game going
+  const hostAway = !room.players.find((p) => p.id === room.host)?.connected
+  const canPick = isHost || room.settings.anyonePicks || hostAway
   const ready = room.players.filter((p) => p.status === 'ready' && p.connected)
   const ranked = [...room.players].sort((a, b) => b.points - a.points || b.wins - a.wins)
   const leader = ranked[0] && ranked[0].points > 0 ? ranked[0].id : null
   useEffect(() => { idle(() => { void loadRulebook() }) }, [])
+  // the last crew room you were in becomes your one-tap way back
+  useEffect(() => { if (isCrew(room.code)) saveCrew(room.code) }, [room.code])
+  // the host can start whatever they started last time, same options, in one tap
+  const last = lastGame()
+  const lastMeta = last ? gameMeta(last.id) : undefined
+  const quick = canPick && lastMeta && ready.length >= lastMeta.min ? lastMeta : undefined
+  const quickStart = () => {
+    if (!last) return
+    sfx.slam()
+    saveLastGame(last)
+    startGame(last.id, last.options)
+  }
 
   useLayoutEffect(() => {
     const ctx = gsap.context(() => {
@@ -129,6 +144,11 @@ export default function Hub() {
             {room.players.some((p) => p.status !== 'ready') && ' · someone is still dressing up'}
             {room.settings.locked && <span className="hub-lock">Room locked</span>}
           </p>
+          {quick && (
+            <button className="bubble-btn magenta hub-quick" onClick={quickStart} data-cursor="START">
+              <Glyph name="bolt" color="#d9f66b" size={20} /> {quick.name} again
+            </button>
+          )}
         </div>
 
         <section className="hub-grid">
@@ -236,6 +256,7 @@ function StartSheet({ g, readyCount, onClose, onRules }: { g: GameMeta; readyCou
   }, [])
   const start = () => {
     sfx.slam()
+    saveLastGame({ id: g.id, options: opts })
     startGame(g.id, opts)
     onClose()
   }

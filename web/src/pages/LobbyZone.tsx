@@ -7,7 +7,8 @@ import Avatar from '../components/Avatar'
 import Glyph from '../components/Glyph'
 import QrScan from '../components/QrScan'
 import { useTransition } from '../components/Transition'
-import { checkRoom, createRoom, joinRoom, useNet } from '../lib/net'
+import { checkRoom, createRoom, entryLabel, entryPath, joinCrew, joinRoom, useNet } from '../lib/net'
+import { crewSlug, isCrew, savedCrew } from '../lib/crew'
 import { sfx } from '../lib/sound'
 import './LobbyZone.css'
 import { toast } from '../lib/toast'
@@ -22,6 +23,10 @@ export default function LobbyZone() {
   const [busy, setBusy] = useState(false)
   const [scan, setScan] = useState(false)
   const [side, setSide] = useState<'host' | 'join' | null>(null)
+  // the crew this browser last played in, and the name box for starting one
+  const [crew] = useState(savedCrew)
+  const [naming, setNaming] = useState(false)
+  const [crewName, setCrewName] = useState('')
   const inputs = useRef<(HTMLInputElement | null)[]>([])
   // hover focus is a desktop nicety; on touch a tap fires mouseenter and would reflow the whole page
   const hover = (s: 'host' | 'join' | null) => () => { if (!isTouch) setSide(s) }
@@ -57,7 +62,7 @@ export default function LobbyZone() {
     sfx.click()
     try {
       const c = await createRoom()
-      await go(`/room/${c}/avatar`, { label: 'DRESS UP!', colors: ['#d9f66b', '#e64fe0', '#1d3a6e'] })
+      await go(entryPath(c), { label: entryLabel(), colors: ['#d9f66b', '#e64fe0', '#1d3a6e'] })
     } catch {
       setBusy(false)
     }
@@ -76,7 +81,7 @@ export default function LobbyZone() {
     }
     try {
       await joinRoom(c)
-      await go(`/room/${c}/avatar`, { label: 'DRESS UP!', colors: ['#a7ecff', '#e64fe0', '#1d3a6e'] })
+      await go(entryPath(c), { label: entryLabel(), colors: ['#a7ecff', '#e64fe0', '#1d3a6e'] })
     } catch {
       setBusy(false)
     }
@@ -87,16 +92,29 @@ export default function LobbyZone() {
     if (busy) return
     setBusy(true)
     void go(async () => {
+      if (isCrew(c)) return entryPath(await joinCrew(c))
       const info = await checkRoom(c)
       if (!info.exists || info.full) {
         toast.error(info.exists ? 'That room is full' : `No room called ${c}`)
         return null
       }
       await joinRoom(c)
-      return `/room/${c}/avatar`
-    }, { label: 'DRESS UP!', colors: ['#a7ecff', '#e64fe0', '#1d3a6e'] }).then(() => {
-      if (!window.location.pathname.endsWith('/avatar')) setBusy(false)
+      return entryPath(c)
+    }, { label: entryLabel(), colors: ['#a7ecff', '#e64fe0', '#1d3a6e'] }).then(() => {
+      if (!window.location.pathname.startsWith('/room/')) setBusy(false)
     })
+  }
+
+  /** Crews go through their link, so the same page handles a pinned shortcut and this button. */
+  const openCrew = (name: string) => {
+    const slug = crewSlug(name)
+    if (slug.length < 5) {
+      sfx.bad()
+      toast.warn('Crew names need 5 to 12 letters or numbers')
+      return
+    }
+    sfx.click()
+    void go(`/c/${slug}`, { label: slug, colors: ['#d9f66b', '#e64fe0', '#1d3a6e'] })
   }
 
   const typeAt = (i: number, v: string) => {
@@ -141,6 +159,26 @@ export default function LobbyZone() {
           <button className="bubble-btn big lz-act" onClick={host} disabled={busy} data-cursor="OPEN">
             <Glyph name="plus" color="#e64fe0" size={22} /> Open a room
           </button>
+          <div className="lz-crew lz-act">
+            {crew && !naming ? (
+              <>
+                <button className="bubble-btn lime lz-crew-go" onClick={() => openCrew(crew)} disabled={busy} data-cursor="GO">
+                  <Glyph name="bolt" color="#1d3a6e" size={20} /> Jump into <b className="display">{crew}</b>
+                </button>
+                <button className="lz-crew-alt" onClick={() => { sfx.click(); setNaming(true) }}>another crew</button>
+              </>
+            ) : naming ? (
+              <form className="lz-crew-form" onSubmit={(e) => { e.preventDefault(); openCrew(crewName) }}>
+                <input className="lz-crew-in display" value={crewName} autoFocus maxLength={16} placeholder="CREW NAME"
+                  autoCapitalize="characters" aria-label="Crew name" onChange={(e) => setCrewName(crewSlug(e.target.value))} />
+                <button className="bubble-btn lime" disabled={crewName.length < 5}>Go</button>
+              </form>
+            ) : (
+              <button className="lz-crew-alt" onClick={() => { sfx.click(); setNaming(true) }}>
+                Same friends every day? <u>Start a crew</u>: one link, no codes
+              </button>
+            )}
+          </div>
         </div>
       </section>
 

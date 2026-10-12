@@ -4,6 +4,7 @@ import { intro } from '../lib/ui'
 import QRCode from 'qrcode'
 import { sfx } from '../lib/sound'
 import { api } from '../lib/net'
+import { isCrew } from '../lib/crew'
 import './Qr.css'
 
 /** Phones can't reach "localhost", so swap in the machine's LAN IP when we're served locally. */
@@ -17,7 +18,7 @@ export async function joinUrl(code: string): Promise<string> {
   } catch {
     /* fall back to current origin */
   }
-  return `${origin}/join/${code}`
+  return isCrew(code) ? `${origin}/c/${code}` : `${origin}/join/${code}`
 }
 
 export function InviteCard({ code }: { code: string }) {
@@ -60,13 +61,26 @@ export default function InviteModal({ code, onClose }: { code: string; onClose: 
       /* clipboard blocked */
     }
   }
+  const crew = isCrew(code)
+  // the phone's own share sheet goes straight to the group chat
+  const canShare = typeof navigator.share === 'function'
+  const share = async () => {
+    const url = await joinUrl(code)
+    try {
+      await navigator.share({ title: 'Ruckus', text: crew ? `Our Ruckus room. Tap to jump in:` : `Join my Ruckus room ${code}:`, url })
+    } catch {
+      /* closed the sheet */
+    }
+  }
   return (
     <div ref={root} className="qr-modal" onClick={onClose}>
       <div className="qr-sheet" onClick={(e) => e.stopPropagation()}>
         <h3 className="display">Invite friends</h3>
-        <div className="inv-code display">{code.split('').map((c, i) => <span key={i} className="inv-letter">{c}</span>)}</div>
+        <div className={`inv-code display ${crew ? 'long' : ''}`}>{code.split('').map((c, i) => <span key={i} className="inv-letter">{c}</span>)}</div>
         <InviteCard code={code} />
-        <div style={{ display: 'flex', gap: 10 }}>
+        {crew && <p className="inv-crew">Your crew’s room, every day. Pin this link in the group chat or add it to your home screen.</p>}
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
+          {canShare && <button className="bubble-btn lime" onClick={share}>Share</button>}
           <button className="bubble-btn magenta" onClick={copy}>{copied ? 'Copied!' : 'Copy link'}</button>
           <button className="bubble-btn navy" onClick={onClose}>Done</button>
         </div>

@@ -10,6 +10,7 @@ import Splash from './components/Splash'
 import Landing from './pages/Landing'
 import LobbyZone from './pages/LobbyZone'
 import JoinLink from './pages/JoinLink'
+import CrewLink from './pages/CrewLink'
 import Customize from './pages/Customize'
 import Hub from './pages/Hub'
 import RoomGuard from './pages/RoomGuard'
@@ -24,6 +25,7 @@ export default function App() {
         <Route path="/" element={<Landing />} />
         <Route path="/play" element={<LobbyZone />} />
         <Route path="/join/:code" element={<JoinLink />} />
+        <Route path="/c/:name" element={<CrewLink />} />
         <Route path="/room/:code" element={<RoomGuard />}>
           <Route index element={<Hub />} />
           <Route path="avatar" element={<Customize />} />

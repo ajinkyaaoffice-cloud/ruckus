@@ -97,3 +97,6 @@ html.low-power .hc-top, html.low-power .hc-art, html.low-power .hc-foot { transf
 
 /* room badges everyone sees */
 .hub-lock { display: inline-flex; align-items: center; gap: 5px; margin-left: 8px; padding: 3px 10px 2px; border-radius: 999px; background: var(--navy); color: #fff; font-size: 12px; font-weight: 800; vertical-align: 1px; }
+
+/* host's one-tap rerun of their last game */
+.hub-quick { margin-top: 10px; }

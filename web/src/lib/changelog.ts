@@ -7,6 +7,19 @@ export type Release = { id: string; title: string; items: string[] }
 
 export const CHANGELOG: Release[] = [
   {
+    id: '2026-10-12-crews',
+    title: 'Crews: one link, straight in',
+    items: [
+      'Start a crew from the Play page: your group gets one permanent link, like /c/THEGANG',
+      'Pin it in the group chat or add it to your home screen. Tap it and you’re in the lobby, ready',
+      'Already made your look? Joining any room now skips the dressing room. Edit it any time from the hub',
+      'The Play page remembers your crew: one tap to jump back in',
+      'Hosts get a one-tap button to start the last game again, same settings',
+      'If the host drops in the lobby, whoever’s there can pick the game',
+      'Share your room link straight from your phone’s share sheet',
+    ],
+  },
+  {
     id: '2026-10-12-breaks',
     title: 'Take a break',
     items: [

@@ -150,16 +150,18 @@ async def ws_endpoint(ws: WebSocket) -> None:
                 await err("Say hello first")
                 continue
             room = manager.find_player(pid)
+            # players with a saved look can skip the dressing room and walk in ready
+            status = "ready" if msg.get("ready") is True else "customizing"
             try:
                 if t == "create":
                     await leave_current(pid)
                     room = manager.create()
-                    p = Player(pid, name, avatar, ws=ws)
+                    p = Player(pid, name, avatar, ws=ws, status=status)
                     room.add(p)
                     await ws.send_json({"t": "joined", "code": room.code})
                     await room.sync()
-                elif t == "join":
-                    target = manager.get(msg.get("code"))
+                elif t in ("join", "crew"):
+                    target = manager.crew(msg.get("name")) if t == "crew" else manager.get(msg.get("code"))
                     if not target:
                         raise GameError("No room with that code")
                     if pid in target.players:
@@ -169,7 +171,7 @@ async def ws_endpoint(ws: WebSocket) -> None:
                     else:
                         target.can_join(pid)
                         await leave_current(pid, keep=target)
-                        target.add(Player(pid, name, avatar, ws=ws))
+                        target.add(Player(pid, name, avatar, ws=ws, status=status))
                     await ws.send_json({"t": "joined", "code": target.code})
                     await target.sync()
                     if target.game:

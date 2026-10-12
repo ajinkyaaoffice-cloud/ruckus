@@ -289,8 +289,14 @@ function awaitJoin(msg: unknown): Promise<string> {
   })
 }
 
-export const createRoom = () => awaitJoin({ t: 'create' })
-export const joinRoom = (code: string) => awaitJoin({ t: 'join', code: code.toUpperCase() })
+// anyone with a saved look walks straight in ready; first-timers still get the dressing room
+const walkIn = () => useNet.getState().profile.customized
+export const createRoom = () => awaitJoin({ t: 'create', ready: walkIn() })
+export const joinRoom = (code: string) => awaitJoin({ t: 'join', code: code.toUpperCase(), ready: walkIn() })
+export const joinCrew = (name: string) => awaitJoin({ t: 'crew', name, ready: walkIn() })
+/** Where to go once in a room: the hub, or dress-up for someone who never made a look. */
+export const entryPath = (code: string) => (walkIn() ? `/room/${code}` : `/room/${code}/avatar`)
+export const entryLabel = () => (walkIn() ? 'YOU’RE IN!' : 'DRESS UP!')
 export const leaveRoom = () => send({ t: 'leave' })
 export const act = (action: Record<string, unknown>) => send({ t: 'act', action })
 export const startGame = (game: string, options: Record<string, unknown> = {}) => send({ t: 'start', game, options })

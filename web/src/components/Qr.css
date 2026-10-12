@@ -29,3 +29,7 @@
 .inv-code span { width: 58px; height: 70px; display: grid; place-items: center; padding-top: 6px; font-size: 44px; background: var(--magenta); color: #fff; border-radius: 16px; box-shadow: 0 6px 0 var(--navy); }
 .inv-code span:nth-child(even) { background: var(--navy); rotate: 5deg; box-shadow: 0 6px 0 var(--magenta); }
 .inv-code span:nth-child(odd) { rotate: -4deg; }
+
+.inv-crew { margin: 0; max-width: 300px; text-align: center; font-size: 14px; font-weight: 600; line-height: 1.4; color: var(--navy); }
+.inv-code.long { gap: 4px; width: 100%; justify-content: center; }
+.inv-code.long span { flex: 0 1 38px; min-width: 18px; width: auto; height: clamp(38px, 10vw, 54px); font-size: clamp(18px, 6vw, 30px); border-radius: 10px; box-shadow: 0 4px 0 var(--navy); }
