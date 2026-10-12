@@ -405,7 +405,7 @@ export default function Landing() {
         <div className="games-pin">
           <div className="games-head">
             <span className="sticker">The lineup</span>
-            <h2 className="display" data-split><Split text="Six ways to" /><br /><Split text="ruin a friendship" /></h2>
+            <h2 className="display" data-split><Split text="Seven ways to" /><br /><Split text="ruin a friendship" /></h2>
           </div>
           <div className="games-track">
             {CATALOG.map((g, i) => (

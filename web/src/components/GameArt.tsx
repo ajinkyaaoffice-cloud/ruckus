@@ -77,6 +77,21 @@ export default function GameArt({ id, className }: { id: string; className?: str
             <circle cx="137" cy="137" r="3.5" fill={N} /><circle cx="149" cy="149" r="3.5" fill={N} /><circle cx="143" cy="143" r="3.5" fill={N} /></g>
         </svg>
       )
+    case 'mogul':
+      return (
+        <svg {...common}>
+          <rect x="34" y="34" width="132" height="132" rx="14" fill={W} />
+          <rect x="34" y="34" width="132" height="132" rx="14" fill="none" stroke={N} strokeWidth="5" />
+          <path d="M34 62 H166 M34 138 H166 M62 34 V166 M138 34 V166" stroke={N} strokeWidth="4" />
+          <rect x="62" y="34" width="76" height="10" fill={M} /><rect x="156" y="62" width="10" height="76" fill={A} />
+          <rect x="62" y="156" width="76" height="10" fill={C} /><rect x="34" y="62" width="10" height="76" fill={L} />
+          <g className="art-float-a"><path d="M78 118 V92 L100 74 L122 92 V118 Z" fill={O} stroke={N} strokeWidth="5" strokeLinejoin="round" />
+            <rect x="93" y="100" width="14" height="18" rx="2" fill={N} /></g>
+          <g className="art-wiggle"><circle cx="150" cy="150" r="18" fill={A} stroke={N} strokeWidth="4" />
+            <text x="150" y="158" textAnchor="middle" fontFamily="Luckiest Guy" fontSize="22" fill={N}>$</text></g>
+          <text x="50" y="56" textAnchor="middle" fontFamily="Luckiest Guy" fontSize="15" fill={M}>GO</text>
+        </svg>
+      )
     default:
       return <svg {...common}><circle cx="100" cy="100" r="60" fill={M} /></svg>
   }

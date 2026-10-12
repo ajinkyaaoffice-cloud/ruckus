@@ -866,6 +866,253 @@ const LudoFinish = () => (
   </Scene>
 )
 
+/* ---------- Mogul ---------- */
+
+const MSKY = '#8fd8ff', MPINK = '#ff5fb8', MNAVY = '#3d5bd9', MLIME = '#d9f66b'
+const mx = (x0: number, i: number) => x0 + i * 26
+
+/** A row of board tiles with colour bands; `go` marks the GO tile. */
+function MRow({ x0, y, n, band = () => null, go = -1 }: { x0: number; y: number; n: number; band?: (i: number) => string | null; go?: number }) {
+  return (
+    <g>
+      {Array.from({ length: n }, (_, i) => {
+        const b = band(i)
+        return (
+          <g key={i}>
+            <rect x={mx(x0, i) - 13} y={y - 18} width={26} height={36} fill={i === go ? MLIME : '#fff8ec'} stroke="#1d3a6e" strokeWidth={1.5} />
+            {b && <rect x={mx(x0, i) - 13} y={y - 18} width={26} height={8} fill={b} stroke="#1d3a6e" strokeWidth={1.5} />}
+            {i === go && <text x={mx(x0, i)} y={y + 2} dy="0.36em" textAnchor="middle" className="rs-num" fontSize={11} fill="#e64fe0">GO</text>}
+          </g>
+        )
+      })}
+    </g>
+  )
+}
+function MToken({ cls, color }: { cls: string; color: string }) {
+  return (
+    <g className={cls} data-o>
+      <ellipse cy={9} rx={8} ry={2.6} fill="#1d3a6e" opacity={0.25} />
+      <circle r={8} fill={color} stroke="#1d3a6e" strokeWidth={2} />
+      <circle cx={-2.6} cy={-1.5} r={1.4} fill="#1d3a6e" /><circle cx={2.6} cy={-1.5} r={1.4} fill="#1d3a6e" />
+      <path d="M-3 2.6 Q0 5 3 2.6" stroke="#1d3a6e" strokeWidth={1.4} fill="none" strokeLinecap="round" />
+    </g>
+  )
+}
+function MDice() {
+  return (
+    <g className="dice" data-o>
+      {[[-15, 3], [15, 4]].map(([x, n]) => (
+        <g key={x} transform={`translate(${x} 0)`}>
+          <rect x={-12} y={-12} width={24} height={24} rx={6} fill="#fff" stroke="#1d3a6e" strokeWidth={2.2} />
+          {DIE_PIPS[n].map(([px, py], i) => <circle key={i} cx={px * 6} cy={py * 6} r={2.4} fill="#1d3a6e" />)}
+        </g>
+      ))}
+    </g>
+  )
+}
+const rollDice = (tl: gsap.core.Timeline, pos?: gsap.Position) =>
+  tl.to('.dice', { rotation: '+=360', y: '-=12', duration: 0.32, ease: 'power2.out' }, pos).to('.dice', { y: '+=12', duration: 0.25, ease: 'bounce.out' })
+function MCoin({ cls }: { cls: string }) {
+  return (
+    <g className={cls} data-o>
+      <circle r={7} fill="#ffc93c" stroke="#1d3a6e" strokeWidth={1.8} />
+      <text dy="0.36em" textAnchor="middle" className="rs-num" fontSize={9} fill="#1d3a6e">$</text>
+    </g>
+  )
+}
+function MHouse({ cls, hotel }: { cls: string; hotel?: boolean }) {
+  return <path className={cls} data-o d={hotel ? 'M-9 4 V-3 L0 -8 L9 -3 V4 Z' : 'M-4.5 4 V-1 L0 -5 L4.5 -1 V4 Z'} fill={hotel ? '#ff5d73' : '#43d17a'} stroke="#1d3a6e" strokeWidth={1.5} strokeLinejoin="round" />
+}
+function MDeed({ cls, color, name, price }: { cls: string; color: string; name: string; price: string }) {
+  return (
+    <g className={cls} data-o>
+      <rect x={-34} y={-24} width={68} height={48} rx={6} fill="#fff" stroke="#1d3a6e" strokeWidth={2} />
+      <rect x={-34} y={-24} width={68} height={16} rx={6} fill={color} stroke="#1d3a6e" strokeWidth={2} />
+      <text y={-16} dy="0.36em" textAnchor="middle" className="rs-pill" fill="#1d3a6e">{name}</text>
+      <text y={8} dy="0.36em" textAnchor="middle" className="rs-num" fontSize={15} fill="#1d3a6e">{price}</text>
+    </g>
+  )
+}
+
+const MogulMove = () => (
+  <Scene build={(tl) => {
+    tl.set('.dice', { x: 196, y: 36, rotation: 0 }).set('.p', { x: mx(30, 0), y: 106 }).set('.c', { x: mx(30, 2), y: 106, opacity: 0, scale: 0.4 })
+      .set('.l1', { opacity: 0, scale: 0.4 })
+    rollDice(tl, 0.4)
+    for (const i of [1, 2, 3, 4]) {
+      tl.to('.p', { keyframes: [{ y: 92, duration: 0.09, ease: 'power1.out' }, { x: mx(30, i), y: 106, duration: 0.11, ease: 'power1.in' }] })
+      if (i === 2) tl.to('.c', { opacity: 1, scale: 1, y: 72, duration: 0.35, ease: 'back.out(2)' }, '<').to('.c', { opacity: 0, y: 52, duration: 0.3 }, '+=0.15')
+    }
+    tl.to('.l1', { opacity: 1, scale: 1, ease: 'back.out(3)' })
+  }}>
+    <MRow x0={30} y={106} n={8} go={2} band={(i) => (i === 4 ? MSKY : i === 6 ? MPINK : null)} />
+    <MDice />
+    <MCoin cls="c" />
+    <MToken cls="p" color="#e64fe0" />
+    <Pill cls="l1" x={110} y={40} text="passing GO pays $200" bg="#1d3a6e" />
+  </Scene>
+)
+
+const MogulBuy = () => (
+  <Scene build={(tl) => {
+    tl.set('.p', { x: mx(56, 0), y: 112 }).set('.d', { x: mx(56, 2), y: 52, scale: 0, opacity: 1 }).set('.tap', { x: 196, y: 128, opacity: 0 })
+      .set('.own', { scaleX: 0, transformOrigin: '50% 50%' }).set('.l1, .b1', { opacity: 0, scale: 0.4 })
+    for (const i of [1, 2]) tl.to('.p', { keyframes: [{ y: 98, duration: 0.09 }, { x: mx(56, i), y: 112, duration: 0.11 }] }, i === 1 ? 0.4 : undefined)
+    tl.to('.d', { scale: 1, duration: 0.45, ease: 'back.out(2.5)' })
+      .to('.b1', { opacity: 1, scale: 1, ease: 'back.out(3)' })
+      .to('.tap', { opacity: 1, duration: 0.2 }, '+=0.3')
+    tap(tl, '.tap')
+    tl.to('.d', { scale: 0.3, opacity: 0, x: mx(56, 2), y: 112, duration: 0.35, ease: 'power2.in' }, '+=0.1')
+      .to('.own', { scaleX: 1, duration: 0.3, ease: 'back.out(2)' })
+      .to('.b1, .tap', { opacity: 0, duration: 0.2 }, '<')
+      .to('.l1', { opacity: 1, scale: 1, ease: 'back.out(3)' })
+  }}>
+    <MRow x0={56} y={112} n={5} band={(i) => (i >= 1 && i <= 3 ? MSKY : null)} />
+    <rect className="own" data-o x={mx(56, 2) - 13} y={124} width={26} height={6} fill="#e64fe0" stroke="#1d3a6e" strokeWidth={1.2} />
+    <MToken cls="p" color="#e64fe0" />
+    <MDeed cls="d" color={MSKY} name="Kite Row" price="$100" />
+    <Pill cls="b1" x={196} y={128} text="Buy $100" bg="#e64fe0" />
+    <Tap />
+    <Pill cls="l1" x={120} y={22} text="yours! or pass → everyone bids" bg="#1d3a6e" />
+  </Scene>
+)
+
+const MogulRent = () => (
+  <Scene build={(tl) => {
+    tl.set('.p', { x: mx(70, 0), y: 100 }).set('.o', { x: 206, y: 40 }).set('.c1, .c2', { x: mx(70, 2), y: 100, opacity: 0 })
+      .set('.l1', { opacity: 0, scale: 0.4 })
+    for (const i of [1, 2]) tl.to('.p', { keyframes: [{ y: 86, duration: 0.09 }, { x: mx(70, i), y: 100, duration: 0.11 }] }, i === 1 ? 0.4 : undefined)
+    tl.to('.c1', { keyframes: [{ opacity: 1, y: 80, duration: 0.15 }, { x: 206, y: 40, duration: 0.45, ease: 'power1.in' }, { opacity: 0, duration: 0.1 }] })
+      .to('.c2', { keyframes: [{ opacity: 1, y: 80, duration: 0.15 }, { x: 206, y: 40, duration: 0.45, ease: 'power1.in' }, { opacity: 0, duration: 0.1 }] }, '-=0.5')
+      .to('.o', { scale: 1.2, yoyo: true, repeat: 1, duration: 0.15 })
+      .to('.l1', { opacity: 1, scale: 1, ease: 'back.out(3)' })
+  }}>
+    <MRow x0={70} y={100} n={5} band={(i) => (i >= 1 && i <= 3 ? MPINK : null)} />
+    {[1, 2, 3].map((i) => <rect key={i} x={mx(70, i) - 13} y={112} width={26} height={6} fill="#45b8ff" stroke="#1d3a6e" strokeWidth={1.2} />)}
+    <MToken cls="o" color="#45b8ff" />
+    <MToken cls="p" color="#e64fe0" />
+    <MCoin cls="c1" /><MCoin cls="c2" />
+    <Pill cls="l1" x={110} y={36} text="whole set? rent doubles" bg="#45b8ff" />
+  </Scene>
+)
+
+const MogulBuild = () => {
+  const xs = [80, 120, 160]
+  return (
+    <Scene build={(tl) => {
+      tl.set('.h1a, .h1b, .h1c, .h2a, .h2b, .h2c', { opacity: 0, y: -24 }).set('.ht', { opacity: 0, scale: 0 }).set('.l1, .l2', { opacity: 0, scale: 0.4 })
+      for (const k of ['h1a', 'h1b', 'h1c', 'h2a', 'h2b', 'h2c']) tl.to(`.${k}`, { opacity: 1, y: 0, duration: 0.25, ease: 'bounce.out' }, k === 'h1a' ? 0.4 : '+=0.05')
+      tl.to('.l1', { opacity: 1, scale: 1, ease: 'back.out(3)' })
+        .to('.l1', { opacity: 0, duration: 0.2 }, '+=0.9')
+        .to('.h1a, .h2a', { opacity: 0, scale: 0.4, duration: 0.2 })
+        .to('.ht', { opacity: 1, scale: 1, duration: 0.4, ease: 'back.out(3)' })
+        .to('.l2', { opacity: 1, scale: 1, ease: 'back.out(3)' })
+    }}>
+      {xs.map((x) => (
+        <g key={x}>
+          <rect x={x - 18} y={64} width={36} height={50} fill="#fff8ec" stroke="#1d3a6e" strokeWidth={1.5} />
+          <rect x={x - 18} y={64} width={36} height={12} fill="#ff8a1f" stroke="#1d3a6e" strokeWidth={1.5} />
+        </g>
+      ))}
+      {['a', 'b', 'c'].map((s, i) => (
+        <g key={s}>
+          <g transform={`translate(${xs[i] - 7} 70)`}><MHouse cls={`h1${s}`} /></g>
+          <g transform={`translate(${xs[i] + 7} 70)`}><MHouse cls={`h2${s}`} /></g>
+        </g>
+      ))}
+      <g transform={`translate(${xs[0]} 70)`}><MHouse cls="ht" hotel /></g>
+      <Pill cls="l1" x={120} y={34} text="build evenly across the set" bg="#ff8a1f" />
+      <Pill cls="l2" x={120} y={34} text="4 houses → a hotel" bg="#ff5d73" />
+      <text x={120} y={134} textAnchor="middle" className="rs-pill" fill="currentColor">one house each before a second</text>
+    </Scene>
+  )
+}
+
+const MogulCards = () => (
+  <Scene build={(tl) => {
+    tl.set('.back', { scaleX: 1, opacity: 1 }).set('.front', { scaleX: 0 }).set('.cd', { x: 120, y: 66, scale: 0.4, opacity: 0 })
+      .set('.p', { x: 40, y: 126 }).set('.l1', { opacity: 0, scale: 0.4 })
+      .to('.cd', { scale: 1, opacity: 1, duration: 0.4, ease: 'back.out(2)' }, 0.3)
+      .to('.back', { scaleX: 0, duration: 0.18, ease: 'power1.in' }, '+=0.2')
+      .to('.front', { scaleX: 1, duration: 0.18, ease: 'power1.out' })
+      .to('.p', { keyframes: [{ y: 96, duration: 0.25, ease: 'power2.out' }, { x: 200, y: 126, duration: 0.45, ease: 'bounce.out' }] }, '+=0.5')
+      .to('.l1', { opacity: 1, scale: 1, ease: 'back.out(3)' })
+  }}>
+    <rect x={186} y={110} width={28} height={30} fill={MLIME} stroke="#1d3a6e" strokeWidth={1.5} />
+    <text x={200} y={125} dy="0.36em" textAnchor="middle" className="rs-num" fontSize={11} fill="#e64fe0">GO</text>
+    <g className="cd" data-o>
+      <g className="back" data-o>
+        <rect x={-46} y={-30} width={92} height={60} rx={8} fill="#e64fe0" stroke="#1d3a6e" strokeWidth={2.5} />
+        <text dy="0.36em" textAnchor="middle" className="rs-num" fontSize={34} fill="#fff">?</text>
+      </g>
+      <g className="front" data-o>
+        <rect x={-46} y={-30} width={92} height={60} rx={8} fill="#fff8ec" stroke="#1d3a6e" strokeWidth={2.5} />
+        <text y={-12} textAnchor="middle" className="rs-pill" fill="#e64fe0">CHANCE</text>
+        <text y={6} textAnchor="middle" className="rs-pill" fill="#1d3a6e">Advance to GO</text>
+        <text y={18} textAnchor="middle" className="rs-pill" fill="#1d3a6e">collect $200</text>
+      </g>
+    </g>
+    <MToken cls="p" color="#e64fe0" />
+    <Pill cls="l1" x={92} y={18} text="16 Chance + 16 Chest cards" bg="#1d3a6e" />
+  </Scene>
+)
+
+const MogulJail = () => (
+  <Scene build={(tl) => {
+    tl.set('.p', { x: 40, y: 110, rotation: 0 }).set('.o1, .o2, .o3', { opacity: 0, scale: 0.4 })
+      .to('.p', { keyframes: [{ x: 70, y: 40, rotation: 180, duration: 0.35, ease: 'power2.out' }, { x: 92, y: 80, rotation: 360, duration: 0.35, ease: 'bounce.out' }] }, 0.4)
+      .set('.p', { rotation: 0 })
+      .to('.o1, .o2, .o3', { opacity: 1, scale: 1, ease: 'back.out(3)', stagger: 0.25 }, '+=0.3')
+  }}>
+    <rect x={62} y={52} width={60} height={60} rx={8} fill="#ffd9a8" stroke="#1d3a6e" strokeWidth={2.5} />
+    <MToken cls="p" color="#e64fe0" />
+    {[0, 1, 2, 3].map((k) => <line key={k} x1={72 + k * 13} x2={72 + k * 13} y1={56} y2={108} stroke="#1d3a6e" strokeWidth={3} />)}
+    <Pill cls="o1" x={182} y={48} text="pay $50" bg="#1d3a6e" />
+    <Pill cls="o2" x={182} y={78} text="use a free card" bg="#43d17a" fg="#1d3a6e" />
+    <Pill cls="o3" x={182} y={108} text="or roll doubles" bg="#e64fe0" />
+  </Scene>
+)
+
+const MogulCash = () => (
+  <Scene build={(tl) => {
+    tl.set('.m', { opacity: 0, scale: 0.4 }).set('.c1', { x: 84, y: 76, opacity: 0 }).set('.l1, .l2', { opacity: 0, scale: 0.4 })
+      .to('.m', { opacity: 1, scale: 1, duration: 0.35, ease: 'back.out(3)' }, 0.5)
+      .to('.c1', { keyframes: [{ opacity: 1, y: 56, duration: 0.25 }, { x: 180, y: 76, duration: 0.4 }, { opacity: 0, duration: 0.1 }] })
+      .to('.l1', { opacity: 1, scale: 1, ease: 'back.out(3)' })
+      .to('.l1', { opacity: 0, duration: 0.2 }, '+=1')
+      .to('.l2', { opacity: 1, scale: 1, ease: 'back.out(3)' })
+  }}>
+    <rect x={62} y={52} width={44} height={60} fill="#fff8ec" stroke="#1d3a6e" strokeWidth={1.5} />
+    <rect x={62} y={52} width={44} height={13} fill={MNAVY} stroke="#1d3a6e" strokeWidth={1.5} />
+    <g className="m" data-o>
+      <rect x={64} y={67} width={40} height={43} fill="rgba(29,58,110,0.2)" />
+      <circle cx={84} cy={88} r={10} fill="#1d3a6e" />
+      <text x={84} y={88} dy="0.36em" textAnchor="middle" className="rs-num" fontSize={11} fill="#fff">M</text>
+    </g>
+    <MCoin cls="c1" />
+    <circle cx={180} cy={76} r={14} fill="#e64fe0" stroke="#1d3a6e" strokeWidth={2} />
+    <Pill cls="l1" x={120} y={132} text="mortgage: half the price back" bg="#1d3a6e" />
+    <Pill cls="l2" x={120} y={132} text="still short? bankrupt — you're out" bg="#ff5d73" />
+  </Scene>
+)
+
+const MogulTrade = () => (
+  <Scene build={(tl) => {
+    tl.set('.a', { x: 22, y: 64 }).set('.b', { x: 218, y: 64 }).set('.d1', { x: 56, y: 64 }).set('.d2', { x: 184, y: 64 }).set('.c', { x: 56, y: 106, opacity: 1 }).set('.l1', { opacity: 0, scale: 0.4 })
+      .to('.d1', { x: 184, duration: 0.6, ease: 'power2.inOut' }, 0.6)
+      .to('.d2', { x: 56, duration: 0.6, ease: 'power2.inOut' }, '<')
+      .to('.c', { x: 184, duration: 0.6, ease: 'power2.inOut' }, '<0.1')
+      .to('.l1', { opacity: 1, scale: 1, ease: 'back.out(3)' })
+  }}>
+    <MToken cls="a" color="#e64fe0" />
+    <MToken cls="b" color="#45b8ff" />
+    <MDeed cls="d1" color={MPINK} name="Neon Strip" price="$160" />
+    <MDeed cls="d2" color={MSKY} name="Kite Row" price="$100" />
+    <MCoin cls="c" />
+    <Pill cls="l1" x={120} y={132} text="swap streets, cash and jail cards" bg="#1d3a6e" />
+  </Scene>
+)
+
 /* ---------- the books ---------- */
 
 export type RulePage = { title: string; text: string; Scene: ComponentType }
@@ -918,6 +1165,19 @@ export const RULES: Record<string, RuleBook> = {
       { title: 'Wait for it', text: 'Keep your finger still. Tumbleweeds, birds and dust will try to fool you.', Scene: QdFake },
       { title: 'DRAW!', text: 'When the screen turns red and says DRAW!, tap as fast as you can. The fastest tap wins the round.', Scene: QdDraw },
       { title: 'No cheating', text: 'Tap too early and you’re out for that round. Seven rounds — most wins takes it.', Scene: QdFoul },
+    ],
+  },
+  mogul: {
+    goal: 'Buy streets, charge rent, build up your sets — and be the last one with money.',
+    pages: [
+      { title: 'Roll and move', text: 'Roll both dice and walk round the board. Every time you pass or land on GO, the bank pays you $200. Doubles mean roll again — but three in a row sends you to jail.', Scene: MogulMove },
+      { title: 'Buy it or bid', text: 'Land on a street, station or utility nobody owns and you can buy it at the printed price. Pass, and it goes to auction: everyone can bid (you too), and the top bid wins.', Scene: MogulBuy },
+      { title: 'Collect rent', text: 'Anyone landing on your property pays you rent. Own a whole colour set and the rent doubles. Stations pay more the more lines you own; utilities charge 4× (or 10×) the dice.', Scene: MogulRent },
+      { title: 'Build houses', text: 'With a full set, build houses on your turn. Build evenly — one on each before a second on any. Four houses become a hotel. Tap your property to build.', Scene: MogulBuild },
+      { title: 'Chance and Chest', text: 'Landing on one draws a card: move somewhere, collect money, pay fees or repairs, or a Get Out of Jail Free card to keep.', Scene: MogulCards },
+      { title: 'Jail', text: 'Go To Jail, a card, or three doubles locks you up. On your turn pay $50, play a free card, or roll for doubles. Miss three times and you pay and move. You still collect rent inside.', Scene: MogulJail },
+      { title: 'Short on cash', text: 'Can’t pay? Sell houses (half price back), mortgage property (half its price; no rent while mortgaged) or trade. If you still can’t, you’re bankrupt and everything goes to whoever you owe.', Scene: MogulCash },
+      { title: 'Trade and win', text: 'Tap a player’s name on your turn to offer a trade. Last one with money wins — or, with a time limit, the richest by net worth when the clock runs out.', Scene: MogulTrade },
     ],
   },
   ludo: {

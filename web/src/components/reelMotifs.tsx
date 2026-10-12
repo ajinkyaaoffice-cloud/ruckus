@@ -57,6 +57,14 @@ export const MOTIFS: Record<string, Motif> = {
     choreo: 'rain', count: 14,
     piece: (i) => (i % 3 === 0 ? die(1 + ((i * 5) % 6)) : pawn(LUDO[i % 4])),
   },
+  mogul: {
+    choreo: 'rain', count: 14,
+    piece: (i) => (i % 3 === 0
+      ? <><circle r={30} fill="#ffc93c" {...st} /><text y={12} textAnchor="middle" fontFamily="Luckiest Guy" fontSize={34} fill={N}>$</text></>
+      : i % 3 === 1
+        ? <><path d="M-30 28 V-4 L0 -30 L30 -4 V28 Z" fill={i % 2 ? '#43d17a' : '#ff5d73'} {...st} /><rect x={-8} y={6} width={16} height={22} rx={2} fill={N} /></>
+        : die(1 + ((i * 5) % 6))),
+  },
   seabattle: {
     choreo: 'rain', count: 12,
     piece: (i) => (i % 3 === 0

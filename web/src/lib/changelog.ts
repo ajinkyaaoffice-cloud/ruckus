@@ -7,6 +7,17 @@ export type Release = { id: string; title: string; items: string[] }
 
 export const CHANGELOG: Release[] = [
   {
+    id: '2026-10-12-mogul',
+    title: 'New game: Mogul',
+    items: [
+      'Mogul, the property game: buy streets, charge rent, build houses and hotels, trade, and bankrupt your friends. 2 to 4 players, best with three',
+      'All the classic rules: doubles, jail, 32 Chance and Chest cards, auctions, mortgages, even building and a bank that runs out of houses',
+      'Pick classic last-one-standing, or a 30 or 60 minute game where the richest player wins',
+      'Rule tips pop up the first time something matters, and the rulebook has a page for every rule',
+      'We cleared out ten older games to make room: Quick Maths, Showdown, Light Cycles, Reversi, Checkers, Echo, Odd One Out, Memory Match, Connect Four and Ping Pong',
+    ],
+  },
+  {
     id: '2026-10-12-crews',
     title: 'Crews: one link, straight in',
     items: [

@@ -21,6 +21,7 @@ const GAMES: Record<string, ComponentType<GameProps>> = {
   seabattle: lazy(() => import('../games/SeaBattle')),
   quickdraw: lazy(() => import('../games/QuickDraw')),
   ludo: lazy(() => import('../games/Ludo')),
+  mogul: lazy(() => import('../games/Mogul')),
 }
 const loadRulebook = () => import('../components/Rulebook')
 const Rulebook = lazy(loadRulebook)

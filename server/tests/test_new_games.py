@@ -26,8 +26,8 @@ def run(g, clock, secs, dt=1 / 30):
             return
 
 
-def test_catalog_has_six_games():
-    assert len(REGISTRY) == 6
+def test_catalog_has_seven_games():
+    assert len(REGISTRY) == 7
 
 
 # --- sea battle -------------------------------------------------------------

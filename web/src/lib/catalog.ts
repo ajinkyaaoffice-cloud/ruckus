@@ -24,6 +24,11 @@ export const CATALOG: GameMeta[] = [
     blurb: 'Roll a 6 to get out, race round the board, knock rivals home. Play on for every place.',
     options: [{ key: 'quick', label: 'Race', choices: [{ value: false, label: 'Classic · 4 home' }, { value: true, label: 'Quick · 2 home' }] }],
   },
+  {
+    id: 'mogul', name: 'Mogul', min: 2, max: 4, tag: 'Board', bg: '#7fd6a8', ink: '#1d3a6e',
+    blurb: 'Buy streets, charge rent, build hotels and trade your way to a fortune. Full property-game rules, best with three.',
+    options: [{ key: 'length', label: 'Game length', choices: [{ value: 0, label: 'Classic · last one standing' }, { value: 60, label: '60 min · richest wins' }, { value: 30, label: '30 min · richest wins' }] }],
+  },
   { id: 'tictactoe', name: 'Tic Tac Toe', min: 2, max: 2, tag: 'Classic', bg: '#e64fe0', ink: '#ffffff',
     blurb: 'Brush-stroke Xs and Os. Three in a row, no mercy.' },
   { id: 'dots', name: 'Dots & Boxes', min: 2, max: 3, tag: 'Strategy', bg: '#d9f66b', ink: '#1d3a6e',
