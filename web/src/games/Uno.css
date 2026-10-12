@@ -103,9 +103,24 @@
 .uno-call.hot { animation: uno-catch 0.45s ease-in-out infinite alternate; }
 
 /* hand */
-.uno-hand { display: flex; justify-content: center; align-items: flex-end; width: 100%; min-height: calc(var(--cw) * 1.6); padding: 18px 10px 0; perspective: 900px; }
-.uno-slot { margin-left: calc(var(--cw) * -0.38 - min(var(--n) * 1px, 18px)); transform: rotate(var(--r)) translateY(var(--y)); transform-origin: 50% 160%; transition: transform 0.35s var(--ease-out); }
+.uno-hand { display: flex; flex-direction: column; align-items: center; width: 100%; min-height: calc(var(--cw) * 1.6); padding: 18px 10px 0; perspective: 900px; }
+.uno-row { display: flex; justify-content: center; align-items: flex-end; }
+/* --step is how far apart card edges sit, worked out from the hand's width */
+.uno-slot { margin-left: calc(var(--step, var(--cw)) - var(--cw)); transform: rotate(var(--r)) translateY(var(--y)); transform-origin: 50% 160%; transition: transform 0.35s var(--ease-out), margin 0.3s var(--ease-out); }
 .uno-slot:first-child { margin-left: 0; }
+/* two rows: the back row peeks out above the front one, top half (and its corner) showing */
+.uno-hand-rows .uno-row:first-child { margin-bottom: calc(var(--cw) * -0.6); translate: calc(var(--step) * -0.5) 0; }
+.uno-hand-rows .uno-row:first-child .uc { filter: brightness(0.96) drop-shadow(0 3px 0 rgba(27, 31, 63, 0.25)); }
+.uno-hand-rows .uno-row:last-child { position: relative; z-index: 1; }
+/* past two rows: one strip you swipe through, with the edges fading out */
+.uno-rows { display: flex; flex-direction: column; align-items: center; }
+.uno-hand-rows .uno-rows, .uno-hand-scroll .uno-rows { align-items: flex-start; }
+.uno-hand-scroll { display: block; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; padding: 22px 16px 8px; margin-top: -4px; scrollbar-width: none; touch-action: pan-x;
+  -webkit-mask: linear-gradient(90deg, transparent, #000 18px, #000 calc(100% - 18px), transparent); mask: linear-gradient(90deg, transparent, #000 18px, #000 calc(100% - 18px), transparent); }
+.uno-hand-scroll::-webkit-scrollbar { display: none; }
+.uno-hand-scroll .uno-rows { width: max-content; margin: 0 auto; }
+.uno-hand-scroll .uno-row:first-child { margin-bottom: calc(var(--cw) * -0.6); translate: calc(var(--step) * -0.5) 0; padding-left: var(--step); }
+.uno-okn { font-style: normal; color: var(--magenta); }
 .uno-hand .uc { transition: translate 0.2s var(--ease-back), filter 0.2s, opacity 0.2s; }
 .uno.my-turn .uno-hand .uc.ok { translate: 0 -16px; cursor: pointer; filter: drop-shadow(0 6px 0 rgba(27, 31, 63, 0.3)) drop-shadow(0 0 10px #fff); }
 .uno.my-turn .uno-hand .uc.ok:hover { translate: 0 -34px; }
@@ -154,7 +169,8 @@
 .uno.seats-3 .uno-opp-fan .uc, .uno.seats-4 .uno-opp-fan .uc { margin-left: -12px; }
 
 @media (max-width: 640px) {
-  .uno { --cw: 56px; }
+  /* as big as the phone allows: by width, and by height so short phones still fit table and hand */
+  .uno { --cw: clamp(52px, min(17vw, 8.6svh), 76px); }
   .uno-opps { gap: 6px; margin-bottom: -20px; }
   .uno-opp-name { max-width: 82px; font-size: 12px; }
   .uno-table { width: 100%; padding: 34px 14px 16px; }
@@ -186,14 +202,21 @@ html.low-power .uno-catch-big { animation: uno-catch-in 0.4s ease-out both; }
 .uno-tip b { font-size: 19px; line-height: 1; color: var(--magenta); }
 @keyframes uno-tip-in { from { opacity: 0; translate: -40px -50%; rotate: -4deg; } }
 @keyframes uno-tip-out { to { opacity: 0; translate: -30px -50%; } }
+/* no room beside the table: the tip drops into the bottom strip next to the emote button,
+   clear of the opponents up top and the hand */
 @media (max-width: 1100px) {
-  /* no room beside the table: sit just under the opponents instead */
-  .uno-tip { left: 50%; top: calc(var(--safe-t, 0px) + 70px); translate: -50% 0; animation-name: uno-tip-drop, uno-tip-up; }
-  @keyframes uno-tip-drop { from { opacity: 0; translate: -50% -24px; } }
-  @keyframes uno-tip-up { to { opacity: 0; translate: -50% -16px; } }
+  .uno-tip { top: auto; left: var(--gutter-l, 16px); bottom: calc(var(--safe-b) + var(--tb-pad) * 0.6); translate: 0 0; width: min(340px, calc(100vw - var(--gutter-l, 16px) - var(--gutter-r, 16px) - var(--tb-btn) - 10px));
+    animation-name: uno-tip-rise, uno-tip-sink; }
+  @keyframes uno-tip-rise { from { opacity: 0; translate: 0 24px; } }
+  @keyframes uno-tip-sink { to { opacity: 0; translate: 0 16px; } }
 }
-@media (max-width: 640px) { .uno-tip { --cw: 40px; padding: 9px 12px 9px 10px; gap: 10px; } .uno-tip b { font-size: 16px; } .uno-tip span { font-size: 12px; } }
+@media (max-width: 640px) {
+  .uno-tip { --cw: 28px; padding: 7px 12px 7px 8px; gap: 10px; border-radius: 18px; }
+  .uno-tip b { font-size: 15px; }
+  .uno-tip span { font-size: 11.5px; line-height: 1.3; }
+}
 html.low-power .uno-tip { animation: uno-tip-out 0.3s ease-in 3.9s forwards; }
+@media (max-width: 1100px) { html.low-power .uno-tip { animation-name: uno-tip-sink; } }
 
 /* direction of play: chevrons riding the rim, plus a labelled chip */
 .uno-arrows { opacity: 0.85; }
@@ -201,3 +224,28 @@ html.low-power .uno-tip { animation: uno-tip-out 0.3s ease-in 3.9s forwards; }
 .uno-dir svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
 .uno-dir.ccw svg { scale: -1 1; }
 @media (max-width: 640px) { .uno-colorchip { max-width: 94%; font-size: 12px; } .uno-colorchip .uno-side { display: none; } }
+
+/* someone went out: their face, their medal, big enough that nobody misses it */
+.uno-out { position: fixed; inset: 0; z-index: 66; display: grid; place-items: center; padding: 16px; border: 0; background: color-mix(in srgb, var(--navy) 55%, transparent); cursor: pointer; animation: uno-out-bg 3.4s ease both; overflow: hidden; }
+@keyframes uno-out-bg { 0% { opacity: 0; } 8%, 85% { opacity: 1; } 100% { opacity: 0; } }
+.uno-out-rays { position: absolute; left: 50%; top: 44%; width: 200vmax; height: 200vmax; margin: -100vmax 0 0 -100vmax;
+  background: repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--pc) 45%, transparent) 0deg 10deg, transparent 10deg 24deg);
+  -webkit-mask: radial-gradient(circle, #000 0%, #000 12%, transparent 50%); mask: radial-gradient(circle, #000 0%, #000 12%, transparent 50%); animation: uno-out-spin 9s linear infinite; }
+@keyframes uno-out-spin { to { rotate: 360deg; } }
+.uno-out-card { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; animation: uno-out-pop 3.4s cubic-bezier(.3, 1.5, .5, 1) both; }
+@keyframes uno-out-pop { 0% { scale: 0.2; rotate: -14deg; } 14% { scale: 1.06; rotate: 3deg; } 22%, 84% { scale: 1; rotate: 0deg; opacity: 1; } 100% { scale: 0.8; opacity: 0; translate: 0 -40px; } }
+.uno-out-face { width: clamp(120px, 34vw, 190px); aspect-ratio: 1; border-radius: 50%; overflow: hidden; background: var(--pc); border: 6px solid #fff; box-shadow: 0 0 0 6px var(--navy), 0 12px 0 6px rgba(0, 0, 0, 0.25); }
+.uno-out-medal { margin-top: -30px; z-index: 1; padding: 8px 18px 4px; border-radius: 999px; font-size: clamp(22px, 6vw, 32px); background: #ffb424; color: var(--navy); border: 4px solid var(--navy); box-shadow: 0 5px 0 var(--navy); rotate: -6deg; }
+.uno-out-medal[data-place="2"] { background: #dfe6f3; }
+.uno-out-medal[data-place="3"] { background: #ff9a62; }
+.uno-out-medal[data-place="4"] { background: #fff; }
+.uno-out-card b { margin-top: 6px; font-size: clamp(40px, 11vw, 84px); line-height: 0.95; color: #fff; -webkit-text-stroke: 3px var(--navy); paint-order: stroke fill; text-shadow: 0 7px 0 var(--pc); }
+.uno-out-card small { background: var(--navy); color: #fff; font-weight: 700; font-size: 15px; padding: 6px 16px; border-radius: 99px; }
+.uno-out.mine .uno-out-card b { color: var(--lime); }
+html.low-power .uno-out-rays { animation: none; }
+@media (prefers-reduced-motion: reduce) { .uno-out-rays { animation: none; } }
+
+/* the break banner owns the bottom strip, so the rule tip sits just above it */
+@media (max-width: 1100px) {
+  .gs-on-break .uno-tip { bottom: calc(var(--safe-b) + var(--tb-pad) * 0.6 + 72px); }
+}

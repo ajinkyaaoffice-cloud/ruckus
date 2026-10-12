@@ -18,7 +18,7 @@ export type HistoryItem = { game: string; winners: string[]; tie: boolean; summa
 
 
 /** Present on game state while a game is frozen waiting for dropped players. Times are server unix seconds. */
-export type PauseInfo = { held: string | null; waiting: { id: string; until: number }[]; resumeAt: number | null; now: number }
+export type PauseInfo = { held: string | null; waiting: { id: string; until: number }[]; away?: string[]; standIn?: boolean; resumeAt: number | null; now: number }
 
 /** Host-only room controls. */
 export type RoomSettings = {
@@ -40,6 +40,8 @@ export type Room = {
   history: HistoryItem[]
   settings: RoomSettings
   banned: { id: string; name: string }[]
+  /** players on a break mid-game (a stand-in plays for them where the game has one) */
+  away?: string[]
 }
 
 export type GameResults = {
@@ -62,6 +64,8 @@ type NetState = {
   room: Room | null
   game: GameState | null
   emotes: Emote[]
+  /** set once per page load when the server says we still hold a seat somewhere */
+  rejoin: string | null
   setProfile: (p: Partial<Profile>) => void
 }
 
@@ -71,6 +75,7 @@ export const useNet = create<NetState>((set, get) => ({
   room: null,
   game: null,
   emotes: [],
+  rejoin: null,
   setProfile: (patch) => {
     const profile = { ...get().profile, ...patch }
     saveProfile(profile)
@@ -96,6 +101,7 @@ let retry = 0
 let pingTimer: number | undefined
 let lastHeard = 0
 const queue: unknown[] = []
+let greeted = false
 let joinedResolvers: ((code: string | null, err?: string) => void)[] = []
 
 /** Game server origin. Empty when the server also serves this site; set VITE_SERVER_URL when the site is hosted elsewhere (e.g. Vercel). */
@@ -166,6 +172,8 @@ export function connect(): void {
       }
       case 'hello':
         if (!msg.room) useNet.setState({ room: null, game: null })
+        else if (!greeted) useNet.setState({ rejoin: msg.room })
+        greeted = true
         break
       case 'joined':
         joinedResolvers.forEach((r) => r(msg.code))
@@ -296,6 +304,10 @@ export const pauseGame = () => send({ t: 'hold' })
 export const resumeGame = () => send({ t: 'unhold' })
 export const endGame = () => send({ t: 'end' })
 export const skipReel = () => send({ t: 'skip_reel' })
+export const takeBreak = () => send({ t: 'break' })
+export const endBreak = () => send({ t: 'unbreak' })
+export const waitMore = (pid: string) => send({ t: 'wait_more', pid })
+export const playOn = (pid: string) => send({ t: 'play_on', pid })
 export const resetScores = () => send({ t: 'reset_scores' })
 export const unbanAll = () => send({ t: 'unban' })
 

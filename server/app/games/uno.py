@@ -587,6 +587,45 @@ class Uno(Game):
         self.clear_timers()
         self.dirty = True
 
+    can_stand_in = True
+
+    def _stand_in_color(self, pid: str) -> str:
+        counts = {c: 0 for c in self.palette}
+        for c in self.hands[pid]:
+            if c["color"] in counts:
+                counts[c["color"]] += 1
+        return max(self.palette, key=lambda c: counts[c])
+
+    def stand_in(self, pid: str) -> bool:
+        """Plays a plain, sensible game: calls UNO, accepts challenges, prefers coloured cards to wilds."""
+        if self.over or pid not in self.players:
+            return False
+        if len(self.hands[pid]) == 1 and pid not in self.said_uno:
+            self._call_uno(pid)
+            return True
+        if self.players[self.turn] != pid:
+            return False
+        others = sorted((p for p in self.players if p != pid), key=lambda p: len(self.hands[p]))
+        extra = {"color": self._stand_in_color(pid), "target": others[0] if others else None}
+        if self.phase == "challenge":
+            self.handle(pid, {"type": "accept"})
+        elif self.phase == "start_color":
+            self.handle(pid, {"type": "start_color", **extra})
+        elif self.phase == "drawn":
+            card = next((c for c in self.hands[pid] if c["id"] == self.drawn_id), None)
+            if card and self.playable(card):
+                self.handle(pid, {"type": "play", "card": card["id"], **extra})
+            else:
+                self.handle(pid, {"type": "pass"})
+        else:
+            ok = [c for c in self.hands[pid] if self.playable(c)]
+            ok.sort(key=lambda c: (c["kind"] in self.wilds, c["kind"] == "number"))
+            if ok:
+                self.handle(pid, {"type": "play", "card": ok[0]["id"], **extra})
+            else:
+                self.handle(pid, {"type": "draw"})
+        return True
+
     def forfeit(self, pid: str) -> None:
         if self.over or pid not in self.players:
             return

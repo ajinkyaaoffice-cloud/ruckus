@@ -204,7 +204,8 @@ async def ws_endpoint(ws: WebSocket) -> None:
                 elif t == "emote":
                     if not room.settings["emotes"]:
                         raise GameError("The host turned emotes off")
-                    if msg.get("emoji") in EMOTES:
+                    p = room.players.get(pid)
+                    if msg.get("emoji") in EMOTES and p and p.can_emote():
                         await room.broadcast({"t": "emote", "pid": pid, "emoji": msg["emoji"]})
                 elif t == "settings":
                     room.configure(pid, msg.get("settings"))
@@ -238,6 +239,16 @@ async def ws_endpoint(ws: WebSocket) -> None:
                     room.require_host(pid)
                     if room.game and room.game.over:
                         await room.broadcast({"t": "skip_reel"})
+                elif t in ("break", "unbreak"):
+                    (room.take_break if t == "break" else room.end_break)(pid)
+                    await room.sync()
+                    await room.sync_game()
+                elif t in ("wait_more", "play_on"):
+                    (room.wait_more if t == "wait_more" else room.play_on)(pid, msg.get("pid"))
+                    await room.sync()
+                    await room.sync_game()
+                    if room.game and room.game.over:
+                        await room._conclude()
                 elif t == "end":
                     room.end_game(pid)
                     await room.broadcast({"t": "ended", "by": room.players[pid].name})

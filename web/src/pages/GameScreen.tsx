@@ -5,9 +5,8 @@ import { BrushMarks, TopBar } from '../components/Chrome'
 import { EmoteBar, PlayerChip } from '../components/Players'
 import Results from '../components/Results'
 import WinnerReel, { type HeroRects } from '../components/WinnerReel'
-import { useTransition } from '../components/Transition'
 import { gameMeta } from '../lib/catalog'
-import { leaveRoom, onGameEvents, useNet, type GameState, type Room, type RoomPlayer } from '../lib/net'
+import { endBreak, onGameEvents, useNet, type GameState, type Room, type RoomPlayer } from '../lib/net'
 import PauseOverlay from '../components/PauseOverlay'
 import { toast } from '../lib/toast'
 import { sfx } from '../lib/sound'
@@ -43,7 +42,6 @@ export default function GameScreen() {
   const room = useNet((s) => s.room)!
   const state = useNet((s) => s.game)
   const me = useNet((s) => s.profile.pid)
-  const { go } = useTransition()
   const [rules, setRules] = useState(false)
   // let the winning move land on the board before the podium covers it
   const [showResults, setShowResults] = useState(false)
@@ -95,17 +93,18 @@ export default function GameScreen() {
       if (e.kind === 'paused') { sfx.hit(0.6); toast.warn(`${who(e.pid)} lost connection — game paused`, { id: `drop:${e.pid}` }) }
       if (e.kind === 'back') { toast.dismiss(`drop:${e.pid}`); toast.success(`${who(e.pid)} ${e.pid === me ? 'are' : 'is'} back!`, { id: `back:${e.pid}` }) }
       if (e.kind === 'resumed') sfx.slam()
+      if (e.kind === 'break' && e.pid !== me) toast.info(`${who(e.pid)} is taking a break`, { id: `break:${e.pid}` })
+      if (e.kind === 'unbreak' && e.pid !== me) toast.success(`${who(e.pid)} is back from their break`, { id: `break:${e.pid}` })
     }
   }), [me])
 
-  const leave = () => {
-    if (!confirm('Leave the room? You will forfeit this game.')) return
-    leaveRoom()
-    go('/play', { label: 'BYE!', reverse: true })
-  }
+  const away = room.away ?? []
+  const onBreak = away.includes(me) && !spectator && !state?.over
+  // a stand-in plays for people on a break where the game has one; otherwise the pause overlay covers it
+  const standIn = onBreak && !state?.pause
 
   return (
-    <div ref={root} className={`gs gs-${gid}`} style={{ ['--gbg' as string]: meta?.bg ?? '#f6b8f7' }}>
+    <div ref={root} className={`gs gs-${gid} ${standIn ? 'gs-on-break' : ''}`} style={{ ['--gbg' as string]: meta?.bg ?? '#f6b8f7' }}>
       <BrushMarks opacity={0.18} />
       <TopBar
         left={<span className="gs-name display">{meta?.name ?? 'Game'}</span>}
@@ -116,14 +115,13 @@ export default function GameScreen() {
                 <span className="display">?</span>
               </button>
             )}
-            <button className="bubble-btn small navy" onClick={leave}>Leave</button>
           </>
         }
       />
       <div className="gs-top-players">
         {participants.map((p) => (
           <PlayerChip key={p.id} p={p} index={room.players.findIndex((x) => x.id === p.id)} compact active={turn === p.id}
-            host={room.host === p.id}
+            host={room.host === p.id} away={away.includes(p.id) && !state?.over}
             expression={state?.over ? (state.results?.winners.includes(p.id) ? 'happy' : 'sad') : finished.includes(p.id) ? 'happy' : turn === p.id ? 'focus' : 'idle'}
             place={finished.includes(p.id) && !state?.over ? finished.indexOf(p.id) + 1 : undefined} />
         ))}
@@ -143,6 +141,13 @@ export default function GameScreen() {
       </main>
 
       <div className="gs-dock"><EmoteBar compact /></div>
+
+      {standIn && (
+        <div className="gs-break" role="status">
+          <span className="gs-break-txt"><b className="display">On a break</b><small>a stand-in is playing your turns</small></span>
+          <button className="bubble-btn small magenta" onClick={() => { sfx.click(); endBreak() }}>I’m back</button>
+        </div>
+      )}
 
       <Intro key={state?.instance ?? 'none'} />
 

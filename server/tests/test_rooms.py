@@ -232,3 +232,79 @@ def test_host_ends_game_without_scoring():
         with pytest.raises(GameError):
             room.end_game("alice")
     asyncio.run(run())
+
+
+def test_reactions_are_capped_per_ten_seconds():
+    p = Player("a", "A", {})
+    assert all(p.can_emote(100.0 + i) for i in range(5))
+    assert not p.can_emote(105.0)
+    assert p.can_emote(110.5)                   # the first one has aged out
+
+
+# --- breaks and the host's say over dropped players -------------------------
+def test_break_with_stand_in_keeps_the_game_going(wall):
+    async def run():
+        room = make_room()
+        await room.start("alice", "uno", {})
+        g = room.game
+        room.take_break("bobby")
+        assert not g.paused and room.public()["away"] == ["bobby"]
+        # dropping while on a break never pauses anyone
+        bob = room.players["bobby"]
+        bob.ws, bob.left_at = None, time.time()
+        assert not room.dropped("bobby") and not g.paused
+        # the stand-in plays bobby's goes
+        for _ in range(40):
+            if g.over:
+                break
+            if g.players[g.turn] == "alice":
+                g.stand_in("alice")
+            else:
+                room.stand_in_at = 0
+                room.stand_in()
+        assert g.seq > 5
+        room.end_break("bobby")
+        assert room.away == {}
+        room.loop_task.cancel()
+    asyncio.run(run())
+
+
+def test_break_without_stand_in_pauses_without_a_timer(wall):
+    async def run():
+        room = make_room()
+        await room.start("alice", "tictactoe", {})
+        g = room.game
+        room.take_break("bobby")
+        assert g.paused and room.pause_info()["away"] == ["bobby"] and room.pause_info()["waiting"] == []
+        room.end_break("bobby")
+        assert room.resume_at is not None
+        room.loop_task.cancel()
+    asyncio.run(run())
+
+
+def test_host_can_wait_longer_or_play_on(wall):
+    async def run():
+        room = make_room()
+        await room.start("alice", "uno", {})
+        bob = room.players["bobby"]
+        bob.ws, bob.left_at = None, time.time()
+        room.dropped("bobby")
+        before = room.pause_info()["waiting"][0]["until"]
+        with pytest.raises(GameError):
+            room.wait_more("bobby", "bobby")
+        room.wait_more("alice", "bobby")
+        assert room.pause_info()["waiting"][0]["until"] == pytest.approx(before + 60)
+        # playing on hands bobby's seat to the stand-in instead of forfeiting
+        room.play_on("alice", "bobby")
+        assert "bobby" in room.away and "bobby" in room.game.players and room.resume_at is not None
+        room.loop_task.cancel()
+
+        room2 = make_room()
+        await room2.start("alice", "tictactoe", {})
+        b2 = room2.players["bobby"]
+        b2.ws, b2.left_at = None, time.time()
+        room2.dropped("bobby")
+        room2.play_on("alice", "bobby")      # no stand-in for tic-tac-toe: bobby forfeits
+        assert room2.game.over and room2.game.results.winners == ["alice"]
+        room2.loop_task.cancel()
+    asyncio.run(run())

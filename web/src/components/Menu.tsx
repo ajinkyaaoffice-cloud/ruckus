@@ -5,7 +5,7 @@ import Glyph, { type GlyphName } from './Glyph'
 import Mascot from './Mascot'
 import { SoundToggle } from './Chrome'
 import { useTransition } from './Transition'
-import { endGame, leaveRoom, pauseGame, resumeGame, useNet } from '../lib/net'
+import { endBreak, endGame, leaveRoom, pauseGame, resumeGame, takeBreak, useNet } from '../lib/net'
 import { lockScroll, scrollToTarget, useUi, intro } from '../lib/ui'
 import { sfx } from '../lib/sound'
 import { showWhatsNew } from './Splash'
@@ -100,10 +100,22 @@ export default function Menu() {
       endGame()
     } })
   }
+  // anyone still playing can step away without the table having to wait
+  const inGame = !!(room && room.phase === 'playing' && game && !game.over && game.players.includes(me))
+  if (inGame) {
+    const away = room!.away?.includes(me)
+    items.push(away
+      ? { label: 'I’m back', glyph: 'bolt', color: '#d9f66b', run: () => { setMenu(false); endBreak() }, sub: 'take your seat again' }
+      : { label: 'Take a break', glyph: 'moon', color: '#a7ecff', run: () => { setMenu(false); takeBreak() }, sub: 'a stand-in plays for you' })
+  }
   if (room) {
     items.push({ label: `Room ${room.code}`, glyph: 'o', color: '#a7ecff', run: nav(`/room/${room.code}`, 'HUB'), sub: 'back to the hub' })
     items.push({ label: 'My look', glyph: 'x', color: '#f6b8f7', run: nav(`/room/${room.code}/avatar`, 'DRESS UP!'), sub: 'customise' })
-    items.push({ label: 'Leave', glyph: 'moon', color: '#ff9a62', run: () => { leaveRoom(); nav('/play', 'BYE!', true)() }, sub: 'exit the room' })
+    items.push({ label: 'Leave', glyph: 'x', color: '#ff9a62', sub: inGame ? 'you forfeit this game' : 'exit the room', run: () => {
+      const two = (game?.players.length ?? 0) <= 2
+      if (inGame && !confirm(two ? 'Leave the room? You forfeit, and with only two of you the game ends for both.' : 'Leave the room? You forfeit this game; the others play on.')) return
+      leaveRoom(); nav('/play', 'BYE!', true)()
+    } })
   }
   items.push({ label: 'What’s new', glyph: 'star', color: '#d9f66b', run: () => { setMenu(false); setTimeout(showWhatsNew, 250) }, sub: 'latest updates' })
 

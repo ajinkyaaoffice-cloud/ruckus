@@ -107,6 +107,13 @@ class Game:
         self.clear_timers()
         self.dirty = True
 
+    # Games that can play a sensible move for someone on a break set this and implement stand_in.
+    can_stand_in = False
+
+    def stand_in(self, pid: str) -> bool:
+        """Make one move for pid if the game is waiting on them. True if it acted."""
+        return False
+
     def forfeit(self, pid: str) -> None:
         """A player left mid-game. Default: remaining players share the win."""
         if self.over:

@@ -8,27 +8,33 @@ import { emote, PLAYER_HEX, useNet, type RoomPlayer } from '../lib/net'
 import { sfx } from '../lib/sound'
 import { lowPower } from '../lib/perf'
 import { ordinal } from '../lib/ui'
+import { toast } from '../lib/toast'
 import './Players.css'
 
+const EMOTE_CAP = 5
+const EMOTE_WINDOW = 10_000
 
-export function PlayerChip({ p, index, host, active, expression, compact, extra, place }: {
+
+export function PlayerChip({ p, index, host, active, expression, compact, extra, place, away }: {
   p: RoomPlayer; index: number; host?: boolean; active?: boolean; expression?: Expression; compact?: boolean; extra?: React.ReactNode
+  away?: boolean      // on a break mid-game
   place?: number      // finished this game already: show their medal, dim the chip
 }) {
   const me = useNet((s) => s.profile.pid) === p.id
   return (
-    <div className={`pchip ${active ? 'active' : ''} ${compact ? 'compact' : ''} ${p.connected ? '' : 'away'} ${place ? 'pchip-done' : ''}`} data-player={p.id}
+    <div className={`pchip ${active ? 'active' : ''} ${compact ? 'compact' : ''} ${p.connected ? '' : 'away'} ${place ? 'pchip-done' : ''} ${away ? 'pchip-break' : ''}`} data-player={p.id}
       style={{ ['--pc' as string]: PLAYER_HEX[index % PLAYER_HEX.length] }}>
       <div className="pchip-face">
         <Avatar config={p.avatar} size="100%" track={compact ? 'idle' : 'mouse'} expression={expression ?? (active ? 'focus' : 'idle')} badge />
         {host && <span className="pchip-crown" title="Host"><Glyph name="star" color="#ffb424" size={26} /></span>}
+        {away && <span className="pchip-zz display" title="On a break">zz</span>}
         {place && <span className="pchip-medal display" data-place={Math.min(place, 4)} title={`Finished ${ordinal(place)}`}>{ordinal(place)}</span>}
       </div>
       <div className="pchip-meta">
         <span className="pchip-name">{p.name}{me && <em> (you)</em>}</span>
         {extra ?? (
           <span className="pchip-sub">
-            {!p.connected ? 'reconnecting…' : p.status === 'ready' ? <><b className="display">{p.points}</b> pts · <b className="display">{p.wins}</b> wins</> : 'dressing up…'}
+            {away ? 'on a break' : !p.connected ? 'reconnecting…' : p.status === 'ready' ? <><b className="display">{p.points}</b> pts · <b className="display">{p.wins}</b> wins</> : 'dressing up…'}
           </span>
         )}
       </div>
@@ -131,13 +137,32 @@ function PopSticker({ pop, onDone }: { pop: Pop; onDone: () => void }) {
 export function EmoteBar({ compact = false }: { compact?: boolean }) {
   const [open, setOpen] = useState(!compact)
   const enabled = useNet((st) => st.room?.settings?.emotes ?? true)
+  // matches the server: 5 reactions in any 10 seconds
+  const sent = useRef<number[]>([])
+  const [cool, setCool] = useState(false)
+  const coolTimer = useRef<number | undefined>(undefined)
+  useEffect(() => () => clearTimeout(coolTimer.current), [])
   const fire = (id: string) => {
+    const now = Date.now()
+    sent.current = sent.current.filter((t) => now - t < EMOTE_WINDOW)
+    if (sent.current.length >= EMOTE_CAP) {
+      const wait = Math.ceil((EMOTE_WINDOW - (now - sent.current[0])) / 1000)
+      sfx.click()
+      toast.info(`Easy there! More reactions in ${wait}s`, { id: 'emote-cap' })
+      return
+    }
+    sent.current.push(now)
     emote(id)
+    if (sent.current.length >= EMOTE_CAP) {
+      setCool(true)
+      clearTimeout(coolTimer.current)
+      coolTimer.current = window.setTimeout(() => setCool(false), EMOTE_WINDOW - (now - sent.current[0]))
+    }
     if (compact) setOpen(false)
   }
   if (!enabled) return null
   return (
-    <div className={`emote-bar ${compact ? 'compact' : ''} ${open ? 'open' : ''}`}>
+    <div className={`emote-bar ${compact ? 'compact' : ''} ${open ? 'open' : ''} ${cool ? 'cool' : ''}`}>
       {compact && (
         <button className="emote-toggle" onClick={() => { sfx.click(); setOpen((o) => !o) }} aria-label="Reactions" data-cursor="REACT">
           {open ? <svg viewBox="0 0 24 24" width="20" height="20"><path d="M6 6l12 12M18 6L6 18" stroke="#fff" strokeWidth="3.2" strokeLinecap="round" /></svg> : <Reaction id="lol" size={34} />}

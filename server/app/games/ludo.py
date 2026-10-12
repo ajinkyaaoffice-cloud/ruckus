@@ -103,6 +103,19 @@ class Ludo(Game):
             pid = self.players[self.turn]
             self._move(pid, self._best(pid), auto=True)
 
+    can_stand_in = True
+
+    def stand_in(self, pid: str) -> bool:
+        if self.over or pid not in self.players or self.players[self.turn] != pid:
+            return False
+        if self.phase == "roll":
+            self._roll(pid, auto=True)
+            return True
+        if self.phase == "move" and self.legal:
+            self._move(pid, self._best(pid), auto=True)
+            return True
+        return False
+
     def _best(self, pid: str) -> int:
         """What a sensible player would do: capture, else get home, else leave the yard, else run the leader."""
         assert self.dice is not None

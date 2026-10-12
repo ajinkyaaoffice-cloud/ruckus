@@ -1,11 +1,12 @@
 import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactElement } from 'react'
+import { createPortal } from 'react-dom'
 import gsap from 'gsap'
 import type { GameProps } from '../pages/GameScreen'
 import { act, onGameEvents, playerHex } from '../lib/net'
 import { sfx } from '../lib/sound'
 import Avatar from '../components/Avatar'
 import { TurnBanner } from './shared'
-import { ordinal } from '../lib/ui'
+import { confetti, ordinal } from '../lib/ui'
 import './Uno.css'
 
 type Color = 'red' | 'yellow' | 'green' | 'blue' | 'pink' | 'teal' | 'purple' | 'orange' | 'wild'
@@ -175,9 +176,33 @@ type Callout = { text: string; sub?: string; color: string; key: number; big?: b
 type Reveal = { of: string; cards: Card[]; bad: number[]; color: string; guilty: boolean; id: number; kind?: Kind }
 type Tip = { card: Card; color?: string; key: number }
 
+/** Colour by colour (wilds last), then numbers low to high, then action cards: a big hand you can read. */
+const COLOR_RANK: Record<string, number> = Object.fromEntries([...COLORS, ...DARK].map((c, i) => [c, i]))
+function sortHand(cards: Card[]): Card[] {
+  const rank = (c: Card) => [COLOR_RANK[c.color] ?? 99, c.kind === 'number' ? 0 : 1, c.kind === 'number' ? Number(c.value ?? 0) : 0, c.kind] as const
+  return [...cards].sort((a, b) => {
+    const x = rank(a), y = rank(b)
+    for (let i = 0; i < x.length; i++) if (x[i] !== y[i]) return x[i] < y[i] ? -1 : 1
+    return a.id - b.id
+  })
+}
+
+/** How the hand is laid out: one fanned row while the cards stay readable, then two rows, then two rows you swipe through. */
+type HandLayout = { mode: 'fan' | 'rows' | 'scroll'; step: number; rows: Card[][] }
+function layoutHand(cards: Card[], width: number, cw: number): HandLayout {
+  const n = cards.length
+  const fit = (k: number) => (k <= 1 ? cw : (width - cw) / (k - 1))
+  if (fit(n) >= cw * 0.42) return { mode: 'fan', step: Math.min(cw * 0.62, fit(n)), rows: [cards] }
+  const k = Math.ceil(n / 2)
+  if (fit(k) >= cw * 0.36) return { mode: 'rows', step: Math.min(cw * 0.62, fit(k)), rows: [cards.slice(0, k), cards.slice(k)] }
+  return { mode: 'scroll', step: cw * 0.4, rows: [cards.slice(0, k), cards.slice(k)] }
+}
+
 export default function Uno({ state, me, room, players, spectator }: GameProps) {
   const root = useRef<HTMLDivElement>(null)
-  const hand: Card[] = state.hand ?? []
+  const handRef = useRef<HTMLDivElement>(null)
+  const [handBox, setHandBox] = useState({ w: 360, cw: 64 })
+  const hand: Card[] = sortHand(state.hand ?? [])
   // everyone dealt in keeps their seat; finishers just stop taking turns
   const order: string[] = state.seats ?? state.players
   const places: Record<string, number> = state.places ?? {}
@@ -201,6 +226,9 @@ export default function Uno({ state, me, room, players, spectator }: GameProps) 
 
   const [pending, setPending] = useState<Pending | null>(null)
   const [callout, setCallout] = useState<Callout | null>(null)
+  // someone just went out: their own big moment, separate from the card callouts so nothing talks over it
+  const [outShow, setOutShow] = useState<{ pid: string; place: number; points: number; key: number } | null>(null)
+  const outTimer = useRef<number | undefined>(undefined)
   // what the last power card does, so nobody has to know the rules by heart
   const [tip, setTip] = useState<Tip | null>(null)
   const tipTimer = useRef<number | undefined>(undefined)
@@ -337,8 +365,18 @@ export default function Uno({ state, me, room, players, spectator }: GameProps) 
           shout('Left', '#1d3a6e', `${name(e.pid)} quit the table`)
           break
         case 'out':
-          if (e.pid === me) { sfx.win(); shout(`${ordinal(e.place)}!`, '#ffb424', `You're out · +${e.points} pts · watch the rest`, 3000) }
-          else { sfx.uno(); shout(`${name(e.pid)} is out!`, '#ffb424', `${ordinal(e.place)} place · the rest play on`, 2600) }
+          // going out that ends the game hands straight to the winner reel instead
+          if (st.over) break
+          if (e.pid === me) sfx.win()
+          else { sfx.uno(); sfx.slam() }
+          setCallout(null)
+          setOutShow({ pid: e.pid, place: e.place, points: e.points, key: Date.now() })
+          clearTimeout(outTimer.current)
+          outTimer.current = window.setTimeout(() => setOutShow(null), 3400)
+          window.setTimeout(() => {
+            confetti(window.innerWidth / 2, window.innerHeight * 0.42, 40)
+            navigator.vibrate?.(e.pid === me ? [30, 40, 60] : 40)
+          }, 250)
           gsap.fromTo(root.current!.querySelector(`.uno-opp[data-pid="${e.pid}"]`), { scale: 1.4, rotate: -10 }, { scale: 1, rotate: 0, duration: 0.9, ease: 'elastic.out(1, 0.35)' })
           break
       }
@@ -482,8 +520,28 @@ export default function Uno({ state, me, room, players, spectator }: GameProps) 
   const showColor = (pending?.needColor ?? false) || (startColorMe && !pending)
   const showTarget = !!pending && !pending.needColor && pending.needTarget
 
-  const fan = hand.length
-  const spread = Math.min(7, 70 / Math.max(fan, 1))
+  const layout = layoutHand(hand, handBox.w, handBox.cw)
+  // keep the hand's measured width and card size current so the layout can pick fan, rows or strip
+  useLayoutEffect(() => {
+    const el = handRef.current
+    if (!el) return
+    const measure = () => {
+      const probe = el.querySelector<HTMLElement>('.uc')
+      const cs = getComputedStyle(el)
+      const w = el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)
+      const cw = probe?.offsetWidth || 64
+      setHandBox((b) => (Math.abs(b.w - w) < 1 && b.cw === cw ? b : { w, cw }))
+    }
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [hand.length > 0])
+  // in the scrolling strip, bring a freshly drawn card into view
+  useEffect(() => {
+    if (layout.mode !== 'scroll' || state.drawnId == null) return
+    handRef.current?.querySelector(`.uc[data-id="${state.drawnId}"]`)?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })
+  }, [state.drawnId, layout.mode])
   const dirSpin = state.direction === 1 ? 'cw' : 'ccw'
   const banner = state.over ? 'Round over' :
     phase === 'challenge' ? (challengeMe ? `${ch?.short ?? '+4'}: challenge it?` : `${name(state.challenge?.victim)} is deciding…`) :
@@ -592,7 +650,7 @@ export default function Uno({ state, me, room, players, spectator }: GameProps) 
             <Avatar config={meP?.avatar} size={44} track="none" expression={hand.length <= 1 ? 'happy' : myTurn ? 'focus' : 'idle'} />
             <div>
               <b>{meP?.name ?? 'You'}</b>
-              <span>{hand.length} card{hand.length === 1 ? '' : 's'}</span>
+              <span>{hand.length} card{hand.length === 1 ? '' : 's'}{myTurn && phase === 'play' && hand.length > 7 && <em className="uno-okn"> · {playable.size} playable</em>}</span>
             </div>
           </div>
           {canPass && <button className="uno-btn uno-pass display" onClick={() => { sfx.click(); act({ type: 'pass' }) }}>Pass</button>}
@@ -602,17 +660,25 @@ export default function Uno({ state, me, room, players, spectator }: GameProps) 
       )}
 
       {!spectator && (
-        <div className="uno-hand" style={{ ['--n' as string]: fan }}>
-          {hand.map((c, i) => {
-            const mid = (fan - 1) / 2
-            const ok = myTurn && playable.has(c.id)
-            const drawn = state.drawnId === c.id
-            return (
-              <div key={c.id} className="uno-slot" style={{ ['--r' as string]: `${(i - mid) * spread * 0.6}deg`, ['--y' as string]: `${Math.abs(i - mid) ** 1.6 * 1.4}px`, zIndex: i }}>
-                <UnoCard card={c} className={`${ok ? 'ok' : myTurn ? 'no' : ''} ${drawn ? 'drawn' : ''}`} onClick={() => clickCard(c)} />
-              </div>
-            )
-          })}
+        <div ref={handRef} className={`uno-hand uno-hand-${layout.mode}`} style={{ ['--step' as string]: `${layout.step}px` }}>
+          <div className="uno-rows">
+          {layout.rows.map((row, r) => (
+            <div key={r} className="uno-row">
+              {row.map((c, i) => {
+                const mid = (row.length - 1) / 2
+                // only the single row fans; stacked rows and the strip stay flat so every corner reads
+                const spread = layout.mode === 'fan' ? Math.min(7, 70 / Math.max(row.length, 1)) : 0
+                const ok = myTurn && playable.has(c.id)
+                const drawn = state.drawnId === c.id
+                return (
+                  <div key={c.id} className="uno-slot" style={{ ['--r' as string]: `${(i - mid) * spread * 0.6}deg`, ['--y' as string]: spread ? `${Math.abs(i - mid) ** 1.6 * 1.4}px` : '0px', zIndex: i }}>
+                    <UnoCard card={c} className={`${ok ? 'ok' : myTurn ? 'no' : ''} ${drawn ? 'drawn' : ''}`} onClick={() => clickCard(c)} />
+                  </div>
+                )
+              })}
+            </div>
+          ))}
+          </div>
         </div>
       )}
 
@@ -697,6 +763,23 @@ export default function Uno({ state, me, room, players, spectator }: GameProps) 
         </div>
       )}
 
+      {outShow && (() => {
+        const p = room.players.find((x) => x.id === outShow.pid)
+        const mine = outShow.pid === me
+        // the game ends when only one is left, so the reel takes over from there
+        return (
+          createPortal(<button key={outShow.key} className={`uno-out ${mine ? 'mine' : ''}`} style={{ ['--pc' as string]: playerHex(room, outShow.pid) }}
+            onClick={() => { clearTimeout(outTimer.current); setOutShow(null) }} aria-label="Dismiss">
+            <span className="uno-out-rays" aria-hidden />
+            <span className="uno-out-card">
+              <span className="uno-out-face"><Avatar config={p?.avatar} size="100%" track="none" expression="happy" /></span>
+              <span className="uno-out-medal display" data-place={Math.min(outShow.place, 4)}>{ordinal(outShow.place)}</span>
+              <b className="display">{mine ? 'You’re out!' : `${p?.name ?? 'Someone'} is out!`}</b>
+              <small>{mine ? `+${outShow.points} pts · watch the rest battle it out` : `${ordinal(outShow.place)} place · the rest play on`}</small>
+            </span>
+          </button>, document.body)
+        )
+      })()}
       {callout && (
         <div key={callout.key} className={`uno-callout ${callout.big ? 'big' : ''}`} style={{ ['--co' as string]: callout.color }}>
           <b className="display">{callout.text}</b>

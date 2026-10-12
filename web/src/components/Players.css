@@ -5,6 +5,9 @@
 .pchip.active { box-shadow: 0 0 0 4px var(--pc), 0 8px 0 rgba(29, 58, 110, 0.16); transform: translateY(-4px) rotate(-1.5deg); }
 .pchip.away { filter: grayscale(0.8); opacity: 0.7; }
 .pchip.pchip-done { opacity: 0.85; }
+.pchip.pchip-break { filter: saturate(0.4); opacity: 0.8; }
+.pchip-zz { position: absolute; top: -8px; right: -10px; z-index: 2; padding: 3px 7px 0; border-radius: 999px; font-size: 12px; background: #a7ecff; color: var(--navy); border: 2.5px solid var(--navy); rotate: 12deg; animation: pchip-zz 2.4s ease-in-out infinite; }
+@keyframes pchip-zz { 50% { translate: 0 -3px; rotate: 4deg; } }
 .pchip-medal { position: absolute; bottom: -8px; right: -10px; z-index: 2; min-width: 30px; padding: 4px 6px 1px; border-radius: 999px; font-size: 12px; text-align: center;
   background: #ffb424; color: var(--navy); border: 2.5px solid var(--navy); box-shadow: 0 2px 0 var(--navy); rotate: 10deg; animation: pchip-medal 0.6s var(--ease-out, ease-out) both; }
 .pchip-medal[data-place="2"] { background: #dfe6f3; }
@@ -72,3 +75,6 @@ html.low-power .emote-drop { width: 44px; margin-left: -22px; filter: none; }
 @keyframes rx-orbit { to { transform: rotate(360deg); } }
 @keyframes rx-pop { to { transform: scale(1.18) rotate(8deg); } }
 @keyframes rx-spinb { to { transform: rotate(360deg); } }
+
+/* hit the reaction cap: the bar greys out until the window frees up */
+.emote-bar.cool .emote-list button { filter: grayscale(1); opacity: 0.45; }

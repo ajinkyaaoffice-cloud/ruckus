@@ -7,6 +7,21 @@ export type Release = { id: string; title: string; items: string[] }
 
 export const CHANGELOG: Release[] = [
   {
+    id: '2026-10-12-breaks',
+    title: 'Take a break',
+    items: [
+      'Take a break from the menu: a stand-in plays your turns in UNO and Ludo, so nobody has to wait',
+      'Host can give a dropped player another minute, or play on without them, right from the pause screen',
+      'Closed the tab by mistake? Open the site again and you’re dropped straight back into your room',
+      'Change your look mid-game, and Let’s go takes you back to the table',
+      'Leave moved into the menu, with a warning before you forfeit',
+      'UNO on phones: bigger cards, a sorted hand, and big hands fold into two rows you can scroll',
+      'The card rule tip sits at the bottom so it never hides anyone’s cards',
+      'Going out in UNO is now a big moment everyone sees',
+      'Reactions are capped at five every ten seconds',
+    ],
+  },
+  {
     id: '2026-10-06-scan',
     title: 'Quicker joining',
     items: [

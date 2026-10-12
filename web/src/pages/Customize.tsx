@@ -109,9 +109,10 @@ export default function Customize() {
     setExpr('happy')
     // the hop plays while the wipe starts; never wait on it, a killed tween would never resolve
     gsap.to('.cz-avatar', { y: -60, scale: 1.08, duration: 0.25, ease: 'power2.out', yoyo: true, repeat: 1 })
+    // mid-game (opened from the menu) the button takes you straight back to the table
     const playing = useNet.getState().room?.phase === 'playing'
-    if (playing) { leaving.current = false; return }
-    window.setTimeout(() => go(`/room/${code}`, { label: 'LOBBY!', colors: ['#1d3a6e', '#e64fe0', '#d9f66b'] }), 180)
+    window.setTimeout(() => go(playing ? `/room/${code}/play` : `/room/${code}`,
+      { label: playing ? 'BACK IN!' : 'LOBBY!', colors: ['#1d3a6e', '#e64fe0', '#d9f66b'] }), 180)
   }
 
   const others = room?.players.filter((p) => p.id !== profile.pid) ?? []

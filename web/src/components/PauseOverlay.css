@@ -62,3 +62,13 @@
 .po-held { margin: 16px 0 4px; font-size: 17px; font-weight: 600; }
 .po-held b { color: var(--magenta); }
 .po-actions { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+
+/* host's say over a dropped player, and the "I'm back" for someone on a break */
+.po-host { flex: none; display: flex; gap: 6px; }
+.po-mini { flex: none; padding: 7px 11px 5px; border-radius: 999px; border: 2.5px solid var(--navy); background: #fff; color: var(--navy); font: 800 13px/1 inherit; font-family: inherit; cursor: pointer; box-shadow: 0 3px 0 var(--navy); transition: translate 0.12s, box-shadow 0.12s; }
+.po-mini.go { background: var(--lime); }
+.po-mini:active { translate: 0 3px; box-shadow: 0 0 0 var(--navy); }
+@media (max-width: 480px) {
+  .po-list li { flex-wrap: wrap; }
+  .po-host { width: 100%; justify-content: flex-end; }
+}

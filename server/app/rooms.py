@@ -32,6 +32,11 @@ DEFAULT_SETTINGS: dict[str, Any] = {
 NET_INTERVAL = 1 / 30   # most game snapshots per second sent to clients
 SEND_TIMEOUT = 2.5
 RESUME_DELAY = 3.0       # countdown once everyone is back, so nobody is caught off guard
+EMOTE_CAP = 5                            # reactions per player...
+EMOTE_WINDOW = 10.0                      # ...in any ten seconds
+BREAK_MAX = 15 * 60.0    # how long a seat is kept for someone on a break
+STAND_IN_DELAY = 1.2     # seconds a stand-in waits before playing an away player's go
+WAIT_MORE = 60.0         # what the host's "wait longer" adds to a dropped player's seat
 
 
 def clean_name(name: Any) -> str:
@@ -61,6 +66,16 @@ class Player:
     points: int = 0
     wins: int = 0
     played: int = 0
+    emoted: list[float] = field(default_factory=list)
+
+    def can_emote(self, now: float | None = None) -> bool:
+        """At most EMOTE_CAP reactions in any EMOTE_WINDOW seconds."""
+        now = time.time() if now is None else now
+        self.emoted = [t for t in self.emoted if now - t < EMOTE_WINDOW]
+        if len(self.emoted) >= EMOTE_CAP:
+            return False
+        self.emoted.append(now)
+        return True
 
     def public(self) -> dict[str, Any]:
         return {"id": self.id, "name": self.name, "avatar": self.avatar, "status": self.status,
@@ -85,6 +100,10 @@ class Room:
         self.waiting: dict[str, float] = {}
         self.resume_at: float | None = None
         self.held: str | None = None                  # the host paused the game (pid of who did it)
+        # players taking a break mid-game (pid -> since). Where the game has a stand-in it plays
+        # their turns and nobody waits; otherwise the game pauses until they're back
+        self.away: dict[str, float] = {}
+        self.stand_in_at = 0.0
         self.settings: dict[str, Any] = dict(DEFAULT_SETTINGS)
         self.banned: dict[str, str] = {}             # kicked by the host (pid -> name); kept out until let back
 
@@ -98,6 +117,7 @@ class Room:
             "history": self.history[-12:],
             "settings": self.settings,
             "banned": [{"id": k, "name": v} for k, v in self.banned.items()],
+            "away": list(self.away),
             "now": time.time(),
         }
 
@@ -108,8 +128,9 @@ class Room:
 
     def remove(self, pid: str) -> None:
         self.players.pop(pid, None)
-        if self.waiting.pop(pid, None) is not None and not self.waiting:
-            self.resume_at = time.time() + RESUME_DELAY
+        was_away = self.away.pop(pid, None) is not None
+        if (self.waiting.pop(pid, None) is not None or was_away) and not self.waiting:
+            self._resume_if_clear()
         if self.game and not self.game.over and pid in self.game.players:
             self.game.forfeit(pid)
         if self.host == pid:
@@ -169,6 +190,8 @@ class Room:
         return {
             "held": self.held,
             "waiting": [{"id": pid, "until": at + self.grace} for pid, at in self.waiting.items()],
+            "away": [pid for pid in self.away if not g.can_stand_in],
+            "standIn": g.can_stand_in,
             "resumeAt": self.resume_at,
             "now": time.time(),
         }
@@ -182,7 +205,7 @@ class Room:
         g = self.game
         if not self.settings["pauseOnDrop"]:
             return False
-        if not g or g.over or pid not in g.players or pid in self.waiting:
+        if not g or g.over or pid not in g.players or pid in self.waiting or pid in self.away:
             return False
         p = self.players.get(pid)
         self.waiting[pid] = (p.left_at if p and p.left_at else time.time())
@@ -196,11 +219,62 @@ class Room:
         if self.waiting.pop(pid, None) is None:
             return False
         if not self.waiting and self.game and not self.game.over:
-            if not self.held:
-                self.resume_at = time.time() + RESUME_DELAY
             self.game.emit("back", pid=pid)
+            self._resume_if_clear()
             self._ensure_loop()
         return True
+
+    def _resume_if_clear(self) -> None:
+        g = self.game
+        if g and not g.over and g.paused and not self.waiting and not self.held and not self._break_pauses():
+            self.resume_at = time.time() + RESUME_DELAY
+            self._ensure_loop()
+
+    def _break_pauses(self) -> bool:
+        return bool(self.away) and bool(self.game) and not self.game.can_stand_in
+
+    # --- breaks -----------------------------------------------------------------
+    def take_break(self, pid: str) -> None:
+        g = self.running()
+        if pid not in g.players:
+            raise GameError("You're not playing this one")
+        if pid in self.away:
+            raise GameError("You're already on a break")
+        self.away[pid] = time.time()
+        g.emit("break", pid=pid)
+        if not g.can_stand_in:
+            # nobody can play for them here, so the game waits (without a forfeit timer)
+            self.resume_at = None
+            g.pause()
+        else:
+            self.stand_in_at = time.time() + STAND_IN_DELAY
+        g.dirty = True
+
+    def end_break(self, pid: str) -> None:
+        if pid not in self.away:
+            raise GameError("You're not on a break")
+        self.away.pop(pid, None)
+        if self.game and not self.game.over:
+            self.game.emit("unbreak", pid=pid)
+            self._resume_if_clear()
+
+
+    def stand_in(self) -> None:
+        """Play the go of anyone on a break, one move at a time, at a human-ish pace."""
+        g = self.game
+        if not g or g.over or g.paused or not self.away or not g.can_stand_in:
+            return
+        t = time.time()
+        if t < self.stand_in_at:
+            return
+        for pid in list(self.away):
+            if pid in g.players:
+                try:
+                    if g.stand_in(pid):
+                        self.stand_in_at = t + STAND_IN_DELAY
+                        return
+                except GameError:
+                    log.exception("stand-in move failed (%s)", g.id)
 
     # --- host controls --------------------------------------------------------
     def require_host(self, by: str) -> None:
@@ -295,9 +369,38 @@ class Room:
             raise GameError("The game isn't paused")
         self.held = None
         g.emit("unhold", pid=by)
-        if not self.waiting:
-            self.resume_at = time.time() + RESUME_DELAY
-            self._ensure_loop()
+        self._resume_if_clear()
+
+    def wait_more(self, by: str, target: Any) -> None:
+        """Host: hold a dropped player's seat a minute longer."""
+        self.require_host(by)
+        if target not in self.waiting:
+            raise GameError("They're not being waited on")
+        until = self.waiting[target] + self.grace
+        if until - time.time() > BREAK_MAX:
+            raise GameError("That's long enough")
+        self.waiting[target] += WAIT_MORE
+        p = self.players.get(target)
+        if p and p.left_at:
+            p.left_at += WAIT_MORE
+
+    def play_on(self, by: str, target: Any) -> None:
+        """Host: stop waiting for a dropped player. A stand-in takes their seat where the game
+        has one (they can pick it back up when they return), otherwise they forfeit."""
+        self.require_host(by)
+        g = self.running()
+        if target not in self.waiting:
+            raise GameError("They're not being waited on")
+        self.waiting.pop(target)
+        if g.can_stand_in:
+            self.away[target] = time.time()
+            p = self.players.get(target)
+            if p and p.left_at:
+                p.left_at = time.time()          # the break's own clock holds the seat now
+            g.emit("break", pid=target)
+        else:
+            self.remove(target)
+        self._resume_if_clear()
 
     def end_game(self, by: str) -> None:
         """Host abandons the current game: nobody scores, everyone goes back to the lobby."""
@@ -310,6 +413,7 @@ class Room:
         self.phase = "lobby"
         self.held = None
         self.waiting.clear()
+        self.away.clear()
         self.resume_at = None
 
     # --- games --------------------------------------------------------------
@@ -349,6 +453,7 @@ class Room:
         self.game = cls(ids, {**self.game_options, "first": first}, random.Random())
         self.held = None
         self.waiting.clear()
+        self.away.clear()
         self.resume_at = None
         self.phase = "playing"
         await self.sync()
@@ -376,6 +481,7 @@ class Room:
                         await self.sync_game()
                     continue
                 g.update()
+                self.stand_in()
                 # physics may tick at 60 Hz, but phones only need ~30 snapshots a second
                 # (clients extrapolate between them); events like hits still go out at once
                 now = time.monotonic()
@@ -489,7 +595,8 @@ class RoomManager:
             now = time.time()
             for code, room in list(self.rooms.items()):
                 gone = [p.id for p in room.players.values()
-                        if p.ws is None and p.left_at and now - p.left_at > room.grace]
+                        if p.ws is None and p.left_at and now - p.left_at > room.grace
+                        and now - room.away.get(p.id, -BREAK_MAX) > BREAK_MAX]
                 for pid in gone:
                     room.remove(pid)
                 if gone and room.players:

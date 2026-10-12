@@ -24,3 +24,11 @@
 .score-chips span.dim { filter: grayscale(0.8); opacity: 0.55; }
 .timer-bar { width: min(88vw, 560px); height: 12px; border-radius: 99px; background: rgba(29, 58, 110, 0.18); overflow: hidden; }
 .timer-bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--magenta), var(--amber)); transform-origin: left; transition: opacity 0.3s; }
+
+/* you're on a break: a stand-in plays for you until you tap back in */
+/* parked in the bottom strip beside the emote button, so the table stays in view */
+.gs-break { position: fixed; left: var(--gutter-l); bottom: calc(var(--safe-b) + var(--tb-pad) * 0.6); z-index: 60; display: flex; align-items: center; gap: 14px; padding: 8px 8px 8px 18px; border-radius: 999px; background: var(--navy); color: #fff; box-shadow: 0 6px 0 rgba(0, 0, 0, 0.25); max-width: calc(100vw - var(--gutter-l) - var(--gutter-r) - var(--tb-btn) - 10px); animation: gs-break-in 0.5s cubic-bezier(.3, 1.6, .5, 1) both; }
+.gs-break-txt { display: flex; flex-direction: column; line-height: 1.15; min-width: 0; }
+.gs-break-txt b { font-size: 18px; color: #a7ecff; }
+.gs-break-txt small { font-size: 12px; font-weight: 600; opacity: 0.75; }
+@keyframes gs-break-in { from { translate: 0 120%; opacity: 0; } }

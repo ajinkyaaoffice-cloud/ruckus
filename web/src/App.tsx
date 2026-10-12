@@ -13,6 +13,7 @@ import JoinLink from './pages/JoinLink'
 import Customize from './pages/Customize'
 import Hub from './pages/Hub'
 import RoomGuard from './pages/RoomGuard'
+import Rejoin from './components/Rejoin'
 
 const GameScreen = lazy(() => import('./pages/GameScreen'))
 
@@ -35,6 +36,7 @@ export default function App() {
       <Toasts />
       {!isTouch && <Cursor />}
       <Splash />
+      <Rejoin />
     </TransitionProvider>
   )
 }
