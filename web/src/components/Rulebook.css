@@ -62,28 +62,13 @@
 .rb-uno .rb-deco { opacity: 1; background:
   radial-gradient(ellipse 46% 64% at 50% 50%, rgba(255, 255, 255, 0.35) 98%, transparent 100%),
   linear-gradient(135deg, #ff5d73 0 10%, transparent 10% 90%, #3d8bff 90%); rotate: 0deg; }
-/* Ping Pong: table-tennis blue with the white centre line */
-.rb-pong { --rb-paper: #f2fdff; --rs-bg: #bff2ff; --rs-ink: #1d3a6e; --rb-accent: #3d8bff; }
-.rb-pong .rb-deco { background: linear-gradient(90deg, transparent calc(50% - 2px), #fff calc(50% - 2px) calc(50% + 2px), transparent calc(50% + 2px)); }
 /* Tic Tac Toe: a notebook page with a margin line */
 .rb-tictactoe { --rb-paper: #fff; --rs-bg: repeating-linear-gradient(transparent 0 17px, #d8e6ff 17px 18px), #fff; --rs-ink: #1d3a6e; --rb-accent: #e64fe0; }
 .rb-tictactoe .rb-leaf { background: linear-gradient(90deg, transparent 26px, #ffb3c4 26px 28px, transparent 28px), var(--rb-paper); }
 .rb-tictactoe .rb-deco { background: repeating-linear-gradient(45deg, transparent 0 14px, rgba(255, 255, 255, 0.25) 14px 18px); }
-/* Connect Four: punched holes all round the frame */
-.rb-connect4 { --rb-paper: #eef3ff; --rs-bg: #dfe8ff; --rs-ink: #1d3a6e; --rb-accent: #e64fe0; }
-.rb-connect4 .rb-deco { background: radial-gradient(circle, rgba(255, 255, 255, 0.22) 7px, transparent 8px) 0 0 / 26px 26px; }
 /* Dots & Boxes: graph paper */
 .rb-dots { --rb-paper: #fbffe9; --rs-bg: radial-gradient(circle, #c9d6a0 1.2px, transparent 1.6px) 0 0 / 12px 12px, #fff; --rs-ink: #1d3a6e; --rb-accent: #1d3a6e; }
 .rb-dots .rb-deco { background: radial-gradient(circle, rgba(29, 58, 110, 0.35) 2.5px, transparent 3px) 0 0 / 22px 22px; }
-/* Memory: card-back diamonds */
-.rb-memory { --rb-paper: #f6f3ff; --rs-bg: #efeaff; --rs-ink: #1d3a6e; --rb-accent: #7d6bff; }
-.rb-memory .rb-deco { background: conic-gradient(from 45deg, rgba(255, 255, 255, 0.22) 25%, transparent 0 50%, rgba(255, 255, 255, 0.22) 0 75%, transparent 0) 0 0 / 30px 30px; }
-/* Odd One Out: rows of stars, one turned */
-.rb-oddone { --rb-paper: #fffaeb; --rs-bg: #fff3d2; --rs-ink: #1d3a6e; --rb-accent: #ff5d73; }
-.rb-oddone .rb-deco { background: radial-gradient(circle, rgba(255, 255, 255, 0.5) 3px, transparent 3.5px) 0 0 / 18px 18px; }
-/* Echo: ripples from the middle, pads glow on a dark stage */
-.rb-echo { --rb-paper: #fff6fe; --rs-bg: radial-gradient(circle at 50% 52%, #26457c, #132a52); --rs-ink: #fff; --rb-accent: #e64fe0; }
-.rb-echo .rb-deco { background: repeating-radial-gradient(circle at 50% 50%, transparent 0 18px, rgba(230, 79, 224, 0.18) 18px 21px); }
 
 @media (max-height: 560px) and (orientation: landscape) {
   .rb { width: min(820px, 100%); }
@@ -96,21 +81,6 @@
 /* Sea Battle: chart paper and sonar rings */
 .rb-seabattle { --rb-paper: #f2f8ff; --rs-bg: #dcebff; --rs-ink: #1d3a6e; --rb-accent: #3d8bff; }
 .rb-seabattle .rb-deco { background: repeating-radial-gradient(circle at 80% 20%, transparent 0 22px, rgba(61, 139, 255, 0.16) 22px 24px); }
-/* Checkers: the board itself */
-.rb-checkers { --rb-paper: #fff5f7; --rs-bg: #ffe3ea; --rs-ink: #1d3a6e; --rb-accent: #ff5d73; }
-.rb-checkers .rb-deco { background: repeating-conic-gradient(rgba(255, 93, 115, 0.14) 0 25%, transparent 0 50%) 0 0 / 36px 36px; }
-/* Reversi: green felt */
-.rb-reversi { --rb-paper: #f3fff9; --rs-bg: #d8f5e8; --rs-ink: #1d3a6e; --rb-accent: #2fbf8f; }
-.rb-reversi .rb-deco { background: radial-gradient(circle, rgba(47, 191, 143, 0.22) 6px, transparent 6.5px) 0 0 / 30px 30px; }
-/* Light Cycles: neon grid at night */
-.rb-cycles { --rb-paper: #f4f8ff; --rs-bg: #0b1a36; --rs-ink: #fff; --rb-accent: #e64fe0; }
-.rb-cycles .rb-deco { background: linear-gradient(rgba(167, 236, 255, 0.16) 1px, transparent 1px) 0 0 / 22px 22px, linear-gradient(90deg, rgba(167, 236, 255, 0.16) 1px, transparent 1px) 0 0 / 22px 22px; }
 /* Quick Draw: wanted poster */
 .rb-quickdraw { --rb-paper: #fff4dc; --rs-bg: #ffe9b8; --rs-ink: #1d3a6e; --rb-accent: #ff3d5a; }
 .rb-quickdraw .rb-deco { background: repeating-linear-gradient(-8deg, transparent 0 14px, rgba(201, 122, 58, 0.12) 14px 16px); }
-/* Showdown: candy stripes */
-.rb-showdown { --rb-paper: #fff2fa; --rs-bg: #ffe0f2; --rs-ink: #1d3a6e; --rb-accent: #e64fe0; }
-.rb-showdown .rb-deco { background: repeating-linear-gradient(45deg, transparent 0 16px, rgba(255, 154, 213, 0.22) 16px 30px); }
-/* Quick Maths: squared exercise-book paper */
-.rb-quickmaths { --rb-paper: #f6fffc; --rs-bg: #e3f8f1; --rs-ink: #1d3a6e; --rb-accent: #2fbf8f; }
-.rb-quickmaths .rb-deco { background: linear-gradient(rgba(29, 58, 110, 0.08) 1px, transparent 1px) 0 0 / 16px 16px, linear-gradient(90deg, rgba(29, 58, 110, 0.08) 1px, transparent 1px) 0 0 / 16px 16px; }

@@ -56,11 +56,11 @@ html.boot-hold .hero-title, html.boot-hold .hero-foot, html.boot-hold .hero-band
 .t-uno { left: 7%; top: 17%; rotate: -16deg; }
 .t-x { right: 11%; top: 15%; }
 .t-disc { right: 5%; top: 50%; }
-.t-paddle { left: 4%; top: 56%; rotate: 20deg; }
-.t-memory { right: 20%; bottom: 20%; rotate: 12deg; }
+.t-die { left: 4%; top: 56%; rotate: 20deg; }
+.t-pawn { right: 20%; bottom: 20%; rotate: 12deg; }
 .t-o { left: 27%; top: 9%; width: clamp(50px, 6vw, 90px); }
 .t-dots { left: 18%; bottom: 17%; rotate: -10deg; }
-.t-pad { right: 31%; top: 8%; width: clamp(50px, 6vw, 90px); }
+.t-house { right: 31%; top: 8%; width: clamp(50px, 6vw, 90px); }
 
 .hero-foot { width: min(1080px, 94vw); display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-top: clamp(20px, 4vh, 44px); }
 .hero-sub { margin: 0; max-width: 360px; font-weight: 700; font-size: clamp(16px, 1.6vw, 21px); color: var(--navy); line-height: 1.35; overflow: hidden; }
@@ -85,9 +85,9 @@ html.boot-hold .hero-title, html.boot-hold .hero-foot, html.boot-hold .hero-band
   .ht-row.r1, .ht-row.r2 { translate: 0 0; }
   .ht-tag { position: absolute; right: -18px; top: -26px; }
   .ht-line.serif { font-size: 0.34em; }
-  .t-o, .t-pad, .t-dots, .t-memory { display: none; }
+  .t-o, .t-house, .t-dots, .t-pawn { display: none; }
   .hero-token { width: 60px; }
-  .t-uno { top: 11%; left: 3%; } .t-x { top: 12%; } .t-paddle { top: auto; bottom: 26%; } .t-disc { top: auto; bottom: 30%; }
+  .t-uno { top: 11%; left: 3%; } .t-x { top: 12%; } .t-die { top: auto; bottom: 26%; } .t-disc { top: auto; bottom: 30%; }
   .hero-foot { flex-direction: column; text-align: center; }
 }
 

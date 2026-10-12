@@ -245,7 +245,7 @@ export default function Hub() {
 function StartSheet({ g, readyCount, onClose, onRules }: { g: GameMeta; readyCount: number; onClose: () => void; onRules: () => void }) {
   const root = useRef<HTMLDivElement>(null)
   const [opts, setOpts] = useState<Record<string, unknown>>(() =>
-    Object.fromEntries((g.options ?? []).map((o) => [o.key, o.choices[g.id === 'pong' ? 1 : 0].value])))
+    Object.fromEntries((g.options ?? []).map((o) => [o.key, o.choices[0].value])))
   useLayoutEffect(() => {
     const ctx = gsap.context(() => {
       gsap.fromTo('.ss-sheet', ...intro({ scale: 0.4, rotate: -20, y: 160, duration: 0.7, ease: 'back.out(1.7)' }))

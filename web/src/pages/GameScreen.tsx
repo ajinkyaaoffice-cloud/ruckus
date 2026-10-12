@@ -16,20 +16,10 @@ export type GameProps = { state: GameState; me: string; room: Room; players: Roo
 
 const GAMES: Record<string, ComponentType<GameProps>> = {
   tictactoe: lazy(() => import('../games/TicTacToe')),
-  connect4: lazy(() => import('../games/ConnectFour')),
   uno: lazy(() => import('../games/Uno')),
-  pong: lazy(() => import('../games/Pong')),
   dots: lazy(() => import('../games/Dots')),
-  memory: lazy(() => import('../games/Memory')),
-  oddone: lazy(() => import('../games/OddOne')),
-  echo: lazy(() => import('../games/Echo')),
   seabattle: lazy(() => import('../games/SeaBattle')),
-  checkers: lazy(() => import('../games/Checkers')),
-  reversi: lazy(() => import('../games/Reversi')),
-  cycles: lazy(() => import('../games/Cycles')),
   quickdraw: lazy(() => import('../games/QuickDraw')),
-  showdown: lazy(() => import('../games/Showdown')),
-  quickmaths: lazy(() => import('../games/QuickMaths')),
   ludo: lazy(() => import('../games/Ludo')),
 }
 const loadRulebook = () => import('../components/Rulebook')

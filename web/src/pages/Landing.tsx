@@ -405,7 +405,7 @@ export default function Landing() {
         <div className="games-pin">
           <div className="games-head">
             <span className="sticker">The lineup</span>
-            <h2 className="display" data-split><Split text="Eight ways to" /><br /><Split text="ruin a friendship" /></h2>
+            <h2 className="display" data-split><Split text="Six ways to" /><br /><Split text="ruin a friendship" /></h2>
           </div>
           <div className="games-track">
             {CATALOG.map((g, i) => (
@@ -497,10 +497,10 @@ export default function Landing() {
 }
 
 /* ---------------- hero tokens: tiny props from every game ---------------- */
-type TokenKind = 'uno' | 'x' | 'o' | 'disc' | 'paddle' | 'memory' | 'dots' | 'pad'
+type TokenKind = 'uno' | 'x' | 'o' | 'disc' | 'die' | 'pawn' | 'dots' | 'house'
 const TOKENS: { k: TokenKind; d: number }[] = [
-  { k: 'uno', d: 1.4 }, { k: 'x', d: 0.7 }, { k: 'disc', d: 1.1 }, { k: 'paddle', d: 1.6 },
-  { k: 'memory', d: 0.9 }, { k: 'o', d: 0.5 }, { k: 'dots', d: 1.2 }, { k: 'pad', d: 0.8 },
+  { k: 'uno', d: 1.4 }, { k: 'x', d: 0.7 }, { k: 'disc', d: 1.1 }, { k: 'die', d: 1.6 },
+  { k: 'pawn', d: 0.9 }, { k: 'o', d: 0.5 }, { k: 'dots', d: 1.2 }, { k: 'house', d: 0.8 },
 ]
 
 function Token({ kind }: { kind: TokenKind }) {
@@ -520,29 +520,26 @@ function Token({ kind }: { kind: TokenKind }) {
         <svg viewBox="0 0 100 100"><circle cx="50" cy="54" r="44" fill="#c98500" /><circle cx="50" cy="48" r="44" fill="#ffb424" />
           <circle cx="50" cy="48" r="28" fill="none" stroke="#000" strokeOpacity=".14" strokeWidth="7" /></svg>
       )
-    case 'paddle':
-      return (
-        <svg viewBox="0 0 120 150"><rect x="50" y="88" width="20" height="56" rx="8" fill="#1d3a6e" /><circle cx="60" cy="58" r="52" fill="#e64fe0" />
-          <circle cx="60" cy="58" r="40" fill="none" stroke="#fff" strokeOpacity=".35" strokeWidth="6" /><circle cx="104" cy="20" r="12" fill="#fff" /></svg>
-      )
-    case 'memory':
-      return (
-        <svg viewBox="0 0 100 120"><rect x="4" y="4" width="92" height="112" rx="14" fill="#a596ff" />
-          <rect x="14" y="14" width="72" height="92" rx="8" fill="none" stroke="#fff" strokeWidth="4" strokeDasharray="8 7" />
-          <path d="M50 34 l6 13 14 2 -10 10 2 14 -12 -7 -12 7 2 -14 -10 -10 14 -2z" fill="#d9f66b" /></svg>
-      )
     case 'dots':
       return (
         <svg viewBox="0 0 110 110"><rect x="16" y="16" width="38" height="38" rx="6" fill="#45b8ff" />
           <path d="M15 15 H55 V55 M55 15 H95" stroke="#1d3a6e" strokeWidth="7" strokeLinecap="round" fill="none" />
           {[15, 55, 95].flatMap((y) => [15, 55, 95].map((x) => <circle key={`${x}${y}`} cx={x} cy={y} r="8" fill="#fff" />))}</svg>
       )
-    case 'pad':
+    case 'die':
       return (
-        <svg viewBox="0 0 110 110"><path d="M55 8 A47 47 0 0 1 102 55 L70 55 A15 15 0 0 0 55 40Z" fill="#d9f66b" />
-          <path d="M102 55 A47 47 0 0 1 55 102 L55 70 A15 15 0 0 0 70 55Z" fill="#ff9a62" />
-          <path d="M55 102 A47 47 0 0 1 8 55 L40 55 A15 15 0 0 0 55 70Z" fill="#45b8ff" />
-          <path d="M8 55 A47 47 0 0 1 55 8 L55 40 A15 15 0 0 0 40 55Z" fill="#e64fe0" /></svg>
+        <svg viewBox="0 0 100 100"><rect x="8" y="12" width="84" height="84" rx="22" fill="#1d3a6e" /><rect x="8" y="6" width="84" height="84" rx="22" fill="#fff" />
+          {[[30, 28], [70, 28], [50, 48], [30, 68], [70, 68]].map(([x, y]) => <circle key={`${x}${y}`} cx={x} cy={y} r="8" fill="#ff5d73" />)}</svg>
+      )
+    case 'pawn':
+      return (
+        <svg viewBox="0 0 100 130"><path d="M18 120 Q22 70 42 64 L58 64 Q78 70 82 120 Z" fill="#43d17a" stroke="#1d3a6e" strokeWidth="6" strokeLinejoin="round" />
+          <circle cx="50" cy="40" r="26" fill="#43d17a" stroke="#1d3a6e" strokeWidth="6" /><circle cx="41" cy="31" r="7" fill="#fff" opacity=".8" /></svg>
+      )
+    case 'house':
+      return (
+        <svg viewBox="0 0 110 110"><path d="M14 52 L55 16 L96 52 V98 H14 Z" fill="#ff5d73" stroke="#1d3a6e" strokeWidth="6" strokeLinejoin="round" />
+          <rect x="44" y="64" width="22" height="34" rx="4" fill="#ffc93c" stroke="#1d3a6e" strokeWidth="5" /></svg>
       )
   }
 }

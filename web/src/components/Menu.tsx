@@ -85,7 +85,7 @@ export default function Menu() {
     { label: 'Play', glyph: 'bolt', color: '#d9f66b', run: nav('/play', 'LOBBY!'), sub: 'host or join' },
   ]
   if (onLanding) {
-    items.push({ label: 'Games', glyph: 'star', color: '#ffb424', run: section('.games'), sub: 'all eight' })
+    items.push({ label: 'Games', glyph: 'star', color: '#ffb424', run: section('.games'), sub: 'all six' })
     items.push({ label: 'Legends', glyph: 'burst', color: '#a7ecff', run: section('.lb'), sub: 'leaderboard' })
   }
   // host-only controls for the game in progress

@@ -3,11 +3,7 @@ import random
 import pytest
 
 from app.games import REGISTRY, GameError
-from app.games.connect4 import ConnectFour
 from app.games.dots import Dots
-from app.games.echo import Echo
-from app.games.memory import Memory
-from app.games.oddone import OddOneOut
 from app.games.tictactoe import TicTacToe
 from app.games import uno
 from app.games.uno import Uno, build_deck
@@ -53,22 +49,6 @@ def test_tictactoe_draw():
     for i, cell in enumerate([0, 1, 2, 4, 3, 5, 7, 6, 8]):
         g.handle(x if i % 2 == 0 else o, {"type": "place", "cell": cell})
     assert g.over and len(g.results.ranking) == 1
-
-
-def test_connect4_diagonal():
-    g = ConnectFour(P2, rng=random.Random(0))
-    a, b = g.players
-    for who, col in [(a, 0), (b, 1), (a, 1), (b, 2), (a, 2), (b, 3), (a, 2), (b, 3), (a, 3), (b, 6), (a, 3)]:
-        g.handle(who, {"type": "drop", "col": col})
-    assert g.over and g.results.winners == [a]
-
-
-def test_connect4_full_column():
-    g = ConnectFour(P2, rng=random.Random(0))
-    for i in range(6):
-        g.handle(g.players[g.turn], {"type": "drop", "col": 0})
-    with pytest.raises(GameError):
-        g.handle(g.players[g.turn], {"type": "drop", "col": 0})
 
 
 # --- UNO -------------------------------------------------------------------
@@ -308,87 +288,12 @@ def test_dots_box_gives_extra_turn():
     assert g.boxes[0][0] == b and g.players[g.turn] == b and g.score[b] == 1
 
 
-def test_memory_pair_and_miss(monkeypatch):
-    g = Memory(P2, rng=random.Random(0))
-    p = g.players[0]
-    first = 0
-    twin = next(i for i in range(1, len(g.cards)) if g.cards[i] == g.cards[0])
-    other = next(i for i in range(1, len(g.cards)) if g.cards[i] != g.cards[0])
-    g.handle(p, {"type": "flip", "card": first})
-    g.handle(p, {"type": "flip", "card": twin})
-    g._timers[0][1]()
-    assert g.score[p] == 1 and g.players[g.turn] == p
-    nxt = next(i for i in range(len(g.cards)) if not g.owner[i] and i != other)
-    g.handle(p, {"type": "flip", "card": other})
-    if g.cards[nxt] == g.cards[other]:
-        nxt = next(i for i in range(len(g.cards)) if not g.owner[i] and g.cards[i] != g.cards[other] and i != other)
-    g.handle(p, {"type": "flip", "card": nxt})
-    g._timers[-1][1]()
-    assert g.players[g.turn] != p
-    assert g.view(p)["faces"][other] is None
-
-
-def test_oddone_scoring_and_lockout():
-    g = OddOneOut(P2, rng=random.Random(0))
-    g._next_round()
-    g._go()
-    a, b = P2
-    wrong = (g.answer + 1) % len(g.items)
-    g.handle(a, {"type": "pick", "index": wrong})
-    with pytest.raises(GameError):
-        g.handle(a, {"type": "pick", "index": g.answer})
-    g.handle(b, {"type": "pick", "index": g.answer})
-    assert g.score[b] == 1 and g.phase == "reveal"
-    assert g.view(a)["answer"] == g.answer
-
-
-def test_oddone_answer_hidden_during_play():
-    g = OddOneOut(P2, rng=random.Random(0))
-    g._next_round()
-    g._go()
-    assert g.view("alice")["answer"] is None
-
-
-def test_echo_knockout():
-    g = Echo(P2, rng=random.Random(0))
-    g._watch()
-    g._input()
-    seq = list(g.sequence)
-    wrong = (seq[0] + 1) % 6
-    g.handle("alice", {"type": "pad", "pad": wrong})
-    assert "alice" not in g.alive
-    for s in seq:
-        g.handle("bob", {"type": "pad", "pad": s})
-    g._timers[-1][1]()       # end timer
-    assert g.over and g.results.winners == ["bob"]
-
-
 def test_registry_player_counts():
     assert REGISTRY["tictactoe"].max_players == 2
     assert REGISTRY["uno"].max_players == 5
     assert REGISTRY["uno"].min_players == 2
     with pytest.raises(GameError):
         TicTacToe(P3)
-
-
-def test_pong_tracking_paddles_rally_and_misses():
-    from app.games import pong as pm
-    clock = [0.0]
-    g = pm.Pong(P2, rng=random.Random(2))
-    g.now = lambda: clock[0]          # type: ignore[method-assign]
-    g.last = 0.0
-    g.serve_at = 0.5
-    hits = 0
-    for _ in range(60 * 90):
-        clock[0] += 1 / 60
-        g.handle("alice", {"type": "move", "x": g.ball["x"]})   # alice tracks perfectly
-        g.update()
-        hits += sum(1 for e in g.events if e["kind"] == "hit")
-        g.events.clear()
-        if g.over:
-            break
-    assert hits > 0
-    assert g.over and g.results.winners == ["alice"] and g.score["alice"] == 7
 
 
 @pytest.mark.parametrize("n,modern,seed", [(4, False, 1), (5, False, 2), (5, True, 3), (5, True, 4)])

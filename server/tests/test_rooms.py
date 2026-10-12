@@ -6,7 +6,7 @@ import time
 import pytest
 
 from app.games import Game, GameError
-from app.games.quickmaths import QuickMaths
+from app.games.ludo import Ludo
 from app.rooms import Player, RoomManager
 
 
@@ -39,19 +39,16 @@ def wall(monkeypatch):
 
 
 def test_pause_freezes_game_time(wall):
-    g = QuickMaths(["a", "b"], rng=random.Random(2))
-    wall[0] += 4.0
-    g.update()
-    assert g.phase == "play"
+    g = Ludo(["a", "b"], rng=random.Random(2))
     left = g.deadline - g.now()
     g.pause()
-    wall[0] += 30.0                     # far past the question's time limit
+    wall[0] += 60.0                     # far past the roll timer
     g.update()
-    assert g.phase == "play" and g.deadline - g.now() == pytest.approx(left)
+    assert g.phase == "roll" and g.dice is None and g.deadline - g.now() == pytest.approx(left)
     g.resume()
     wall[0] += 1.0
     g.update()
-    assert g.phase == "play" and g.deadline - g.now() == pytest.approx(left - 1.0)
+    assert g.phase == "roll" and g.deadline - g.now() == pytest.approx(left - 1.0)
 
 
 def make_room():
@@ -169,9 +166,9 @@ def test_anyone_picks_and_reset_scores():
         for p in room.players.values():
             p.status = "ready"
         with pytest.raises(GameError, match="host"):
-            await room.start("bobby", "quickmaths", {})
+            await room.start("bobby", "quickdraw", {})
         room.configure("alice", {"anyonePicks": True})
-        await room.start("bobby", "quickmaths", {})
+        await room.start("bobby", "quickdraw", {})
         assert room.phase == "playing"
         room.players["alice"].points = 6
         room.history.append({"game": "x"})
@@ -187,7 +184,7 @@ def test_no_pause_on_drop_when_switched_off():
         room = make_room()
         for p in room.players.values():
             p.status = "ready"
-        await room.start("alice", "quickmaths", {})
+        await room.start("alice", "quickdraw", {})
         assert room.dropped("bobby") and room.game.paused
         room.configure("alice", {"pauseOnDrop": False})
         assert not room.waiting and room.resume_at is not None
