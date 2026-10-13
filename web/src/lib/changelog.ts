@@ -7,13 +7,23 @@ export type Release = { id: string; title: string; items: string[] }
 
 export const CHANGELOG: Release[] = [
   {
+    id: '2026-10-13-mogul-tips',
+    title: 'Mogul tips and crew joining',
+    items: [
+      'Mogul now explains every space as it’s landed on, like UNO does for cards: rent, stations, Chance, tax, jail and more',
+      'Owned streets are easier to spot: a thicker owner stripe and a tint in the owner’s colour',
+      'Join a friend’s crew by name, right from the Join side of the Play page',
+      'Going back to the dressing room in the lobby takes you off the ready list, so a game can’t start without you',
+    ],
+  },
+  {
     id: '2026-10-12-mogul',
     title: 'New game: Mogul',
     items: [
       'Mogul, the property game: buy streets, charge rent, build houses and hotels, trade, and bankrupt your friends. 2 to 4 players, best with three',
       'All the classic rules: doubles, jail, 32 Chance and Chest cards, auctions, mortgages, even building and a bank that runs out of houses',
       'Pick classic last-one-standing, or a 30 or 60 minute game where the richest player wins',
-      'Rule tips pop up the first time something matters, and the rulebook has a page for every rule',
+      'Rule tips pop up when something matters, and the rulebook has a page for every rule',
       'We cleared out ten older games to make room: Quick Maths, Showdown, Light Cycles, Reversi, Checkers, Echo, Odd One Out, Memory Match, Connect Four and Ping Pong',
     ],
   },

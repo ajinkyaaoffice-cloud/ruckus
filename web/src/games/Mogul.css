@@ -76,9 +76,9 @@
 .mg-dice.live .mg-die.b { animation-delay: -0.35s; }
 @keyframes mg-tumble { 0% { rotate: 0deg; translate: 0 0; } 40% { rotate: 160deg; translate: 0 -14px; } 100% { rotate: 360deg; translate: 0 0; } }
 @keyframes mg-wake { from { rotate: -7deg; } to { rotate: 7deg; scale: 1.06; } }
-.mg-roll { position: relative; border: 0; background: none; padding: 4px 4px 14px; font: inherit; color: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.mg-roll { position: relative; border: 0; background: none; padding: 4px 4px 30px; font: inherit; color: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .mg-roll:active .mg-dice-row { translate: 0 3px; }
-.mg-roll-tag { position: absolute; left: 50%; bottom: -6px; translate: -50% 0; padding: 4px 14px 1px; border-radius: 99px; background: var(--magenta); color: #fff; font-size: 15px; box-shadow: 0 3px 0 var(--navy); }
+.mg-roll-tag { position: absolute; left: 50%; bottom: 3px; translate: -50% 0; padding: 4px 14px 1px; border-radius: 99px; background: var(--magenta); color: #fff; font-size: 15px; box-shadow: 0 3px 0 var(--navy); }
 .mg-roll .mg-say { margin-bottom: 4px; }
 
 /* the chance / chest card */
@@ -227,3 +227,13 @@ html.low-power .mg-tip { animation: mg-tip-out 0.3s ease-in 4.9s forwards; }
 @media (max-width: 1100px) { html.low-power .mg-tip { animation-name: mg-tip-sink; } }
 .mg-sheet.deed .mg-sheet-in { padding-top: 54px; }
 .mg-tint { pointer-events: none; }
+/* the tip names the space it's about, like UNO's tip shows the card */
+.mg-tip-tile { flex: none; display: flex; flex-direction: column; justify-content: flex-end; width: 50px; height: 62px; padding: 0 4px 6px; border-radius: 8px; border: 3px solid var(--navy); background: #fff; overflow: hidden; rotate: -5deg;
+  font-size: 9px; font-weight: 800; line-height: 1.05; text-align: center; color: var(--navy); box-shadow: 0 3px 0 var(--navy); }
+.mg-tip-tile i { display: block; height: 16px; margin: 0 -4px auto; background: var(--tc); border-bottom: 2px solid var(--navy); }
+.mg-tip small { font-size: 11px; font-weight: 700; opacity: 0.65; line-height: 1.1; }
+@media (max-width: 640px) {
+  .mg-tip-tile { width: 36px; height: 46px; font-size: 7px; padding-bottom: 4px; border-width: 2px; border-radius: 6px; }
+  .mg-tip-tile i { height: 11px; }
+  .mg-tip small { font-size: 10px; }
+}

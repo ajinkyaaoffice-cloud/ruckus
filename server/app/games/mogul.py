@@ -517,7 +517,7 @@ class Mogul(Game):
         to = (frm + steps) % 40
         self.pos[pid] = to
         self.last = {"id": self.seq + 1, "pid": pid, "from": frm, "to": to, "steps": steps, "kind": kind}
-        self.emit("move", pid=pid, frm=frm, to=to, steps=steps, kind=kind)
+        self.emit("move", pid=pid, frm=frm, to=to, steps=steps, how=kind)
         if steps > 0 and frm + steps >= 40:
             self.cash[pid] += SALARY
             self.emit("salary", pid=pid, amount=SALARY)

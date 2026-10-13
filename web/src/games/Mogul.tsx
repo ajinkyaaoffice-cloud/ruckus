@@ -33,7 +33,7 @@ type St = {
 }
 type Side = { cash: number; spaces: number[]; cards: number }
 
-/* ---------- rule tips (shown once each, the first time they matter) ---------- */
+/* ---------- rule tips: like UNO's card rules, each one pops up whenever it comes into play ---------- */
 
 const TIPS: Record<string, { name: string; text: string; tile?: number }> = {
   buy: { name: 'Buy or auction', text: 'Buy it at the printed price, or pass and everyone bids for it — the top bid wins, even under price.' },
@@ -49,8 +49,14 @@ const TIPS: Record<string, { name: string; text: string; tile?: number }> = {
   tax: { name: 'Tax', text: 'Paid to the bank. Free Parking is just a rest stop — nothing collects there.' },
   trade: { name: 'Trading', text: 'Swap property, cash and jail cards. Sets with buildings can’t be traded; mortgaged ones cost the taker 10%.' },
   go: { name: 'GO', text: 'Every time you pass or land on GO the bank pays you $200.' },
+  rent: { name: 'Rent', text: 'Landing on someone’s property pays them rent. A full colour set doubles it; houses and hotels raise it a lot.' },
+  own: { name: 'Your property', text: 'No rent on your own streets. Own the whole colour set to start building.' },
+  chance: { name: 'Chance', text: 'Draw the top card and do what it says: move, pay, collect or go to jail. A jail card can be kept.' },
+  chest: { name: 'Chest', text: 'Draw the top card: mostly money in or out, sometimes a move. A jail card can be kept or traded.' },
+  parking: { name: 'Free Parking', text: 'A rest stop. Nothing to pay and nothing to collect.' },
+  visit: { name: 'Just visiting', text: 'Landing on Jail by dice is only a visit. You’re free to carry on next turn.' },
+  gotojail: { name: 'Go to jail', text: 'Straight to jail without passing GO or collecting $200. Your turn ends.' },
 }
-const seenTips = new Set<string>()
 
 /* ---------- board ---------- */
 
@@ -159,9 +165,10 @@ function Overlay({ owner, houses, mortgaged, room, hot }: { owner: Record<string
         const m = mortgaged.includes(i)
         // the outer strip of the tile shows who owns it
         const strip = 0.22
+        const g = 0.1                       // clear of the board's frame
         const so = [
-          { x: r.x, y: r.y + r.h - strip, w: r.w, h: strip }, { x: r.x, y: r.y, w: strip, h: r.h },
-          { x: r.x, y: r.y, w: r.w, h: strip }, { x: r.x + r.w - strip, y: r.y, w: strip, h: r.h },
+          { x: r.x + 0.06, y: r.y + r.h - strip - g, w: r.w - 0.12, h: strip }, { x: r.x + g, y: r.y + 0.06, w: strip, h: r.h - 0.12 },
+          { x: r.x + 0.06, y: r.y + g, w: r.w - 0.12, h: strip }, { x: r.x + r.w - strip - g, y: r.y + 0.06, w: strip, h: r.h - 0.12 },
         ][r.side]
         const bandAt = (k: number, n: number) => {
           // positions of n buildings along the colour band (which faces the middle)
@@ -174,8 +181,8 @@ function Overlay({ owner, houses, mortgaged, room, hot }: { owner: Record<string
         return (
           <g key={i} className={`mg-own ${hot === i ? 'hot' : ''}`}>
             {hot === i && <rect className="mg-hot" x={r.x * S} y={r.y * S} width={r.w * S} height={r.h * S} fill="none" stroke="#fff" strokeWidth="5" />}
-            {own && <rect className="mg-tint" x={r.x * S} y={r.y * S} width={r.w * S} height={r.h * S} fill={playerHex(room, own)} opacity="0.22" />}
-            {own && <rect key={own} className="mg-strip" x={so.x * S} y={so.y * S} width={so.w * S} height={so.h * S} fill={playerHex(room, own)} stroke="#1d3a6e" strokeWidth="1.5" />}
+            {own && <rect className="mg-tint" x={r.x * S} y={r.y * S} width={r.w * S} height={r.h * S} fill={playerHex(room, own)} opacity="0.3" />}
+            {own && <rect key={own} className="mg-strip" rx="3" x={so.x * S} y={so.y * S} width={so.w * S} height={so.h * S} fill={playerHex(room, own)} stroke="#1d3a6e" strokeWidth="1.5" />}
             {m && (
               <g className="mg-mort">
                 <rect x={r.x * S + 2} y={r.y * S + 2} width={r.w * S - 4} height={r.h * S - 4} fill="url(#mg-hatch)" />
@@ -252,7 +259,7 @@ function DeedRows({ s, i }: { s: Space; i: number }) {
 
 type Callout = { text: string; sub?: string; color: string; key: number }
 type Float = { pid: string; d: number; key: number }
-type Tip = { k: string; key: number }
+type Tip = { k: string; key: number; tile?: number; title?: string }
 
 export default function Mogul({ state: raw, me, room, players, spectator }: GameProps) {
   const state = raw as unknown as St
@@ -283,10 +290,9 @@ export default function Mogul({ state: raw, me, room, players, spectator }: Game
     clearTimeout(calloutTimer.current)
     calloutTimer.current = window.setTimeout(() => setCallout(null), hold)
   }
-  const showTip = (k: string, force = false) => {
-    if (!TIPS[k] || (!force && seenTips.has(k))) return
-    seenTips.add(k)
-    setTip({ k, key: Date.now() })
+  const showTip = (k: string, tile?: number, title?: string) => {
+    if (!TIPS[k]) return
+    setTip({ k, tile, title, key: Date.now() + Math.random() })
     clearTimeout(tipTimer.current)
     tipTimer.current = window.setTimeout(() => setTip(null), 5200)
   }
@@ -411,25 +417,37 @@ export default function Mogul({ state: raw, me, room, players, spectator }: Game
           }, 65)
           break
         }
+        case 'move': {
+          // once the token settles, explain the space it landed on (for anyone, like UNO's card rules)
+          if (e.how === 'jail') break
+          const i = e.to as number, s = SPACES[i]
+          const own = g.owner[i]
+          const k = s.kind === 'chance' || s.kind === 'chest' || s.kind === 'parking' || s.kind === 'gotojail' || s.kind === 'tax' || s.kind === 'go' ? s.kind
+            : s.kind === 'jail' ? 'visit'
+            : !own ? 'buy'
+            : own === e.pid ? 'own'
+            : g.mortgaged.includes(i) ? 'mortgage'
+            : s.kind === 'station' || s.kind === 'util' ? s.kind : 'rent'
+          const delay = Math.min(0.45 + 0.17 * Math.abs(e.steps), 2.8) * 1000
+          window.setTimeout(() => showTip(k, i, `${who} · ${s.name}`), delay)
+          break
+        }
         case 'speeding':
           window.setTimeout(() => { sfx.bad(); shout('Three doubles!', '#ff5d73', `${who} ${e.pid === me ? 'are' : 'is'} speeding — off to jail`, 1700) }, 500)
           break
         case 'salary':
           window.setTimeout(() => { sfx.point(); note(`${who} passed GO · +$200`); if (e.pid === me) { shout('+$200', '#43d17a', 'passed GO', 1000); showTip('go') } }, 700)
           break
-        case 'offer':
-          if (e.pid === me) showTip('buy')
-          break
         case 'buy':
           sfx.point()
           note(`${who} bought ${sp(e.space)}`)
-          if (e.pid === me && fullSetOf(g, me, e.space)) { window.setTimeout(() => { sfx.uno(); shout('Full set!', GROUP_HEX[(SPACES[e.space] as { group: Group }).group], 'rent doubles · you can build', 1800); showTip('set') }, 300) }
+          if (e.pid === me && fullSetOf(g, me, e.space)) { window.setTimeout(() => { sfx.uno(); shout('Full set!', GROUP_HEX[(SPACES[e.space] as { group: Group }).group], 'rent doubles · you can build', 1800); showTip('set', e.space) }, 300) }
           break
         case 'auction':
           sfx.slam()
           note(`${sp(e.space)} goes to auction`)
           shout('Auction!', '#ffb424', sp(e.space), 1100)
-          showTip('auction')
+          showTip('auction', e.space, `Auction · ${sp(e.space)}`)
           break
         case 'bid':
           sfx.tap()
@@ -439,7 +457,7 @@ export default function Mogul({ state: raw, me, room, players, spectator }: Game
           sfx.uno()
           note(`${who} won ${sp(e.space)} for ${money(e.amount)}`)
           shout('Sold!', hex(e.pid), `${sp(e.space)} to ${who} · ${money(e.amount)}`, 1500)
-          if (e.pid === me && fullSetOf(g, me, e.space)) window.setTimeout(() => showTip('set'), 1600)
+          if (e.pid === me && fullSetOf(g, me, e.space)) window.setTimeout(() => showTip('set', e.space), 1600)
           break
         case 'unsold':
           note(`Nobody bid · ${sp(e.space)} stays with the bank`)
@@ -449,18 +467,14 @@ export default function Mogul({ state: raw, me, room, players, spectator }: Game
             sfx.hit(0.7)
             note(`${who} paid ${name(e.to)} ${money(e.amount)} rent`)
             if (e.pid === me || e.to === me) shout(money(e.amount), e.to === me ? '#43d17a' : '#ff5d73', e.to === me ? `rent from ${who}` : `rent to ${name(e.to)}`, 1200)
-            const k = SPACES[e.space].kind
-            if (k === 'station' || k === 'util') showTip(k)
           }, 150)
           break
         case 'mortgaged':
           note(`${sp(e.space)} is mortgaged · no rent`)
-          showTip('mortgage')
           break
         case 'tax':
           sfx.hit(0.3)
           note(`${who} paid ${money(e.amount)} ${sp(e.space).toLowerCase()}`)
-          if (e.pid === me) showTip('tax')
           break
         case 'card':
           sfx.card()
@@ -478,7 +492,7 @@ export default function Mogul({ state: raw, me, room, players, spectator }: Game
           sfx.bad()
           note(`${who} went to jail`)
           window.setTimeout(() => { sfx.slam(); shout('Jail!', '#ff8a1f', e.pid === me ? 'pay, use a card or roll doubles' : `${who} ${e.pid === me ? 'are' : 'is'} locked up`, 1500) }, 700)
-          if (e.pid === me) showTip('jail')
+          window.setTimeout(() => showTip('jail', JAIL, `${who} · Jail`), 1500)
           break
         case 'free':
           sfx.open()
@@ -493,13 +507,13 @@ export default function Mogul({ state: raw, me, room, players, spectator }: Game
         case 'debt':
           sfx.bad()
           note(`${who} ${e.pid === me ? 'owe' : 'owes'} ${money(e.amount)}`)
-          if (e.pid === me) { shout('Short!', '#ff5d73', `raise ${money(e.amount - (g.cash[me] ?? 0))} or go bankrupt`, 1800); showTip('debt', true) }
+          if (e.pid === me) { shout('Short!', '#ff5d73', `raise ${money(e.amount - (g.cash[me] ?? 0))} or go bankrupt`, 1800); showTip('debt') }
           break
         case 'build':
           sfx.place()
           note(`${who} built ${e.houses === 5 ? 'a hotel' : 'a house'} on ${sp(e.space)}`)
           if (e.houses === 5) shout('Hotel!', '#ff5d73', `${sp(e.space)} · ${who}`, 1300)
-          if (e.pid === me) showTip('build')
+          showTip('build', e.space, `${who} · ${sp(e.space)}`)
           break
         case 'sell':
           if (!e.quiet) sfx.close()
@@ -508,7 +522,7 @@ export default function Mogul({ state: raw, me, room, players, spectator }: Game
         case 'mortgage':
           sfx.close()
           note(`${who} mortgaged ${sp(e.space)}`)
-          if (e.pid === me) showTip('mortgage')
+          if (e.pid === me) showTip('mortgage', e.space)
           break
         case 'unmortgage':
           sfx.open()
@@ -517,12 +531,13 @@ export default function Mogul({ state: raw, me, room, players, spectator }: Game
         case 'offer_trade':
           sfx.open()
           note(`${who} offered ${name(e.to)} a trade`)
-          if (e.to === me) { sfx.uno(); showTip('trade') }
+          if (e.to === me) sfx.uno()
+          showTip('trade')
           break
         case 'trade':
           if (e.ok) { sfx.uno(); note(`${who} and ${name(e.to)} traded`); shout('Deal!', '#43d17a', `${who} ⇄ ${name(e.to)}`, 1300) }
           else note(e.cancelled ? `${who} took the offer back` : `${name(e.to)} ${e.timeout ? 'let the offer lapse' : 'said no'}`)
-          if (e.pid === me && e.ok) window.setTimeout(() => { for (const s of e.get.spaces) if (fullSetOf(g, me, s)) { showTip('set'); break } }, 400)
+          if (e.pid === me && e.ok) window.setTimeout(() => { for (const s of e.get.spaces) if (fullSetOf(g, me, s)) { showTip('set', s); break } }, 400)
           break
         case 'bankrupt':
           sfx.lose()
@@ -718,7 +733,7 @@ export default function Mogul({ state: raw, me, room, players, spectator }: Game
           {SPACES.map((_, i) => {
             const r = tileRect(i)
             return <rect key={i} className="mg-hit" x={r.x * S} y={r.y * S} width={r.w * S} height={r.h * S} fill="transparent"
-              onClick={() => { if (ownable(i)) { sfx.click(); setDeed(i) } else showTip(({ jail: 'jail', gotojail: 'jail', tax: 'tax', parking: 'tax', go: 'go' } as Record<string, string>)[SPACES[i].kind] ?? '', true) }} />
+              onClick={() => { if (ownable(i)) { sfx.click(); setDeed(i) } else showTip(({ jail: 'jail', gotojail: 'gotojail', tax: 'tax', parking: 'parking', go: 'go', chance: 'chance', chest: 'chest' } as Record<string, string>)[SPACES[i].kind] ?? '', i) }} />
           })}
           {/* tokens: whoever's turn it is on top */}
           {[...seats].filter((p) => !broke.includes(p) && spots[p]).sort((a, b) => (a === state.turn ? 1 : 0) - (b === state.turn ? 1 : 0)).map((pid) => {
@@ -789,8 +804,13 @@ export default function Mogul({ state: raw, me, room, players, spectator }: Game
         </div>, document.body)}
       {tip && TIPS[tip.k] && createPortal(
         <button key={tip.key} className="mg-tip" onClick={() => { clearTimeout(tipTimer.current); setTip(null) }} aria-label="Dismiss rule">
-          <span className="mg-tip-i display">?</span>
-          <span><b className="display">{TIPS[tip.k].name}</b>{TIPS[tip.k].text}</span>
+          {tip.tile != null
+            ? <span className="mg-tip-tile" style={{ ['--tc' as string]: colorOf(tip.tile) }}><i />{SPACES[tip.tile].name}</span>
+            : <span className="mg-tip-i display">?</span>}
+          <span>
+            {tip.title && <small>{tip.title}</small>}
+            <b className="display">{TIPS[tip.k].name}</b>{TIPS[tip.k].text}
+          </span>
         </button>, document.body)}
     </div>
   )

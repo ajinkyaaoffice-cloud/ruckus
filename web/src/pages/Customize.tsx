@@ -71,6 +71,12 @@ export default function Customize() {
     return () => ctx.revert()
   }, [cat])
 
+  /* in the lobby, stepping into the dressing room takes me off the ready list so the host can't start without me */
+  useEffect(() => {
+    const { room } = useNet.getState()
+    if (room && room.phase !== 'playing') pushProfile(false)
+  }, [room?.code])
+
   /* live-sync my look to the room (debounced) so friends watch me get dressed */
   useEffect(() => {
     const t = setTimeout(() => pushProfile(), 250)

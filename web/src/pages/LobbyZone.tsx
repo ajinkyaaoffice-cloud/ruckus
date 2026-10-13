@@ -27,6 +27,9 @@ export default function LobbyZone() {
   const [crew] = useState(savedCrew)
   const [naming, setNaming] = useState(false)
   const [crewName, setCrewName] = useState('')
+  // the join side's box for a friend's crew name
+  const [joiningCrew, setJoiningCrew] = useState(false)
+  const [friendCrew, setFriendCrew] = useState('')
   const inputs = useRef<(HTMLInputElement | null)[]>([])
   // hover focus is a desktop nicety; on touch a tap fires mouseenter and would reflow the whole page
   const hover = (s: 'host' | 'join' | null) => () => { if (!isTouch) setSide(s) }
@@ -175,7 +178,7 @@ export default function LobbyZone() {
               </form>
             ) : (
               <button className="lz-crew-alt" onClick={() => { sfx.click(); setNaming(true) }}>
-                Same friends every day? <u>Start a crew</u>: one link, no codes
+                Same friends every day? <u>Start a crew</u>: one name, no codes
               </button>
             )}
           </div>
@@ -214,6 +217,19 @@ export default function LobbyZone() {
               <svg className="ico" viewBox="0 0 24 24"><path d="M3 8V4h4M17 4h4v4M21 16v4h-4M7 20H3v-4M7 12h10" stroke="currentColor" strokeWidth="2.4" fill="none" strokeLinecap="round" /></svg>
               Scan QR
             </button>
+          </div>
+          <div className="lz-crew lz-act">
+            {joiningCrew ? (
+              <form className="lz-crew-form" onSubmit={(e) => { e.preventDefault(); openCrew(friendCrew) }}>
+                <input className="lz-crew-in display" value={friendCrew} autoFocus maxLength={16} placeholder="CREW NAME"
+                  autoCapitalize="characters" aria-label="Your friends' crew name" onChange={(e) => setFriendCrew(crewSlug(e.target.value))} />
+                <button className="bubble-btn magenta" disabled={busy || friendCrew.length < 5}>Join</button>
+              </form>
+            ) : (
+              <button className="lz-crew-alt" onClick={() => { sfx.click(); setJoiningCrew(true) }}>
+                In a crew? <u>Join it by name</u>
+              </button>
+            )}
           </div>
         </div>
       </section>
