@@ -46,7 +46,9 @@ export default function GameScreen() {
   // players who already finished stay on the bar (and in the game's view) but just watch
   const finished: string[] = state?.finished ?? []
   const active: string[] = state?.players ?? room.game?.participants ?? []
-  const participants = [...finished.filter((id) => !active.includes(id)), ...active]
+  // UNO No Mercy: knocked-out players keep their seat on the bar and in the game's names too
+  const knocked: string[] = state?.mercied ?? []
+  const participants = [...finished.filter((id) => !active.includes(id)), ...active, ...knocked.filter((id) => !active.includes(id))]
     .map((id) => room.players.find((p) => p.id === id))
     .filter(Boolean) as RoomPlayer[]
   const spectator = !active.includes(me)
@@ -119,7 +121,7 @@ export default function GameScreen() {
       </div>
       {spectator && !state?.over && (
         <div className={`gs-spec display ${myPlace ? 'done' : ''}`}>
-          {myPlace ? `You finished ${ordinal(myPlace)}! · watching the rest` : 'Spectating · you\'re up next game'}
+          {myPlace ? `You finished ${ordinal(myPlace)}! · watching the rest` : knocked.includes(me) ? 'Knocked out · watching the rest' : 'Spectating · you\'re up next game'}
         </div>
       )}
 

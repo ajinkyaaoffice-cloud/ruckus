@@ -77,7 +77,7 @@
 .uno-draw.live:hover .uc:last-of-type { translate: 0 -10px; transition: translate 0.2s var(--ease-back); }
 @keyframes uno-bob { to { translate: 0 -6px; } }
 .uno-draw-n { position: absolute; bottom: -10px; right: -12px; background: #fff; color: var(--navy); font-weight: 800; font-size: 12px; border-radius: 99px; padding: 2px 8px; box-shadow: 0 2px 0 var(--navy); z-index: 5; }
-.uno-draw-hint { position: absolute; top: -27px; left: 50%; translate: -50% 0; color: #fff; text-shadow: 0 3px 0 var(--magenta); font-size: 18px; z-index: 5; }
+.uno-draw-hint { position: absolute; white-space: nowrap; top: -27px; left: 50%; translate: -50% 0; color: #fff; text-shadow: 0 3px 0 var(--magenta); font-size: 18px; z-index: 5; }
 .uno-pile { position: relative; width: var(--cw); aspect-ratio: 2 / 3; }
 .uno-pile .uc { position: absolute; inset: 0; }
 .uno-colorchip { position: relative; z-index: 2; margin-top: 16px; display: flex; align-items: center; gap: 6px; background: #fff; padding: 4px 12px 4px 4px; border-radius: 99px; box-shadow: 0 3px 0 rgba(0, 0, 0, 0.25); font-weight: 800; font-size: 13px; color: var(--navy); text-transform: capitalize; white-space: nowrap; }
@@ -223,7 +223,7 @@ html.low-power .uno-tip { animation: uno-tip-out 0.3s ease-in 3.9s forwards; }
 .uno-dir { display: inline-flex; align-items: center; gap: 3px; font-style: normal; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.03em; padding: 2px 8px 2px 4px; border-radius: 99px; background: var(--navy); color: #fff; margin-left: 2px; }
 .uno-dir svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
 .uno-dir.ccw svg { scale: -1 1; }
-@media (max-width: 640px) { .uno-colorchip { max-width: 94%; font-size: 12px; } .uno-colorchip .uno-side { display: none; } }
+@media (max-width: 640px) { .uno-colorchip { max-width: 94%; font-size: 12px; } .uno-colorchip .uno-side:not(.mercy) { display: none; } }
 
 /* someone went out: their face, their medal, big enough that nobody misses it */
 .uno-out { position: fixed; inset: 0; z-index: 66; display: grid; place-items: center; padding: 16px; border: 0; background: color-mix(in srgb, var(--navy) 55%, transparent); cursor: pointer; animation: uno-out-bg 3.4s ease both; overflow: hidden; }
@@ -249,3 +249,14 @@ html.low-power .uno-out-rays { animation: none; }
 @media (max-width: 1100px) {
   .gs-on-break .uno-tip { bottom: calc(var(--safe-b) + var(--tb-pad) * 0.6 + 72px); }
 }
+
+/* ---------- No Mercy ---------- */
+.uno-side.mercy { background: #ff5d73; color: #fff; }
+.uno-danger { color: #ff5d73; font-weight: 800; }
+.uno-opp-ko { background: #ff5d73; color: #fff; rotate: 6deg; }
+/* the pile of draw cards waiting on someone: it slams in bigger every time it grows */
+.uno-stack { position: absolute; z-index: 6; right: -10px; top: -12px; padding: 6px 14px 2px; border-radius: 16px; border: 3px solid var(--navy);
+  background: #ff5d73; color: #fff; font-size: clamp(22px, 5vw, 34px); line-height: 1; box-shadow: 0 4px 0 var(--navy); rotate: -5deg;
+  animation: uno-stack-in 0.5s var(--ease-back, cubic-bezier(.34,1.56,.64,1)) both; pointer-events: none; }
+@keyframes uno-stack-in { from { scale: 1.8; rotate: 14deg; opacity: 0; } }
+html.low-power .uno-stack { animation: none; }

@@ -40,6 +40,22 @@ UNO Flip (option modern="flip"), per unorules.com/uno-flip-rules:
   offender does instead, innocent -> challenger does, plus 2 more.
 * A Flip turned up as the first card flips the table before the first turn.
   Wild Draw Two can't open a round. Cards score by the side in play at the end.
+
+UNO Show 'Em No Mercy (option modern="mercy"):
+* 168 cards: per colour 0-9 twice, Skip x3, Reverse x3, Draw Two x3, Draw Four x2,
+  Skip Everyone x2, Discard All x3; plus Wild Reverse Draw Four x8, Wild Draw Six x4,
+  Wild Draw Ten x4 and Wild Colour Roulette x8. No plain Wild, no challenges.
+* Stacking: a draw card may be answered with any draw card of equal or higher
+  value (any colour). Whoever can't or won't stack takes the whole pile and misses
+  their go. Wild Reverse Draw Four reverses play first, so the penalty goes back.
+* Can't play? Keep drawing until you can (the card that fits may be played or kept).
+* 7: swap hands with a player of your choice. 0: every hand passes along in the
+  direction of play.
+* Discard All: also throw away every other card of that colour you hold.
+* Colour Roulette: the next player names a colour and turns cards over until it
+  shows, keeping them all, and misses their go.
+* Mercy rule: anyone holding 25 or more cards is knocked out.
+* Play on as usual; the round opens on a number card.
 """
 from __future__ import annotations
 
@@ -57,6 +73,13 @@ FLIP_WILDS = ("wild", "wild2", "wildcolor")
 FLIP_POINTS = {"draw1": 10, "draw5": 20, "reverse": 20, "skip": 20, "flip": 20, "skipall": 30,
                "wild": 40, "wild2": 50, "wildcolor": 60}
 CHALLENGEABLE = ("wild4", "wild2", "wildcolor")
+
+# UNO Show 'Em No Mercy
+MERCY_WILDS = ("wildrev4", "wild6", "wild10", "roulette")
+MERCY_POINTS = {"skip": 20, "reverse": 20, "draw2": 20, "draw4": 30, "skipall": 30, "discard": 30,
+                "wildrev4": 50, "wild6": 50, "wild10": 60, "roulette": 50}
+DRAW_VALUE = {"draw2": 2, "draw4": 4, "wildrev4": 4, "wild6": 6, "wild10": 10}
+MERCY_LIMIT = 25
 UNO_GRACE = 2.0   # seconds a player on one card has to call UNO before anyone may catch them
 UNO_CATCH = 3.0   # once catching opens, it stays open at least this long
 
@@ -82,6 +105,23 @@ def build_deck(modern: bool) -> list[dict[str, Any]]:
         add("wild", "swap")
         for _ in range(3):
             add("wild", "custom")
+    return cards
+
+
+def build_mercy_deck() -> list[dict[str, Any]]:
+    cards: list[dict[str, Any]] = []
+
+    def add(color: str, kind: str, value: int | None = None, n: int = 1) -> None:
+        for _ in range(n):
+            cards.append({"id": len(cards), "color": color, "kind": kind, "value": value, "mercy": True})
+
+    for c in COLORS:
+        for v in range(10):
+            add(c, "number", v, 2)
+        for kind, n in (("skip", 3), ("reverse", 3), ("draw2", 3), ("draw4", 2), ("skipall", 2), ("discard", 3)):
+            add(c, kind, None, n)
+    for kind, n in (("wildrev4", 8), ("wild6", 4), ("wild10", 4), ("roulette", 8)):
+        add("wild", kind, None, n)
     return cards
 
 
@@ -111,12 +151,14 @@ def ordinal(n: int) -> str:
 def card_points(card: dict[str, Any]) -> int:
     if card["kind"] == "number":
         return card["value"]
-    return FLIP_POINTS[card["kind"]] if "other" in card else POINTS[card["kind"]]
+    if "other" in card:
+        return FLIP_POINTS[card["kind"]]
+    return MERCY_POINTS[card["kind"]] if card.get("mercy") else POINTS[card["kind"]]
 
 
 def face(card: dict[str, Any]) -> dict[str, Any]:
     """The side its holder can see; the other face stays private."""
-    return {k: v for k, v in card.items() if k != "other"}
+    return {k: v for k, v in card.items() if k not in ("other", "mercy")}
 
 
 def back(card: dict[str, Any]) -> dict[str, Any]:
@@ -137,17 +179,22 @@ class Uno(Game):
         self.bluff = "color" if self.options.get("bluff") == "color" else "any"
         self.reveal: dict[str, Any] | None = None   # the challenged hand, shown to the challenger
         self.flip = self.options.get("modern") == "flip"
+        self.mercy = self.options.get("modern") == "mercy"
         self.modern = self.options.get("modern") is True
         self.dark = False                    # Flip: which side is in play
-        self.wilds = FLIP_WILDS if self.flip else WILDS
-        self.draw_pile = build_flip_deck(self.rng) if self.flip else build_deck(self.modern)
+        self.wilds = FLIP_WILDS if self.flip else MERCY_WILDS if self.mercy else WILDS
+        self.stack = 0                       # No Mercy: cards piled up on the player who must answer
+        self.stack_min = 0                   # ...and the smallest draw card that may be stacked on it
+        self.mercied: list[str] = []         # No Mercy: knocked out at 25 cards, in order
+        self.draw_pile = (build_flip_deck(self.rng) if self.flip else build_mercy_deck() if self.mercy
+                          else build_deck(self.modern))
         self.deck_size = len(self.draw_pile)
         self.rng.shuffle(self.draw_pile)
         self.discard: list[dict[str, Any]] = []
         self.hands: dict[str, list[dict[str, Any]]] = {p: [] for p in self.players}
         self.direction = 1
         self.color = ""
-        self.phase = "play"                  # play | drawn | challenge | start_color (also after a Flip turns up a Wild)
+        self.phase = "play"                  # play | drawn | challenge | start_color (also after a Flip turns up a Wild) | stack | roulette
         self.drawn_id: int | None = None
         self.challenge: dict[str, Any] | None = None   # {"from", "victim", "guilty"}
         self.said_uno: set[str] = set()
@@ -207,7 +254,7 @@ class Uno(Game):
         while True:
             card = self._pop()
             assert card is not None
-            if card["kind"] in ("wild4", "wild2"):
+            if card["kind"] in ("wild4", "wild2") or (self.mercy and card["kind"] != "number"):
                 self.draw_pile.insert(0, card)
                 self.rng.shuffle(self.draw_pile)
                 continue
@@ -252,6 +299,8 @@ class Uno(Game):
 
     # --- rules --------------------------------------------------------------
     def playable(self, card: dict[str, Any]) -> bool:
+        if self.phase == "stack":
+            return DRAW_VALUE.get(card["kind"], 0) >= self.stack_min
         if card["kind"] in self.wilds:
             return True
         if card["color"] == self.color:
@@ -295,7 +344,29 @@ class Uno(Game):
         return color
 
     def handle(self, pid: str, action: dict[str, Any]) -> None:
-        if pid in self.finished:
+        try:
+            self._handle(pid, action)
+        finally:
+            if self.mercy and not self.over:
+                self._mercy_check()
+
+    def _mercy_check(self) -> None:
+        """No Mercy: 25 cards or more and you're out of the round."""
+        for p in list(self.players):
+            if len(self.hands[p]) >= MERCY_LIMIT and len(self.players) > 1:
+                self.draw_pile[:0] = self.hands[p]
+                n = len(self.hands[p])
+                self.hands[p] = []
+                self.mercied.append(p)
+                if self.players[self.turn] == p:
+                    self.stack = self.stack_min = 0
+                self._retire(p)
+                self.emit("mercy", pid=p, count=n)
+        if len(self.players) < 2:
+            self._finish_game()
+
+    def _handle(self, pid: str, action: dict[str, Any]) -> None:
+        if pid in self.finished or pid in self.mercied:
             raise GameError("You're already out — enjoy the show")
         self.require_player(pid)
         if self.over:
@@ -332,6 +403,15 @@ class Uno(Game):
             self._advance()
         elif t in ("accept", "challenge"):
             self._resolve_challenge(pid, t == "challenge")
+        elif t == "roulette":
+            if self.phase != "roulette":
+                raise GameError("Not now")
+            color = self._check_color(action.get("color"))
+            got = self._draw_until(pid, color)
+            self.color = color
+            self.emit("color", pid=pid, color=color)
+            self.emit("forced_draw", pid=pid, count=got, card={"kind": "roulette", "color": "wild", "value": None})
+            self._advance()
         else:
             raise GameError("Unknown action")
 
@@ -353,8 +433,27 @@ class Uno(Game):
         self.emit("caught", pid=target, by=pid)
 
     def _draw(self, pid: str) -> None:
+        if self.mercy and self.phase == "stack":
+            got = self._give(pid, self.stack)
+            self.stack = self.stack_min = 0
+            self.emit("forced_draw", pid=pid, count=got, card={"kind": "stack", "color": "wild", "value": None})
+            return self._advance()
         if self.phase != "play":
             raise GameError("You can't draw right now")
+        if self.mercy:
+            # draw until something fits (or the mercy rule bites)
+            got = 0
+            while len(self.hands[pid]) < MERCY_LIMIT and self._give(pid, 1):
+                got += 1
+                if self.playable(self.hands[pid][-1]):
+                    break
+            self.emit("draw", pid=pid, count=got)
+            if got and self.playable(self.hands[pid][-1]):
+                self.phase = "drawn"
+                self.drawn_id = self.hands[pid][-1]["id"]
+            else:
+                self._advance()
+            return
         got = self._give(pid, 1)
         self.emit("draw", pid=pid, count=got)
         if got and self.playable(self.hands[pid][-1]):
@@ -373,6 +472,8 @@ class Uno(Game):
         self.emit("swap", pid=pid, target=target)
 
     def _play(self, pid: str, action: dict[str, Any]) -> None:
+        if self.mercy:
+            return self._play_mercy(pid, action)
         if self.phase not in ("play", "drawn"):
             raise GameError("You can't play right now")
         card = self._find(pid, action.get("card"))
@@ -446,6 +547,86 @@ class Uno(Game):
                     self._give(p, 2)
             self.emit("custom", pid=pid)
             self._advance()
+
+    def _play_mercy(self, pid: str, action: dict[str, Any]) -> None:
+        if self.phase not in ("play", "drawn", "stack"):
+            raise GameError("You can't play right now")
+        card = self._find(pid, action.get("card"))
+        if self.phase == "drawn" and card["id"] != self.drawn_id:
+            raise GameError("You may only play the card you just drew")
+        if not self.playable(card):
+            raise GameError("Stack a draw card at least as big, or take them" if self.phase == "stack" else "That card doesn't match")
+        hand = self.hands[pid]
+        kind = card["kind"]
+        last = len(hand) == 1
+        color = card["color"]
+        if kind in self.wilds and kind != "roulette":
+            color = self._check_color(action.get("color"))
+        seven = kind == "number" and card["value"] == 7 and not last
+        target = action.get("target")
+        if seven:
+            rivals = [p for p in self.players if p != pid]
+            if target not in rivals:
+                if len(rivals) != 1:
+                    raise GameError("Choose who to swap with")
+                target = rivals[0]
+
+        hand.remove(card)
+        self.discard.append(card)
+        self.color = "" if kind == "roulette" else color
+        self.drawn_id = None
+        self.emit("play", pid=pid, card=face(card), color=color)
+        if kind == "discard":
+            same = [c for c in hand if c["color"] == card["color"]]
+            if same:
+                for c in same:
+                    hand.remove(c)
+                self.discard[-1:-1] = same
+                self.emit("discard_all", pid=pid, count=len(same), color=card["color"])
+
+        if len(hand) == 1 and pid not in self.said_uno:
+            self.vulnerable.add(pid)
+            self.slipped_at[pid] = self.now()
+            self.later(UNO_GRACE, self._touch)
+
+        n = len(self.players)
+        if kind in DRAW_VALUE:
+            if kind == "wildrev4" and n > 2:
+                self.direction *= -1
+            self.stack += DRAW_VALUE[kind]
+            self.stack_min = DRAW_VALUE[kind]
+            self._advance()
+            self.phase = "stack"
+            self.emit("stack", pid=self.players[self.turn], count=self.stack, by=pid)
+        elif seven:
+            self._swap(pid, target)
+            self._advance()
+        elif kind == "number" and card["value"] == 0 and hand:
+            self._rotate(pid)
+            self._advance()
+        elif kind == "skip" or (kind == "reverse" and n == 2):
+            self._advance(1)
+        elif kind == "reverse":
+            self.direction *= -1
+            self._advance()
+        elif kind == "skipall":
+            self._advance(n - 1)
+        elif kind == "roulette":
+            self._advance()
+            self.phase = "roulette"
+        else:
+            self._advance()
+        if not hand:
+            self._mark_out(pid)
+
+    def _rotate(self, pid: str) -> None:
+        """No Mercy 0: every hand moves one seat along the way play is going."""
+        old = {p: self.hands[p] for p in self.players}
+        for i, p in enumerate(self.players):
+            self.hands[self.players[(i + self.direction) % len(self.players)]] = old[p]
+        self.said_uno.clear()
+        self.vulnerable.clear()
+        self.emit("rotate", pid=pid, direction=self.direction)
 
     def _draw_until(self, pid: str, color: str, extra: int = 0) -> int:
         """Wild Draw Colour: keep drawing until the named colour turns up (then `extra` more)."""
@@ -528,6 +709,9 @@ class Uno(Game):
             self._advance()
         else:                                   # numbers, Wild, Skip Everyone, and Swap (an empty hand swaps nothing)
             self._advance()
+        self._mark_out(pid)
+
+    def _mark_out(self, pid: str) -> None:
         # penalties from the last card land first, then the finisher collects what's left in the other hands
         pts = sum(card_points(c) for p in self.players if p != pid for c in self.hands[p])
         self.finished.append(pid)
@@ -564,6 +748,8 @@ class Uno(Game):
                 ranking[-1].append(p)
             else:
                 ranking.append([p])
+        for p in reversed(self.mercied):
+            ranking.append([p])
         if self.left:
             ranking.append(list(self.left))
         details: dict[str, str] = {}
@@ -572,10 +758,14 @@ class Uno(Game):
         for p in self.players:
             n = len(self.hands[p])
             details[p] = f"{n} card{'s' if n != 1 else ''} · {pts[p]} pts left"
+        for p in self.mercied:
+            details[p] = f"knocked out · {MERCY_LIMIT}+ cards"
         for p in self.left:
             details[p] = "left the table"
         if len(self.seats) - len(self.left) <= 2 and self.finished:
             summary = f"UNO out! {self.scores.get(self.finished[0], 0)} points collected"
+        elif self.mercied:
+            summary = f"No mercy · {len(self.mercied)} knocked out"
         elif self.finished:
             summary = "Everyone's out but one"
         else:
@@ -607,7 +797,15 @@ class Uno(Game):
             return False
         others = sorted((p for p in self.players if p != pid), key=lambda p: len(self.hands[p]))
         extra = {"color": self._stand_in_color(pid), "target": others[0] if others else None}
-        if self.phase == "challenge":
+        if self.phase == "stack":
+            ok = sorted((c for c in self.hands[pid] if self.playable(c)), key=lambda c: DRAW_VALUE[c["kind"]])
+            if ok:
+                self.handle(pid, {"type": "play", "card": ok[0]["id"], **extra})
+            else:
+                self.handle(pid, {"type": "draw"})
+        elif self.phase == "roulette":
+            self.handle(pid, {"type": "roulette", **extra})
+        elif self.phase == "challenge":
             self.handle(pid, {"type": "accept"})
         elif self.phase == "start_color":
             self.handle(pid, {"type": "start_color", **extra})
@@ -646,7 +844,7 @@ class Uno(Game):
         my_turn = bool(me is not None and self.players[self.turn] == pid)
         playable: list[int] = []
         if me is not None and my_turn and not self.over:
-            if self.phase == "play":
+            if self.phase in ("play", "stack"):
                 playable = [c["id"] for c in me if self.playable(c)]
             elif self.phase == "drawn":
                 playable = [self.drawn_id] if self.drawn_id is not None else []
@@ -675,6 +873,11 @@ class Uno(Game):
             "drawCount": len(self.draw_pile),
             "modern": self.modern,
             "flip": self.flip,
+            "mercy": self.mercy,
+            "stack": self.stack,
+            "stackMin": self.stack_min,
+            "mercied": self.mercied,
+            "mercyLimit": MERCY_LIMIT,
             "side": "dark" if self.dark else "light",
             "flipPick": self.flip_pick,
             "palette": list(self.palette),

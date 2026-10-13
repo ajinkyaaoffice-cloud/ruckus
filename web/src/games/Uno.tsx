@@ -12,6 +12,7 @@ import './Uno.css'
 type Color = 'red' | 'yellow' | 'green' | 'blue' | 'pink' | 'teal' | 'purple' | 'orange' | 'wild'
 type Kind = 'number' | 'skip' | 'reverse' | 'draw2' | 'wild' | 'wild4' | 'swap' | 'custom'
   | 'draw1' | 'flip' | 'wild2' | 'draw5' | 'skipall' | 'wildcolor'   // UNO Flip
+  | 'draw4' | 'discard' | 'wildrev4' | 'wild6' | 'wild10' | 'roulette'   // No Mercy
 export type Card = { id: number; color: Color; kind: Kind; value: number | null }
 
 const COLORS = ['red', 'yellow', 'green', 'blue'] as const
@@ -20,10 +21,11 @@ export const HEX: Record<string, string> = {
   red: '#ff5d73', yellow: '#ffc93c', green: '#43d17a', blue: '#3d8bff', wild: '#1b1f3f',
   pink: '#ff5fb8', teal: '#14b8a6', purple: '#8b5cf6', orange: '#ff8a1f',
 }
-const WILDS: Kind[] = ['wild', 'wild4', 'swap', 'custom', 'wild2', 'wildcolor']
+const WILDS: Kind[] = ['wild', 'wild4', 'swap', 'custom', 'wild2', 'wildcolor', 'wildrev4', 'wild6', 'wild10', 'roulette']
 const KIND_NAME: Record<Kind, string> = {
   number: '', skip: 'Skip', reverse: 'Reverse', draw2: 'Draw Two', wild: 'Wild', wild4: 'Wild Draw Four', swap: 'Swap Hands', custom: 'Everyone +2',
   draw1: 'Draw One', flip: 'Flip', wild2: 'Wild Draw Two', draw5: 'Draw Five', skipall: 'Skip Everyone', wildcolor: 'Wild Draw Colour',
+  draw4: 'Draw Four', discard: 'Discard All', wildrev4: 'Wild Reverse Draw Four', wild6: 'Wild Draw Six', wild10: 'Wild Draw Ten', roulette: 'Colour Roulette',
 }
 /** The wilds a player may challenge, and what each one costs. */
 const CHALLENGE: Partial<Record<Kind, { short: string; take: (named: string) => string; bluff: (named: string) => string; wrong: (named: string) => string }>> = {
@@ -38,12 +40,28 @@ const CHALLENGE: Partial<Record<Kind, { short: string; take: (named: string) => 
 /** Which side of an UNO Flip deck is face up; plain Wilds borrow it to pick their palette. */
 const Side = createContext<'light' | 'dark'>('light')
 const isDark = (card: Card, side: 'light' | 'dark') =>
-  (DARK as readonly string[]).includes(card.color) || card.kind === 'wildcolor' || card.kind === 'draw5' || card.kind === 'skipall' ||
+  (DARK as readonly string[]).includes(card.color) || card.kind === 'wildcolor' ||
   (card.color === 'wild' && card.kind === 'wild' && side === 'dark')
 
 /** One line on what a power card does, shown when it lands (and when you tap the pile). */
-function ruleOf(card: Card, nPlayers: number, color?: string): { name: string; text: string } | null {
+function ruleOf(card: Card, nPlayers: number, color?: string, mercy = false): { name: string; text: string } | null {
   const c = color ? ` The colour is now ${color}.` : ''
+  if (mercy) {
+    const stack = (n: number) => `unless they stack a draw card of +${n} or more on it, passing the whole pile on. No mercy.`
+    switch (card.kind) {
+      case 'number':
+        if (card.value === 7) return { name: 'Seven', text: 'Whoever plays a 7 swaps their whole hand with a player of their choice.' }
+        if (card.value === 0) return { name: 'Zero', text: 'Every hand passes one seat along, the way play is going.' }
+        return null
+      case 'draw2': return { name: 'Draw Two', text: `The next player takes 2 and misses their go, ${stack(2)}` }
+      case 'draw4': return { name: 'Draw Four', text: `The next player takes 4 and misses their go, ${stack(4)}` }
+      case 'wildrev4': return { name: 'Wild Reverse Draw Four', text: `Play turns round, then the player before takes 4, ${stack(4)}${c}` }
+      case 'wild6': return { name: 'Wild Draw Six', text: `The next player takes 6 and misses their go, ${stack(6)}${c}` }
+      case 'wild10': return { name: 'Wild Draw Ten', text: `The next player takes 10 and misses their go, unless they stack another +10.${c}` }
+      case 'discard': return { name: 'Discard All', text: 'Whoever plays it also throws away every other card of that colour in their hand.' }
+      case 'roulette': return { name: 'Colour Roulette', text: 'The next player names a colour, then turns cards over until it shows. They keep every one and miss their go.' }
+    }
+  }
   switch (card.kind) {
     case 'skip': return { name: 'Skip', text: nPlayers === 2 ? 'The other player misses a go, so the same player goes again.' : 'The next player misses their go.' }
     case 'reverse': return { name: 'Reverse', text: nPlayers === 2 ? 'With two players Reverse works like Skip: the same player goes again.' : 'Play now runs the other way round the table.' }
@@ -87,7 +105,16 @@ function Glyph({ card, dark }: { card: Card; dark: boolean }): ReactElement {
     case 'draw2':
     case 'draw1':
     case 'draw5':
-      return <text dy="0.36em" textAnchor="middle" className="uc-num" style={{ fontSize: 34 }}>{{ draw2: '+2', draw1: '+1', draw5: '+5' }[card.kind]}</text>
+    case 'draw4':
+      return <text dy="0.36em" textAnchor="middle" className="uc-num" style={{ fontSize: 34 }}>{{ draw2: '+2', draw1: '+1', draw5: '+5', draw4: '+4' }[card.kind]}</text>
+    case 'discard':
+      return (
+        <g fill="currentColor" stroke="#1b1f3f" strokeWidth="2" strokeLinejoin="round">
+          <rect x="-16" y="-15" width="16" height="24" rx="3" transform="rotate(-18)" />
+          <rect x="-8" y="-13" width="16" height="24" rx="3" />
+          <rect x="0" y="-11" width="16" height="24" rx="3" transform="rotate(18)" />
+        </g>
+      )
     case 'skipall':
       return (
         <g fill="none" stroke="currentColor" strokeWidth="5">
@@ -107,8 +134,12 @@ function Glyph({ card, dark }: { card: Card; dark: boolean }): ReactElement {
     case 'custom':
     case 'swap':
     case 'wild2':
-    case 'wildcolor': {
-      const label = { wild4: '+4', custom: '+2·all', swap: '⇄', wild2: '+2', wildcolor: '+?', wild: '' }[card.kind]
+    case 'wildcolor':
+    case 'wildrev4':
+    case 'wild6':
+    case 'wild10':
+    case 'roulette': {
+      const label = { wild4: '+4', custom: '+2·all', swap: '⇄', wild2: '+2', wildcolor: '+?', wild: '', wildrev4: '+4', wild6: '+6', wild10: '+10', roulette: '?' }[card.kind]
       const w = dark ? [HEX.pink, HEX.teal, HEX.orange, HEX.purple] : [HEX.red, HEX.green, HEX.yellow, HEX.blue]
       return (
         <g>
@@ -128,7 +159,8 @@ function Glyph({ card, dark }: { card: Card; dark: boolean }): ReactElement {
 function corner(card: Card): string {
   if (card.kind === 'number') return String(card.value)
   return { skip: '⊘', reverse: '⇅', draw2: '+2', wild: 'W', wild4: '+4', swap: '⇄', custom: '★',
-    draw1: '+1', draw5: '+5', flip: '↻', skipall: '⊘', wild2: '+2', wildcolor: '+?' }[card.kind] ?? ''
+    draw1: '+1', draw5: '+5', flip: '↻', skipall: '⊘', wild2: '+2', wildcolor: '+?',
+    draw4: '+4', discard: '≡', wildrev4: '⇄4', wild6: '+6', wild10: '+10', roulette: '◎' }[card.kind] ?? ''
 }
 
 /** `dark` forces a side (for the far faces of Flip cards); otherwise the card works it out. */
@@ -223,6 +255,12 @@ export default function Uno({ state, me, room, players, spectator }: GameProps) 
   const side: 'light' | 'dark' = state.side === 'dark' ? 'dark' : 'light'
   const palette: string[] = state.palette ?? [...COLORS]
   const backs: Record<string, Card[]> | null = state.backs ?? null
+  // No Mercy: who's been knocked out, and anyone still able to take a turn
+  const mercy = !!state.mercy
+  const mercied: string[] = state.mercied ?? []
+  const rivals = others.filter((p) => (state.players as string[]).includes(p))
+  const mercyRef = useRef(mercy)
+  mercyRef.current = mercy
 
   const [pending, setPending] = useState<Pending | null>(null)
   const [callout, setCallout] = useState<Callout | null>(null)
@@ -233,7 +271,7 @@ export default function Uno({ state, me, room, players, spectator }: GameProps) 
   const [tip, setTip] = useState<Tip | null>(null)
   const tipTimer = useRef<number | undefined>(undefined)
   const showTip = (card: Card, color?: string, hold = 4200) => {
-    if (!ruleOf(card, 3)) return
+    if (!ruleOf(card, 3, undefined, mercyRef.current)) return
     setTip({ card, color, key: Date.now() + Math.random() })
     clearTimeout(tipTimer.current)
     tipTimer.current = window.setTimeout(() => setTip(null), hold)
@@ -302,8 +340,9 @@ export default function Uno({ state, me, room, players, spectator }: GameProps) 
           else if (c.kind === 'wild4') shout('+4?!', HEX[e.color], `colour is ${e.color}`)
           else if (c.kind === 'wild2') shout('+2?!', HEX[e.color], `colour is ${e.color}`)
           else if (c.kind === 'wildcolor') shout('Draw colour!', HEX[e.color], `draw till ${e.color}`)
+          else if (c.kind === 'roulette') shout('Roulette!', '#a596ff', `${name(nextOf(st, e.pid, 1))} names a colour`)
           else if (c.kind === 'draw2' || c.kind === 'draw1' || c.kind === 'draw5') sfx.slam()
-          if (c.kind !== 'number' && c.kind !== 'flip') showTip(c, c.color === 'wild' ? e.color : undefined)
+          if ((c.kind !== 'number' && c.kind !== 'flip') || (st.mercy && (c.value === 7 || c.value === 0))) showTip(c, c.color === 'wild' ? e.color : undefined)
           break
         }
         case 'flip': {
@@ -315,7 +354,7 @@ export default function Uno({ state, me, room, players, spectator }: GameProps) 
           break
         }
         case 'forced_draw':
-          shout(`+${e.count}`, '#ff5d73', `${name(e.pid)} ${e.pid === me ? 'draw' : 'draws'} ${e.count}${e.card?.kind === 'wildcolor' ? ` till ${st.color}` : ''}`)
+          shout(`+${e.count}`, '#ff5d73', `${name(e.pid)} ${e.pid === me ? 'draw' : 'draws'} ${e.count}${e.card?.kind === 'wildcolor' || e.card?.kind === 'roulette' ? ` till ${st.color}` : ''}`)
           if (e.pid === me) sfx.bad(); else sfx.slam()
           flyBacks(e.pid, e.count)
           break
@@ -356,6 +395,24 @@ export default function Uno({ state, me, room, players, spectator }: GameProps) 
         case 'color':
           shout(e.color, HEX[e.color], 'is the colour')
           setPile((p) => p.map((x, i) => (i === p.length - 1 ? { ...x, color: e.color } : x)))
+          break
+        case 'stack':
+          sfx.slam()
+          shout(`+${e.count}`, '#ff5d73', e.pid === me ? 'stack a bigger draw card or take them all' : `${name(e.pid)} must stack or take ${e.count}`, 1700)
+          break
+        case 'discard_all':
+          sfx.whoosh()
+          shout('Discard all!', HEX[e.color], `${name(e.pid)} ${e.pid === me ? 'dump' : 'dumps'} ${e.count} more ${e.color}`)
+          break
+        case 'rotate':
+          sfx.whoosh()
+          shout('Pass it on!', '#a596ff', 'every hand moves one seat along')
+          swapFrom.current = nextOf(st, me, -1)
+          break
+        case 'mercy':
+          if (e.pid === me) sfx.lose(); else sfx.slam()
+          shout('No mercy!', '#ff5d73', `${name(e.pid)} hit ${e.count} cards · knocked out`, 2400)
+          gsap.fromTo(root.current!.querySelector(`.uno-opp[data-pid="${e.pid}"]`), { scale: 1.3, rotate: 12 }, { scale: 1, rotate: 0, duration: 0.8, ease: 'elastic.out(1, 0.35)' })
           break
         case 'reshuffle':
           shout('Reshuffle', '#1d3a6e', 'discards become the draw pile')
@@ -481,8 +538,12 @@ export default function Uno({ state, me, room, players, spectator }: GameProps) 
       if (el) gsap.fromTo(el, { x: -8 }, { x: 0, duration: 0.5, ease: 'elastic.out(1, 0.2)' })
       return
     }
-    const wild = WILDS.includes(card.kind)
-    const needTarget = card.kind === 'swap' && hand.length > 1 && others.length > 1
+    const wild = WILDS.includes(card.kind) && card.kind !== 'roulette'
+    const needTarget = card.kind === 'swap' && hand.length > 1 && rivals.length > 1
+    if (mercy && card.kind === 'number' && card.value === 7 && hand.length > 1 && rivals.length > 1) {
+      sfx.open()
+      return setPending({ card, needColor: false, needTarget: true })
+    }
     if (!wild) return send(card)
     sfx.open()
     setPending({ card, needColor: true, needTarget })
@@ -490,14 +551,18 @@ export default function Uno({ state, me, room, players, spectator }: GameProps) 
 
   const pickColor = (color: string) => {
     sfx.click()
+    if (rouletteMe && !pending) {
+      act({ type: 'roulette', color })
+      return
+    }
     if (phase === 'start_color') {
-      if (top.kind === 'swap' && others.length > 1) return setPending({ card: top, color, needColor: false, needTarget: true })
-      act({ type: 'start_color', color, ...(top.kind === 'swap' ? { target: others[0] } : {}) })
+      if (top.kind === 'swap' && rivals.length > 1) return setPending({ card: top, color, needColor: false, needTarget: true })
+      act({ type: 'start_color', color, ...(top.kind === 'swap' ? { target: rivals[0] } : {}) })
       return setPending(null)
     }
     if (!pending) return
     if (pending.needTarget) return setPending({ ...pending, color, needColor: false })
-    const target = pending.card.kind === 'swap' && hand.length > 1 ? others[0] : undefined
+    const target = pending.card.kind === 'swap' && hand.length > 1 ? rivals[0] : undefined
     send(pending.card, color, target)
   }
 
@@ -507,17 +572,19 @@ export default function Uno({ state, me, room, players, spectator }: GameProps) 
       act({ type: 'start_color', color: pending?.color, target: pid })
       return setPending(null)
     }
-    if (pending?.color) send(pending.card, pending.color, pid)
+    if (pending) send(pending.card, pending.color, pid)
   }
 
-  const canDraw = myTurn && phase === 'play'
+  const canDraw = myTurn && (phase === 'play' || phase === 'stack')
+  const stackMe = myTurn && phase === 'stack'
+  const rouletteMe = myTurn && phase === 'roulette'
   const canPass = myTurn && phase === 'drawn'
   const canUno = !spectator && !state.over && hand.length === 1 && !saidUno.includes(me)
   const challengeMe = phase === 'challenge' && state.challenge?.victim === me && !spectator && !reveal
   const ch = CHALLENGE[(state.challenge?.kind ?? 'wild4') as Kind]
   const named: string = state.challenge?.named ?? ''
   const startColorMe = phase === 'start_color' && myTurn
-  const showColor = (pending?.needColor ?? false) || (startColorMe && !pending)
+  const showColor = (pending?.needColor ?? false) || ((startColorMe || rouletteMe) && !pending)
   const showTarget = !!pending && !pending.needColor && pending.needTarget
 
   const layout = layoutHand(hand, handBox.w, handBox.cw)
@@ -546,6 +613,8 @@ export default function Uno({ state, me, room, players, spectator }: GameProps) 
   const banner = state.over ? 'Round over' :
     phase === 'challenge' ? (challengeMe ? `${ch?.short ?? '+4'}: challenge it?` : `${name(state.challenge?.victim)} is deciding…`) :
     phase === 'start_color' ? (myTurn ? (state.flipPick ? 'Name the colour' : 'Pick the starting colour') : `${name(state.turn)} picks a colour`) :
+    phase === 'stack' ? (myTurn ? 'Stack it or take it!' : `${name(state.turn)}: stack or take ${state.stack}`) :
+    phase === 'roulette' ? (myTurn ? 'Roulette: name a colour' : `${name(state.turn)} spins the roulette`) :
     myTurn ? (phase === 'drawn' ? 'Play it or pass' : 'Your turn!') : `${name(state.turn)}'s turn`
 
   const meP = room.players.find((x) => x.id === me)
@@ -561,7 +630,7 @@ export default function Uno({ state, me, room, players, spectator }: GameProps) 
           const n = counts[pid] ?? 0
           const turn = state.turn === pid && !state.over
           const place = places[pid]
-          const quit = gone.includes(pid)
+          const quit = gone.includes(pid) || mercied.includes(pid)
           const mid = (others.length - 1) / 2
           const off = mid ? (i - mid) / mid : 0
           return (
@@ -574,6 +643,7 @@ export default function Uno({ state, me, room, players, spectator }: GameProps) 
                   return far ? <UnoCard key={k} card={far} dataId={-1} dark={side === 'light'} style={st} /> : <UnoBack key={k} style={st} />
                 })}
                 {place && <span className="uno-opp-place display">{ordinal(place)}</span>}
+                {mercied.includes(pid) && <span className="uno-opp-place uno-opp-ko display">KO</span>}
               </div>
               <div className="uno-opp-av">
                 <Avatar config={p?.avatar} size={others.length >= 3 ? 46 : 58} track="none" expression={place || n <= 1 ? 'happy' : turn ? 'focus' : 'idle'} />
@@ -620,8 +690,9 @@ export default function Uno({ state, me, room, players, spectator }: GameProps) 
               ? <UnoCard key={i} card={state.pileBack} dataId={-1} dark={side === 'light'} />
               : <UnoBack key={i} style={{ transform: `translate(${i * 2}px, ${i * -2}px)` }} />))}
             <span className="uno-draw-n">{state.drawCount}</span>
-            {canDraw && <span className="uno-draw-hint display">Draw</span>}
+            {canDraw && <span className="uno-draw-hint display">{stackMe ? `Take ${state.stack}` : 'Draw'}</span>}
           </button>
+          {state.stack > 0 && <span key={state.stack} className="uno-stack display">+{state.stack}</span>}
           <div className="uno-pile" onClick={() => { const t = pile[pile.length - 1]; if (t) showTip(t.card, t.card.color === 'wild' ? state.color : undefined) }}>
             {pile.map((p, i) => (
               <UnoCard key={`${p.card.id}-${i}`} card={p.card} chosen={p.card.color === 'wild' ? p.color : undefined}
@@ -639,6 +710,7 @@ export default function Uno({ state, me, room, players, spectator }: GameProps) 
               {state.direction === 1 ? 'clockwise' : 'anticlockwise'}
             </em>
             {state.flip && <em className={`uno-side ${side}`}>{side} side</em>}
+            {mercy && <em className="uno-side mercy">no mercy</em>}
           </div>
         )}
       </div>
@@ -650,7 +722,11 @@ export default function Uno({ state, me, room, players, spectator }: GameProps) 
             <Avatar config={meP?.avatar} size={44} track="none" expression={hand.length <= 1 ? 'happy' : myTurn ? 'focus' : 'idle'} />
             <div>
               <b>{meP?.name ?? 'You'}</b>
-              <span>{hand.length} card{hand.length === 1 ? '' : 's'}{myTurn && phase === 'play' && hand.length > 7 && <em className="uno-okn"> · {playable.size} playable</em>}</span>
+              <span>
+                {mercied.includes(me) ? 'Knocked out · watch the rest' : <>{hand.length} card{hand.length === 1 ? '' : 's'}</>}
+                {myTurn && (phase === 'play' || phase === 'stack') && hand.length > 7 && <em className="uno-okn"> · {playable.size} playable</em>}
+                {mercy && hand.length >= 15 && <em className="uno-okn uno-danger"> · out at {state.mercyLimit}</em>}
+              </span>
             </div>
           </div>
           {canPass && <button className="uno-btn uno-pass display" onClick={() => { sfx.click(); act({ type: 'pass' }) }}>Pass</button>}
@@ -686,7 +762,8 @@ export default function Uno({ state, me, room, players, spectator }: GameProps) 
         <div className="uno-modal" onClick={(e) => { if (e.target === e.currentTarget && pending) { sfx.close(); setPending(null) } }}>
           {showColor && (
             <div className="uno-picker">
-              <h3 className="display">{startColorMe ? (state.flipPick ? 'Flip turned up a Wild' : 'Starting colour') : 'Pick a colour'}</h3>
+              <h3 className="display">{rouletteMe && !pending ? 'Colour Roulette' : startColorMe ? (state.flipPick ? 'Flip turned up a Wild' : 'Starting colour') : 'Pick a colour'}</h3>
+              {rouletteMe && !pending && <p>Cards turn over until your colour shows. You keep them all.</p>}
               <div className="uno-wheel">
                 {palette.map((c, i) => (
                   <button key={c} className={`uno-wedge w${i}`} style={{ background: HEX[c] }} data-cursor={c} onClick={() => pickColor(c)}>
@@ -702,7 +779,7 @@ export default function Uno({ state, me, room, players, spectator }: GameProps) 
             <div className="uno-picker">
               <h3 className="display">Swap hands with…</h3>
               <div className="uno-targets">
-                {others.map((pid) => {
+                {rivals.map((pid) => {
                   const p = room.players.find((x) => x.id === pid)
                   return (
                     <button key={pid} className="uno-target" style={{ ['--pc' as string]: playerHex(room, pid) }} onClick={() => pickTarget(pid)}>
@@ -788,7 +865,7 @@ export default function Uno({ state, me, room, players, spectator }: GameProps) 
       )}
 
       {tip && (() => {
-        const r = ruleOf(tip.card, state.players.length, tip.color)
+        const r = ruleOf(tip.card, state.players.length, tip.color, mercy)
         return r && (
           <button key={tip.key} className="uno-tip" onClick={() => { clearTimeout(tipTimer.current); setTip(null) }} aria-label="Dismiss card rule">
             <UnoCard card={tip.card} chosen={tip.color} className={tip.color ? 'chosen' : ''} dataId={-1} />

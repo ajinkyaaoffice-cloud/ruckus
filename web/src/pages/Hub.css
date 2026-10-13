@@ -100,3 +100,11 @@ html.low-power .hc-top, html.low-power .hc-art, html.low-power .hc-foot { transf
 
 /* host's one-tap rerun of their last game */
 .hub-quick { margin-top: 10px; }
+/* more choices than fit on a phone (UNO's four decks): the row wraps instead of pushing the sheet wider than the screen */
+.ss-sheet { min-width: 0; max-width: 100%; box-sizing: border-box; }
+.ss-choices { flex-wrap: wrap; justify-content: center; max-width: 100%; }
+@media (max-width: 640px) {
+  .ss-sheet { padding: 24px 18px; }
+  .ss-choices:has(> :nth-child(4)) { border-radius: 26px; }
+  .ss-choice { padding: 9px 13px; }
+}

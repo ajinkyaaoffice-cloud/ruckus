@@ -372,6 +372,66 @@ const UnoDrawColour = () => (
   </Scene>
 )
 
+/* ---------- UNO No Mercy ---------- */
+
+const UnoMercyStack = () => (
+  <Scene build={(tl) => {
+    tl.set('.s0, .s1, .s2, .s3', { x: 120, y: -60, opacity: 0, rotation: 0 }).set('.tot', { opacity: 0, scale: 0.4 }).set('.l1', { opacity: 0, scale: 0.4 })
+    ;[0, 1, 2, 3].forEach((i) => {
+      tl.to(`.s${i}`, { opacity: 1, y: 60 - i * 3, x: 96 + i * 16, rotation: -14 + i * 9, duration: 0.45, ease: 'back.out(1.8)' }, i === 0 ? 0.3 : '+=0.35')
+        .to('.tot', { opacity: 1, scale: 1.25, duration: 0.15, ease: 'power2.out' }, '<0.2')
+        .set('.tot text', { opacity: 0 }).set(`.tot .t${i}`, { opacity: 1 })
+        .to('.tot', { scale: 1, duration: 0.3, ease: 'back.out(3)' })
+    })
+    tl.to('.l1', { opacity: 1, scale: 1, ease: 'back.out(3)' }, '+=0.2')
+  }}>
+    <MiniCard cls="s0" c="red" t="+2" />
+    <MiniCard cls="s1" c="blue" t="+4" />
+    <MiniCard cls="s2" c="wild" t="+6" />
+    <MiniCard cls="s3" c="wild" t="+10" />
+    <g className="tot" transform="translate(205 40)" data-o>
+      <rect x={-26} y={-15} width={52} height={30} rx={10} fill={CH.red} />
+      {['+2', '+6', '+12', '+22'].map((t, i) => <text key={t} className={`rs-num t${i}`} dy="0.36em" textAnchor="middle" fontSize={17} fill="#fff" opacity={i ? 0 : 1}>{t}</text>)}
+    </g>
+    <Pill cls="l1" x={120} y={128} text="can’t stack? take the lot" bg={CH.red} />
+  </Scene>
+)
+
+const UnoMercyCards = () => (
+  <Scene build={(tl) => {
+    tl.set('.k1, .k2, .k3', { scale: 0, rotation: -30, y: 56 }).set('.k1', { x: 50 }).set('.k2', { x: 120 }).set('.k3', { x: 190 })
+      .set('.p1, .p2, .p3', { opacity: 0, scale: 0.4 })
+    ;(['1', '2', '3'] as const).forEach((n, i) => {
+      tl.to(`.k${n}`, { scale: 1, rotation: 0, duration: 0.5, ease: 'back.out(2.4)' }, i === 0 ? 0.3 : '+=0.35')
+        .to(`.p${n}`, { opacity: 1, scale: 1, ease: 'back.out(3)' }, '-=0.2')
+    })
+    tl.to('.k1', { x: 64, duration: 0.3, yoyo: true, repeat: 3, ease: 'power2.inOut' }, '+=0.3')
+      .to('.k2', { rotation: 360, duration: 0.7, ease: 'power2.inOut' }, '<')
+      .to('.k3', { y: 44, duration: 0.15, yoyo: true, repeat: 3 }, '<0.2')
+  }}>
+    <MiniCard cls="k1" c="green" t="7" />
+    <MiniCard cls="k2" c="yellow" t="0" />
+    <MiniCard cls="k3" c="blue" t="≡" />
+    <Pill cls="p1" x={50} y={112} text="swap hands" />
+    <Pill cls="p2" x={120} y={112} text="pass hands on" />
+    <Pill cls="p3" x={190} y={112} text="dump the colour" bg={CH.blue} />
+  </Scene>
+)
+
+const UnoMercyKO = () => (
+  <Scene build={(tl) => {
+    tl.set('.f', { x: 120, y: 64, opacity: 0, rotation: 0, scale: 0.7 }).set('.ko', { opacity: 0, scale: 3, rotation: -30 })
+      .to('.f', { opacity: 1, x: (i: number) => 40 + (i % 9) * 20, y: (i: number) => 50 + Math.floor(i / 9) * 26, rotation: () => gsap.utils.random(-20, 20), duration: 0.35, stagger: 0.07, ease: 'back.out(1.6)' }, 0.3)
+      .to('.ko', { opacity: 1, scale: 1, rotation: -8, duration: 0.5, ease: 'back.out(2.4)' }, '+=0.2')
+  }}>
+    {Array.from({ length: 25 }, (_, i) => <MiniCard key={i} cls="f" c={(['red', 'yellow', 'green', 'blue'] as const)[i % 4]} t={String((i * 7) % 10)} />)}
+    <g className="ko" transform="translate(120 70)" data-o>
+      <rect x={-62} y={-20} width={124} height={40} rx={12} fill={CH.red} stroke="#1d3a6e" strokeWidth={3} />
+      <text className="rs-num" dy="0.36em" textAnchor="middle" fontSize={20} fill="#fff">25 = OUT</text>
+    </g>
+  </Scene>
+)
+
 /* ---------- Tic Tac Toe ---------- */
 
 const T0 = 66, TC = 36
@@ -1132,6 +1192,9 @@ export const RULES: Record<string, RuleBook> = {
       { title: 'Light side cards', text: 'Red, yellow, green and blue. Draw One: the next player takes 1 and misses their go. Skip, Reverse and Flip go on the same colour or the same symbol. Wild Draw Two: the next player takes 2, but only play it with no card of the colour in play. It can be challenged: a bluffer takes 2, and a wrong challenge takes 4.', Scene: UnoFlipLight },
       { title: 'Dark side cards', text: 'Pink, teal, purple and orange. Draw Five: the next player takes 5 and misses their go. Skip Everyone skips the whole table, so you go again. Reverse and Flip work just like on the light side.', Scene: UnoFlipDark },
       { title: 'Wild Draw Colour', text: 'Name a colour: the next player draws until they get a card of that colour, and misses their go. Like +4, it can be challenged: a bluffer draws until the colour instead, and a wrong challenge draws until the colour plus 2 more. Cards score by the side in play: Skip Everyone 30, Wild 40, Wild Draw Two 50, Wild Draw Colour 60.', Scene: UnoDrawColour },
+      { title: 'No Mercy: stack it', text: 'Pick the No Mercy deck (168 cards, no challenges). Any draw card can be answered with a draw card at least as big, in any colour: +2, +4, Wild Reverse +4, +6, +10. The pile grows until someone can’t or won’t stack, and they take the whole lot and miss their go. Wild Reverse +4 turns play round first, so it heads back the way it came.', Scene: UnoMercyStack },
+      { title: 'No Mercy: wild new cards', text: 'Play a 7 to swap hands with anyone. Play a 0 and every hand passes one seat along. Discard All throws away every other card of that colour you hold. Colour Roulette makes the next player name a colour and turn cards over until it shows, keeping them all. Can’t play? Keep drawing until you can.', Scene: UnoMercyCards },
+      { title: 'No Mercy: the mercy rule', text: 'Hold 25 cards or more and you’re knocked out of the round. Everyone else plays on; the last ones standing take the top places.', Scene: UnoMercyKO },
     ],
   },
   tictactoe: {

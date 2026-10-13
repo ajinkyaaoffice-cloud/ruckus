@@ -7,6 +7,18 @@ export type Release = { id: string; title: string; items: string[] }
 
 export const CHANGELOG: Release[] = [
   {
+    id: '2026-10-13-uno-no-mercy',
+    title: 'UNO No Mercy',
+    items: [
+      'New UNO deck: No Mercy, 168 cards. Pick it under Deck when you set up UNO',
+      'Stack draw cards: answer a +2 with a +4, +6 or +10 and pass the whole pile on. Can’t stack? Take the lot',
+      'Wild Reverse +4, Wild +6, Wild +10, Discard All and Colour Roulette',
+      'Play a 7 to swap hands with anyone, a 0 to pass every hand along',
+      'Can’t play? Keep drawing until you can. Hit 25 cards and you’re knocked out',
+      'Every new card explains itself when it lands, and the rulebook has three new pages',
+    ],
+  },
+  {
     id: '2026-10-13-mogul-tips',
     title: 'Mogul tips and crew joining',
     items: [
