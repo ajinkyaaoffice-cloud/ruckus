@@ -62,6 +62,13 @@ html.lenis, html.lenis body { height: auto; }
 .lenis.lenis-stopped { overflow: hidden; }
 
 body { overflow-x: hidden; min-height: 100svh; }
+/* touch screens: a tap or a held press should hit the button, never start selecting the page's text */
+@media (hover: none), (pointer: coarse) {
+  body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+  input, textarea, [contenteditable="true"] { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
+  button, a, [role="button"], label, summary { touch-action: manipulation; }
+  img, svg { -webkit-user-drag: none; }
+}
 
 body.has-cursor, body.has-cursor * { cursor: none !important; }
 

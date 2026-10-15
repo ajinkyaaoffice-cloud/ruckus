@@ -13,6 +13,7 @@ export const CHANGELOG: Release[] = [
       'UNO points now count more than who went out first: how much you collected, cards you made others draw, UNO catches, challenges and knockouts',
       'Getting caught, losing a challenge or being left with a big hand costs you',
       'The results screen shows where every player’s points came from',
+      'On phones, tapping or holding a button no longer selects text on the page',
     ],
   },
   {
