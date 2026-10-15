@@ -159,7 +159,7 @@ export default function Results({ state, room, me, hero }: { state: GameState; r
               </div>
             )
           })}
-          <p className="res-lb-legend">win 3 · 2nd of 3+ gets 1 · draw 1</p>
+          <p className="res-lb-legend">1 per player you beat · +2 for the win · draw 1 each</p>
         </section>
 
         <div className="res-actions">

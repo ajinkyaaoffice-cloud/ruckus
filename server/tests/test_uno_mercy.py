@@ -109,7 +109,7 @@ def test_colour_roulette():
     assert len(g.hands["bob"]) == 3 + 4 and g.color == "blue" and g.players[g.turn] == "cara"
 
 
-def test_mercy_rule_knocks_out_at_25():
+def test_mercy_rule_knocks_out_at_the_limit():
     g = mercy(P3, card(1, "red", "number", 5), [
         [card(10, "wild", "wild10")] + filler(100),
         filler(200, MERCY_LIMIT - 5),

@@ -13,7 +13,7 @@ export type GameMeta = {
 export const CATALOG: GameMeta[] = [
   {
     id: 'uno', name: 'UNO', min: 2, max: 5, tag: 'Cards', bg: '#ff9a62', ink: '#1d3a6e',
-    blurb: 'Full rules: +4 challenges, UNO calls & catches, play on for every place. Classic, Modern, two-sided Flip, or No Mercy with stacking and a 25-card knockout.',
+    blurb: 'Full rules: +4 challenges, UNO calls & catches, play on for every place. Classic, Modern, two-sided Flip, or No Mercy with stacking and a 50-card knockout.',
     options: [
       { key: 'modern', label: 'Deck', choices: [{ value: false, label: 'Classic 108' }, { value: true, label: 'Modern 112' }, { value: 'flip', label: 'Flip 112' }, { value: 'mercy', label: 'No Mercy 168' }] },
       { key: 'bluff', label: 'Wild draw bluff', choices: [{ value: 'any', label: 'Any playable card' }, { value: 'color', label: 'Colour only (official)' }] },

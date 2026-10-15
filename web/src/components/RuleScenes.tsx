@@ -427,7 +427,7 @@ const UnoMercyKO = () => (
     {Array.from({ length: 25 }, (_, i) => <MiniCard key={i} cls="f" c={(['red', 'yellow', 'green', 'blue'] as const)[i % 4]} t={String((i * 7) % 10)} />)}
     <g className="ko" transform="translate(120 70)" data-o>
       <rect x={-62} y={-20} width={124} height={40} rx={12} fill={CH.red} stroke="#1d3a6e" strokeWidth={3} />
-      <text className="rs-num" dy="0.36em" textAnchor="middle" fontSize={20} fill="#fff">25 = OUT</text>
+      <text className="rs-num" dy="0.36em" textAnchor="middle" fontSize={20} fill="#fff">50 = OUT</text>
     </g>
   </Scene>
 )
@@ -1194,7 +1194,7 @@ export const RULES: Record<string, RuleBook> = {
       { title: 'Wild Draw Colour', text: 'Name a colour: the next player draws until they get a card of that colour, and misses their go. Like +4, it can be challenged: a bluffer draws until the colour instead, and a wrong challenge draws until the colour plus 2 more. Cards score by the side in play: Skip Everyone 30, Wild 40, Wild Draw Two 50, Wild Draw Colour 60.', Scene: UnoDrawColour },
       { title: 'No Mercy: stack it', text: 'Pick the No Mercy deck (168 cards, no challenges). Any draw card can be answered with a draw card at least as big, in any colour: +2, +4, Wild Reverse +4, +6, +10. The pile grows until someone can’t or won’t stack, and they take the whole lot and miss their go. Wild Reverse +4 turns play round first, so it heads back the way it came.', Scene: UnoMercyStack },
       { title: 'No Mercy: wild new cards', text: 'Play a 7 to swap hands with anyone. Play a 0 and every hand passes one seat along. Discard All throws away every other card of that colour you hold. Colour Roulette makes the next player name a colour and turn cards over until it shows, keeping them all. Can’t play? Keep drawing until you can.', Scene: UnoMercyCards },
-      { title: 'No Mercy: the mercy rule', text: 'Hold 25 cards or more and you’re knocked out of the round. Everyone else plays on; the last ones standing take the top places.', Scene: UnoMercyKO },
+      { title: 'No Mercy: the mercy rule', text: 'Hold 50 cards or more and you’re knocked out of the round. Everyone else plays on; the last ones standing take the top places.', Scene: UnoMercyKO },
     ],
   },
   tictactoe: {

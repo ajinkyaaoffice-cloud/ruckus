@@ -330,3 +330,35 @@ def test_host_can_wait_longer_or_play_on(wall):
         assert room2.game.over and room2.game.results.winners == ["alice"]
         room2.loop_task.cancel()
     asyncio.run(run())
+
+
+def test_award_points_count_every_place():
+    from app.rooms import award_points
+    pts = lambda r: {p: a["points"] for p, a in award_points(r).items()}
+    assert pts([["a"], ["b"]]) == {"a": 3, "b": 0}
+    assert pts([["a"], ["b"], ["c"], ["d"]]) == {"a": 5, "b": 2, "c": 1, "d": 0}
+    assert pts([["a", "b"], ["c"]]) == {"a": 2, "b": 2, "c": 0}
+    assert pts([["a"], ["b", "c"], ["d"]]) == {"a": 5, "b": 1, "c": 1, "d": 0}
+    assert pts([["a", "b", "c"]]) == {"a": 1, "b": 1, "c": 1}
+    assert award_points([["a"], ["b"]])["a"]["win"] == 1 and award_points([["a", "b"]])["a"]["win"] == 0
+
+
+def test_the_real_host_gets_the_room_back():
+    room = make_room()
+    room.players["alice"].ws = None                  # the host drops
+    room._claim_host("bobby")
+    assert room.host == "bobby" and room.owner == "alice"
+    room.players["alice"].ws = FakeWS()              # and reconnects
+    room.returned("alice")
+    assert room.host == "alice"
+    room.players["alice"].ws = None                  # this time the grace runs out and they rejoin later
+    room.remove("alice", timed_out=True)
+    assert room.host == "bobby"
+    room.add(Player("alice", "Alice", {}, ws=FakeWS(), status="ready"))
+    assert room.host == "alice"
+    room.make_host("alice", "bobby")                 # handing over on purpose sticks
+    room.players["alice"].ws = None
+    room.returned("alice")
+    assert room.host == "bobby" and room.owner == "bobby"
+    room.remove("bobby")                             # leaving on purpose gives up the chair
+    assert room.host == "alice" and room.owner == "alice"

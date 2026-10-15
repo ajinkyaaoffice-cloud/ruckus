@@ -54,7 +54,7 @@ UNO Show 'Em No Mercy (option modern="mercy"):
 * Discard All: also throw away every other card of that colour you hold.
 * Colour Roulette: the next player names a colour and turns cards over until it
   shows, keeping them all, and misses their go.
-* Mercy rule: anyone holding 25 or more cards is knocked out.
+* Mercy rule: anyone holding 50 or more cards is knocked out.
 * Play on as usual; the round opens on a number card.
 """
 from __future__ import annotations
@@ -79,7 +79,7 @@ MERCY_WILDS = ("wildrev4", "wild6", "wild10", "roulette")
 MERCY_POINTS = {"skip": 20, "reverse": 20, "draw2": 20, "draw4": 30, "skipall": 30, "discard": 30,
                 "wildrev4": 50, "wild6": 50, "wild10": 60, "roulette": 50}
 DRAW_VALUE = {"draw2": 2, "draw4": 4, "wildrev4": 4, "wild6": 6, "wild10": 10}
-MERCY_LIMIT = 25
+MERCY_LIMIT = 50
 UNO_GRACE = 2.0   # seconds a player on one card has to call UNO before anyone may catch them
 UNO_CATCH = 3.0   # once catching opens, it stays open at least this long
 
@@ -185,7 +185,7 @@ class Uno(Game):
         self.wilds = FLIP_WILDS if self.flip else MERCY_WILDS if self.mercy else WILDS
         self.stack = 0                       # No Mercy: cards piled up on the player who must answer
         self.stack_min = 0                   # ...and the smallest draw card that may be stacked on it
-        self.mercied: list[str] = []         # No Mercy: knocked out at 25 cards, in order
+        self.mercied: list[str] = []         # No Mercy: knocked out at the card limit, in order
         self.draw_pile = (build_flip_deck(self.rng) if self.flip else build_mercy_deck() if self.mercy
                           else build_deck(self.modern))
         self.deck_size = len(self.draw_pile)
@@ -351,7 +351,7 @@ class Uno(Game):
                 self._mercy_check()
 
     def _mercy_check(self) -> None:
-        """No Mercy: 25 cards or more and you're out of the round."""
+        """No Mercy: 50 cards or more and you're out of the round."""
         for p in list(self.players):
             if len(self.hands[p]) >= MERCY_LIMIT and len(self.players) > 1:
                 self.draw_pile[:0] = self.hands[p]

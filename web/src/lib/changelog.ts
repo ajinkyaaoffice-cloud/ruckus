@@ -7,6 +7,16 @@ export type Release = { id: string; title: string; items: string[] }
 
 export const CHANGELOG: Release[] = [
   {
+    id: '2026-10-15-fairer-points',
+    title: 'Fairer points, and the host comes back',
+    items: [
+      'Every place now counts: 1 point for each player you finish ahead of, plus 2 for the win',
+      'In a four-player game that’s 5, 2, 1 and 0, so coming 3rd beats coming last',
+      'UNO No Mercy knocks you out at 50 cards instead of 25, so games last longer',
+      'If the host drops out, someone keeps things going, and the host gets the room back as soon as they return',
+    ],
+  },
+  {
     id: '2026-10-13-uno-no-mercy',
     title: 'UNO No Mercy',
     items: [

@@ -725,7 +725,7 @@ export default function Uno({ state, me, room, players, spectator }: GameProps) 
               <span>
                 {mercied.includes(me) ? 'Knocked out · watch the rest' : <>{hand.length} card{hand.length === 1 ? '' : 's'}</>}
                 {myTurn && (phase === 'play' || phase === 'stack') && hand.length > 7 && <em className="uno-okn"> · {playable.size} playable</em>}
-                {mercy && hand.length >= 15 && <em className="uno-okn uno-danger"> · out at {state.mercyLimit}</em>}
+                {mercy && hand.length >= 35 && <em className="uno-okn uno-danger"> · out at {state.mercyLimit}</em>}
               </span>
             </div>
           </div>

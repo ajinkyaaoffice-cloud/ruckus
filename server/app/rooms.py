@@ -90,6 +90,8 @@ class Room:
         self.manager = manager
         self.players: dict[str, Player] = {}
         self.host: str | None = None
+        # the real host: stand-ins take over while they're offline, and hand it back when they return
+        self.owner: str | None = None
         self.phase = "lobby"                  # lobby | playing
         self.game: Game | None = None
         self.game_options: dict[str, Any] = {}
@@ -124,12 +126,19 @@ class Room:
 
     def add(self, p: Player) -> None:
         self.players[p.id] = p
+        if self.owner is None:
+            self.owner = p.id
+        if p.id == self.owner:
+            self.host = p.id
         # an offline host would leave everyone staring at "Host is picking"
-        if self.host is None or self.host not in self.players or self.players[self.host].ws is None:
+        elif self.host is None or self.host not in self.players or self.players[self.host].ws is None:
             self.host = p.id
 
-    def remove(self, pid: str) -> None:
+    def remove(self, pid: str, timed_out: bool = False) -> None:
+        """timed_out: their line died and the grace ran out, so they keep the host's chair if they come back."""
         self.players.pop(pid, None)
+        if self.owner == pid and not timed_out:
+            self.owner = None
         was_away = self.away.pop(pid, None) is not None
         if (self.waiting.pop(pid, None) is not None or was_away) and not self.waiting:
             self._resume_if_clear()
@@ -139,6 +148,8 @@ class Room:
             live = [p for p in self.players.values() if p.ws]
             pool = live or list(self.players.values())
             self.host = pool[0].id if pool else None
+            if self.owner is None:
+                self.owner = self.host
 
     # --- messaging ----------------------------------------------------------
     async def send(self, p: Player, msg: dict[str, Any]) -> None:
@@ -218,6 +229,8 @@ class Room:
 
     def returned(self, pid: str) -> bool:
         """They reconnected. Once nobody is missing, play resumes after a short countdown."""
+        if pid == self.owner and pid in self.players:
+            self.host = pid                       # the real host takes the room back from the stand-in
         if self.waiting.pop(pid, None) is None:
             return False
         if not self.waiting and self.game and not self.game.over:
@@ -336,7 +349,7 @@ class Room:
         self.require_host(by)
         if str(target) not in self.players:
             raise GameError("They already left")
-        self.host = str(target)
+        self.host = self.owner = str(target)
 
     def reset_scores(self, by: str) -> None:
         self.require_host(by)
@@ -523,18 +536,7 @@ class Room:
         res = g.results
         participants = list(dict.fromkeys(g.players + [p for grp in res.ranking for p in grp]))
         everyone_tied = len(res.ranking) == 1
-        awards: dict[str, dict[str, int]] = {}
-        for place, group in enumerate(res.ranking):
-            for pid in group:
-                if everyone_tied:
-                    pts, win = 1, 0
-                elif place == 0:
-                    pts, win = 3, 1
-                elif place == 1 and len(res.ranking) > 2:
-                    pts, win = 1, 0
-                else:
-                    pts, win = 0, 0
-                awards[pid] = {"points": pts, "win": win}
+        awards = award_points(res.ranking)
         for pid in participants:
             p = self.players.get(pid)
             if p:
@@ -559,6 +561,22 @@ class Room:
         self.phase = "lobby"
         self.game = None
         await self.sync()
+
+
+def award_points(ranking: list[list[str]]) -> dict[str, dict[str, int]]:
+    """Session points: 1 for every player you finished ahead of, +2 for winning
+    outright (+1 each when the win is shared). A game everyone draws is 1 apiece.
+    Two players: 3 for the win; four: 5, 2, 1, 0."""
+    if len(ranking) == 1:
+        return {pid: {"points": 1, "win": 0} for pid in ranking[0]}
+    awards: dict[str, dict[str, int]] = {}
+    below = sum(len(g) for g in ranking)
+    for place, group in enumerate(ranking):
+        below -= len(group)
+        bonus = (2 if len(group) == 1 else 1) if place == 0 else 0
+        for pid in group:
+            awards[pid] = {"points": below + bonus, "win": int(place == 0)}
+    return awards
 
 
 def crew_code(name: Any) -> str:
@@ -622,7 +640,7 @@ class RoomManager:
                         if p.ws is None and p.left_at and now - p.left_at > room.grace
                         and now - room.away.get(p.id, -BREAK_MAX) > BREAK_MAX]
                 for pid in gone:
-                    room.remove(pid)
+                    room.remove(pid, timed_out=True)
                 if gone and room.players:
                     await room.sync()
                     if room.game:
