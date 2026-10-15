@@ -48,7 +48,7 @@ class Game:
         self.rng = rng or random.Random()
         self.over = False
         self.results: Results | None = None
-        self.awards: dict[str, dict[str, int]] | None = None   # session points each player got, set by the room
+        self.awards: dict[str, dict[str, Any]] | None = None   # session points each player got, set by the room
         self.dirty = True
         self.seq = 0
         self.instance = uuid.uuid4().hex[:10]
@@ -106,6 +106,11 @@ class Game:
         self.results = Results(ranking, summary, details or {})
         self.clear_timers()
         self.dirty = True
+
+    def session_awards(self) -> dict[str, dict[str, Any]] | None:
+        """Games that score more than finishing order return {pid: {"points", "win", "why"}}
+        here; None leaves it to the room's placing points."""
+        return None
 
     # Games that can play a sensible move for someone on a break set this and implement stand_in.
     can_stand_in = False

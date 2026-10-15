@@ -56,6 +56,9 @@
 .res-lb-total { flex: none; display: flex; align-items: baseline; gap: 3px; min-width: 64px; justify-content: flex-end; }
 .res-lb-total b { font-size: 28px; font-variant-numeric: tabular-nums; }
 .res-lb-total small { font-size: 11px; font-weight: 800; opacity: 0.5; }
+.res-lb-why { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 3px; }
+.res-lb-why i { font-style: normal; font-size: 10.5px; font-weight: 700; padding: 1px 6px; border-radius: 999px; background: color-mix(in srgb, var(--pc) 22%, #fff); color: #1d3a6e; white-space: nowrap; }
+.res-lb-why i.neg { background: rgba(230, 79, 79, 0.16); color: #b3263a; }
 .res-lb-legend { margin: 8px 6px 0; font-size: 11.5px; font-weight: 600; opacity: 0.5; }
 
 .res-actions { display: flex; gap: 14px; margin-top: 18px; flex-wrap: wrap; justify-content: center; }

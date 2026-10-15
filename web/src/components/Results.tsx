@@ -20,7 +20,9 @@ export default function Results({ state, room, me, hero }: { state: GameState; r
   const root = useRef<HTMLDivElement>(null)
   const meta = gameMeta(state.game)
   const res = state.results!
-  const awards: Record<string, { points: number; win: number }> = state.awards ?? {}
+  const awards: Record<string, { points: number; win: number; why?: [string, number][] }> = state.awards ?? {}
+  // games that score the whole round (UNO) send a breakdown of where each player's points came from
+  const scored = Object.values(awards).some((a) => a.why)
   const tie = res.ranking.length === 1
   const iWon = res.winners.includes(me)
   const canPick = room.host === me || !!room.settings?.anyonePicks
@@ -153,13 +155,22 @@ export default function Results({ state, room, me, hero }: { state: GameState; r
                 <span className="res-lb-who">
                   <b>{p?.name ?? 'Left'}{pid === me && <em> (you)</em>}</b>
                   {res.details[pid] && <small>{res.details[pid]}</small>}
+                  {awards[pid]?.why && (
+                    <span className="res-lb-why">
+                      {awards[pid].why!.filter(([, n]) => n).map(([label, n]) => (
+                        <i key={label} className={n < 0 ? 'neg' : ''}>{label} {n > 0 ? '+' : '−'}{Math.abs(n)}</i>
+                      ))}
+                    </span>
+                  )}
                 </span>
                 <span className={`res-lb-plus display ${add ? '' : 'zero'}`}>+{add}</span>
                 <span className="res-lb-total"><b className="display" data-to={p?.points ?? 0} data-add={add}>{p?.points ?? 0}</b><small>pts</small></span>
               </div>
             )
           })}
-          <p className="res-lb-legend">1 per player you beat · +2 for the win · draw 1 each</p>
+          <p className="res-lb-legend">{scored
+            ? 'scored on the whole round: placing, haul, attacks, catches, challenges and what you were left holding'
+            : '1 per player you beat · +2 for the win · draw 1 each'}</p>
         </section>
 
         <div className="res-actions">

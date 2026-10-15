@@ -144,6 +144,9 @@ def build_flip_deck(rng) -> list[dict[str, Any]]:
     return [{"id": i, **lf, "other": df} for i, (lf, df) in enumerate(zip(light, dark))]
 
 
+STAT_KEYS = ("hits", "actions", "catches", "caught", "challenges", "busted", "knockouts", "dumped")
+
+
 def ordinal(n: int) -> str:
     return f"{n}{'tsnrhtdd'[(n // 10 % 10 != 1) * (n % 10 < 4) * n % 10::4]}"
 
@@ -211,7 +214,82 @@ class Uno(Game):
         for _ in range(7):
             for p in self.players:
                 self._give(p, 1)
+        # what everyone did this round, for the session score: hits = cards made others draw
+        self.stats: dict[str, dict[str, int]] = {p: {k: 0 for k in STAT_KEYS} for p in self.players}
+        self.last_play: str | None = None
         self._start()
+
+    # --- round stats --------------------------------------------------------
+    def emit(self, kind: str, /, **data: Any) -> None:
+        super().emit(kind, **data)
+        if hasattr(self, "stats"):
+            self._tally(kind, data)
+
+    def _tally(self, kind: str, d: dict[str, Any]) -> None:
+        st, pid = self.stats, d.get("pid")
+        if kind == "play":
+            self.last_play = pid
+            if d["card"]["kind"] != "number":
+                st[pid]["actions"] += 1
+        elif kind == "forced_draw" and self.last_play not in (None, pid):
+            st[self.last_play]["hits"] += d.get("count", 0)
+        elif kind == "custom":
+            st[pid]["hits"] += 2 * (len(self.players) - 1)
+        elif kind == "caught":
+            st[d["by"]]["catches"] += 1
+            st[pid]["caught"] += 1
+        elif kind == "challenge":
+            if d["guilty"]:
+                st[pid]["challenges"] += 1
+                st[d["offender"]]["busted"] += 1
+            else:
+                st[pid]["busted"] += 1
+                st[d["offender"]]["hits"] += d.get("count", 0)
+        elif kind == "mercy" and self.last_play not in (None, pid):
+            st[self.last_play]["knockouts"] += 1
+        elif kind == "discard_all":
+            st[pid]["dumped"] += d.get("count", 0)
+
+    def session_awards(self) -> dict[str, dict[str, Any]] | None:
+        """UNO scores the whole round, not just who went out first:
+        placing        2 for every player finished ahead of (not counting quitters), +2 for the win
+        haul           going out while the others hold plenty: 1 per 20 card points (max 4)
+        attacks        1 per 4 cards you made others draw, per 10 in No Mercy (max 3)
+        catches        +1 per UNO catch (max 2), -1 each time you were caught
+        challenges     +1 for calling out a bluff, -1 for a wrong call or a bluff caught
+        knockouts      No Mercy: +2 for every player your cards knocked out
+        dumps          No Mercy: 1 per 6 cards thrown away by Discard All (max 2)
+        close call     still in at the end with 1-2 cards: +1
+        stuck          still in at the end: -1 per 60 card points left (max -3)
+        A round never scores below zero."""
+        if not self.results:
+            return None
+        ranking = self.results.ranking
+        out: dict[str, dict[str, Any]] = {}
+        for place, group in enumerate(ranking):
+            for pid in group:
+                if pid in self.left:
+                    out[pid] = {"points": 0, "win": 0, "why": [["left", 0]]}
+                    continue
+                st = self.stats.get(pid) or {k: 0 for k in STAT_KEYS}
+                why: list[list[Any]] = []
+                beaten = sum(p not in self.left for g in ranking[place + 1:] for p in g)   # quitters don't count
+                why.append(["win" if place == 0 else "placing", 2 * beaten + (2 if place == 0 else 0)])
+                if pid in self.finished:
+                    why.append(["haul", min(4, self.scores.get(pid, 0) // 20)])
+                why.append(["attacks", min(3, st["hits"] // (10 if self.mercy else 4))])
+                why.append(["catches", min(2, st["catches"]) - st["caught"]])
+                why.append(["challenges", st["challenges"] - st["busted"]])
+                why.append(["knockouts", 2 * st["knockouts"]])
+                why.append(["dumps", min(2, st["dumped"] // 6)])
+                if pid in self.players:
+                    hand = self.hands[pid]
+                    if len(hand) <= 2:
+                        why.append(["close call", 1])
+                    why.append(["stuck", -min(3, sum(card_points(c) for c in hand) // 60)])
+                why = [w for w in why if w[1]] or [["placing", 0]]
+                out[pid] = {"points": max(0, sum(n for _, n in why)), "win": int(place == 0), "why": why}
+        return out
 
     # --- deck plumbing ------------------------------------------------------
     def _pop(self) -> dict[str, Any] | None:

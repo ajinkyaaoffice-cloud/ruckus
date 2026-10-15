@@ -133,3 +133,19 @@ def test_stand_ins_finish_a_no_mercy_game():
                 g.stand_in(p)
         assert g.over, seed
         assert sum(len(r) for r in g.results.ranking) == 3
+
+
+def test_session_score_counts_more_than_placing():
+    g = mercy(P3, card(1, "red", "number", 5), [
+        [card(10, "wild", "wild10")] + filler(100),
+        filler(200, MERCY_LIMIT - 5),
+        [card(30, "yellow", "number", 3)],
+    ])
+    g.handle("alice", {"type": "play", "card": 10, "color": "yellow"})
+    g.handle("bob", {"type": "draw"})                       # bob takes 10 and is knocked out by alice's +10
+    g.handle("cara", {"type": "play", "card": 30})          # cara goes out first
+    aw = g.session_awards()
+    why = {p: dict(a["why"]) for p, a in aw.items()}
+    assert g.results.ranking[0] == ["cara"] and aw["cara"]["win"] == 1
+    assert why["alice"]["knockouts"] == 2 and why["alice"]["attacks"] == 1
+    assert aw["alice"]["points"] == 2 + 2 + 1 and aw["bob"]["points"] == 0

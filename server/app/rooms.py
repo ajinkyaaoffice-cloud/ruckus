@@ -536,7 +536,7 @@ class Room:
         res = g.results
         participants = list(dict.fromkeys(g.players + [p for grp in res.ranking for p in grp]))
         everyone_tied = len(res.ranking) == 1
-        awards = award_points(res.ranking)
+        awards = g.session_awards() or award_points(res.ranking)
         for pid in participants:
             p = self.players.get(pid)
             if p:

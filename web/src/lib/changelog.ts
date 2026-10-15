@@ -7,6 +7,15 @@ export type Release = { id: string; title: string; items: string[] }
 
 export const CHANGELOG: Release[] = [
   {
+    id: '2026-10-15-uno-scoring',
+    title: 'UNO scores the whole round',
+    items: [
+      'UNO points now count more than who went out first: how much you collected, cards you made others draw, UNO catches, challenges and knockouts',
+      'Getting caught, losing a challenge or being left with a big hand costs you',
+      'The results screen shows where every player’s points came from',
+    ],
+  },
+  {
     id: '2026-10-15-fairer-points',
     title: 'Fairer points, and the host comes back',
     items: [
